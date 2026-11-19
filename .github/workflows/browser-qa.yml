@@ -15,6 +15,7 @@ jobs:
     timeout-minutes: 25
     env:
       CI: 'true'
+      ATLAS_NO_BROWSER: '1'
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -35,9 +36,45 @@ jobs:
           node --check js/atlas.mjs
           node --check js/insets.mjs
           node tools/qa_v02d.mjs
+      - name: Start Atlas HTTP server (separate from Playwright)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -u tools/serve.py > "$RUNNER_TEMP/atlas-http.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/atlas-http.pid"
+          for i in {1..50}; do
+            if curl --fail --silent http://127.0.0.1:8001/ -o /dev/null; then
+              echo "Atlas server is responding on port 8001."
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::Atlas server did not start on port 8001."
+          cat "$RUNNER_TEMP/atlas-http.log"
+          exit 1
       - name: Browser rendering and interaction tests (Xvfb + software WebGL)
-        run: xvfb-run -a npm run test:browser
-      - name: Save screenshots and failure traces
+        shell: bash
+        run: |
+          set +e
+          timeout --signal=TERM --kill-after=10s 240s xvfb-run -a npm run test:browser
+          status=$?
+          set -e
+          if [ "$status" -eq 124 ]; then
+            echo "::error::Browser test runner did not exit after 4 minutes. See saved QA files."
+          fi
+          exit "$status"
+      - name: Stop Atlas HTTP server and collect logs
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p qa-logs
+          if [ -f "$RUNNER_TEMP/atlas-http.log" ]; then
+            cp "$RUNNER_TEMP/atlas-http.log" qa-logs/atlas-http.log
+          fi
+          if [ -f "$RUNNER_TEMP/atlas-http.pid" ]; then
+            kill "$(cat "$RUNNER_TEMP/atlas-http.pid")" 2>/dev/null || true
+          fi
+      - name: Save screenshots, logs and failure traces
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -45,5 +82,6 @@ jobs:
           path: |
             test-results/
             playwright-report/
+            qa-logs/
           if-no-files-found: warn
           retention-days: 14
