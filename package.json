@@ -1,0 +1,14 @@
+{
+  "name": "rts-usa-atlas-browser-qa",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "test:browser": "playwright test",
+    "test:data": "node tools/qa_v02d.mjs",
+    "test": "npm run test:data && npm run test:browser"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0"
+  }
+}

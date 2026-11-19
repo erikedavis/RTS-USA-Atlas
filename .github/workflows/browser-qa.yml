@@ -1,0 +1,49 @@
+name: RTS Atlas browser QA
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qa:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      CI: 'true'
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install browser test tools
+        run: npm install --no-audit --no-fund
+      - name: Install Chromium browser and OS dependencies
+        run: npx playwright install --with-deps chromium
+      - name: Validate source and geographic data
+        run: |
+          node --check js/atlas.mjs
+          node --check js/insets.mjs
+          node tools/qa_v02d.mjs
+      - name: Browser rendering and interaction tests (Xvfb + software WebGL)
+        run: xvfb-run -a npm run test:browser
+      - name: Save screenshots and failure traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: atlas-browser-qa-${{ github.run_number }}
+          path: |
+            test-results/
+            playwright-report/
+          if-no-files-found: warn
+          retention-days: 14

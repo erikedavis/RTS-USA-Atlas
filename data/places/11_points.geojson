@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","properties":{"kind":"place","name":"Washington","geoid":"1150000","official_name":"Washington city","state_fips":"11","state_abbr":"DC"},"geometry":{"type":"Point","coordinates":[-76.987565,38.893264]}}]}

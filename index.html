@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#020307">
+  <title>USA ATLAS | National Information Map</title>
+  <link href="./assets/vendor/maplibre-gl.css" rel="stylesheet">
+  <link rel="stylesheet" href="./assets/atlas.css?v=02d">
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand" id="home" tabindex="0" role="button" aria-label="Reset to national view">
+        <span class="brand-mark" aria-hidden="true">◈</span>
+        <span class="brand-title">USA<span>ATLAS</span></span>
+        <span class="brand-sub">NATIONAL INFORMATION SYSTEM</span>
+      </div>
+      <div class="top-actions">
+        <span class="system-tag" id="source-tag">LOADING GEOGRAPHY</span>
+        <span class="version-tag">ALPHA 0.2D</span>
+      </div>
+    </header>
+
+    <div class="toolbar" role="toolbar" aria-label="Map options">
+      <div class="toolbar-group" aria-label="Visual style">
+        <span class="toolbar-label">VIEW</span>
+        <button class="chip active" data-view="statistical" aria-pressed="true">STATISTICAL</button>
+        <button class="chip" data-view="geographic" aria-pressed="false" title="Geographic mode will be developed after the base map">GEOGRAPHIC <span class="coming">SOON</span></button>
+        <button class="chip" data-view="strategic" aria-pressed="false" title="Strategic mode will be developed after terrain support">STRATEGIC <span class="coming">SOON</span></button>
+      </div>
+      <div class="toolbar-spacer"></div>
+      <div class="search-wrap">
+        <label for="search" class="sr-only">Find a state, county or city</label>
+        <input id="search" placeholder="Find state, county, city…" autocomplete="off" spellcheck="false">
+        <div id="search-results" class="search-results" hidden></div>
+      </div>
+    </div>
+
+    <div class="content">
+      <main class="map-shell" aria-label="Interactive map">
+        <div id="map"></div>
+        <div class="gridlines" aria-hidden="true"></div>
+        <div class="map-vignette" aria-hidden="true"></div>
+        <div class="map-loading" id="map-loading"><span class="load-ring"></span><strong>INITIALIZING MAP</strong><small>Loading geographic layers…</small></div>
+        <div class="map-controls">
+          <button id="zoom-in" title="Zoom in" aria-label="Zoom in">+</button>
+          <button id="zoom-out" title="Zoom out" aria-label="Zoom out">−</button>
+          <button id="reset-view" title="Continental US" aria-label="National view">⌂</button>
+          <button id="go-ak" title="Alaska" aria-label="Zoom to Alaska">AK</button>
+          <button id="go-hi" title="Hawaii" aria-label="Zoom to Hawaii">HI</button>
+          <button id="go-pr" title="Puerto Rico" aria-label="Zoom to Puerto Rico">PR</button>
+          <button id="toggle-counties" title="Enable county selection once county boundaries load" aria-label="Toggle county selection" aria-pressed="false">CTY</button>
+          <button id="toggle-metros" title="Toggle metropolitan and micropolitan boundaries" aria-label="Toggle metro boundaries" aria-pressed="false">MSA</button>
+        </div>
+        <div class="map-hud upper-left"><span class="hud-dot"></span><span>GEOSPATIAL DISPLAY / USA</span></div>
+        <div class="map-hud lower-left"><span id="coordinate-text">39.0°N 98.0°W</span><span class="hud-divider">/</span><span id="zoom-text">ZOOM —</span></div>
+        <div class="map-hud lower-right" id="data-caption">CENSUS 2025 / OFFICIAL SOURCE</div>
+      </main>
+      <aside class="info-panel" id="info-panel">
+        <div class="panel-top"><span class="panel-eyebrow">GEOGRAPHIC INTELLIGENCE</span><button id="panel-close" class="panel-close" aria-label="Collapse panel">−</button></div>
+        <div class="panel-content" id="panel-content">
+          <div class="selection-icon">◎</div>
+          <div class="empty-kicker">NO ACTIVE SELECTION</div>
+          <h1>UNITED STATES</h1>
+          <p>Choose a state, county, metro or city to inspect its Census 2025 geographic record.</p>
+          <div class="empty-line"></div>
+          <p class="subtle">The interface is built to accept political, economic, historical, and infrastructure data later. No live statistics are included yet.</p>
+        </div>
+        <div class="panel-footer"><span class="pulse"></span><span id="selection-status">AWAITING SELECTION</span></div>
+      </aside>
+    </div>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </div>
+  <script type="module" src="./js/atlas.mjs?v=02d"></script>
+</body>
+</html>
