@@ -7,7 +7,7 @@ async function assertRendered(page, testInfo) {
   const response = await page.goto('/', { waitUntil: 'domcontentloaded' });
   expect(response?.ok(), 'The atlas must respond over HTTP').toBe(true);
   await expect(page.locator('#map-loading'), 'Atlas loading overlay must disappear').toBeHidden({ timeout: 50_000 });
-  await expect(page.locator('meta[name="atlas-version"]')).toHaveAttribute('content', 'ALPHA 0.8B');
+  await expect(page.locator('meta[name="atlas-version"]')).toHaveAttribute('content', 'ALPHA 0.8C');
   await expect(page.locator('canvas.maplibregl-canvas')).toHaveCount(1);
   const renderer = await page.evaluate(() => {
     const canvas = document.querySelector('canvas.maplibregl-canvas');
@@ -232,5 +232,70 @@ test.describe('phone viewport', () => {
     await expect.poll(() => countyStates(page)).toEqual(['21']);
     await page.getByRole('button', { name: 'Clear state selection' }).tap();
     await expect.poll(async () => (await countyStates(page)).length).toBeGreaterThan(3);
+  });
+
+  test('phone State Atlas keeps the camera on exit and releases a deliberate drag', async ({ page }, testInfo) => {
+    await exposeMap(page);
+    await assertRendered(page, testInfo);
+    await readMap(page);
+    await searchFor(page, 'Kansas');
+    await expect(page.locator('#panel-content h1')).toHaveText('Kansas');
+    await waitForCamera(page);
+
+    const app = page.locator('.app');
+    const cdp = await page.context().newCDPSession(page);
+    async function touch(type, x, y) {
+      await cdp.send('Input.dispatchTouchEvent', {
+        type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }]
+      });
+    }
+    async function swipe(x, y, dx, dy) {
+      await touch('touchStart', x, y);
+      for (let i = 1; i <= 5; i++) await touch('touchMove', x + dx * i / 5, y + dy * i / 5);
+      await touch('touchEnd');
+    }
+
+    const stats = page.locator('#panel-content');
+    const compact = await stats.boundingBox();
+    await swipe(compact.x + compact.width / 2, compact.y + 78, 0, -57);
+    await expect(app).toHaveAttribute('data-phone-stage', 'atlas');
+    await waitForCamera(page);
+    const framed = await camera(page);
+    const expanded = await stats.boundingBox();
+    await swipe(expanded.x + expanded.width / 2, expanded.y + 15, 0, 63);
+    await expect(app).toHaveAttribute('data-phone-stage', 'summary');
+    await waitForCamera(page);
+    expect(await camera(page)).toEqual(framed);
+
+    await page.getByRole('button', { name: 'Open state atlas' }).tap();
+    await expect(app).toHaveAttribute('data-phone-stage', 'atlas');
+    await waitForCamera(page);
+    const start = await camera(page);
+    const projectedLongitude = () => page.evaluate(position => {
+      const point = testMap.project(position.slice(0, 2));
+      return point.x - testMap.getContainer().clientWidth / 2;
+    }, start);
+    await touch('touchStart', 100, 118);
+    for (let x = 108; x <= 148; x += 8) await touch('touchMove', x, 118);
+    await expect.poll(projectedLongitude).toBeGreaterThan(5);
+    expect(await projectedLongitude()).toBeLessThan(40);
+    await expect(app).toHaveAttribute('data-phone-stage', 'atlas');
+    await touch('touchEnd');
+    await waitForCamera(page);
+    await expect.poll(projectedLongitude).toBeLessThan(21);
+    await expect(app).toHaveAttribute('data-phone-stage', 'atlas');
+
+    await touch('touchStart', 100, 118);
+    for (let x = 110; x <= 210; x += 10) await touch('touchMove', x, 118);
+    await expect(app).toHaveAttribute('data-phone-stage', 'summary');
+    const release = await camera(page);
+    for (let x = 220; x <= 260; x += 10) await touch('touchMove', x, 118);
+    await expect.poll(async () => (await camera(page))[0]).toBeLessThan(release[0]);
+    await touch('touchEnd');
+    await waitForCamera(page);
+    await expect(app).not.toHaveClass(/phone-atlas-panning/);
+    expect((await camera(page)).slice(2)).toEqual(start.slice(2));
+    await expect(page.locator('#panel-content h1')).toHaveText('Kansas');
+    expect(await page.evaluate(() => testMap.getPaintProperty('state-surface', 'fill-opacity'))).toBe(.98);
   });
 });

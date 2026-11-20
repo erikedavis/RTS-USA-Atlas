@@ -1,4 +1,4 @@
-import {bindDockSwipe,bindMapTouches} from './phone-gestures.mjs';
+import {bindDockSwipe,bindMapTouches,bindStateAtlasPan} from './phone-gestures.mjs';
 
 const phoneMedia='(max-width: 670px) and (pointer: coarse), (max-width: 950px) and (pointer: coarse) and (orientation: landscape)';
 const STAGES=['closed','tools','summary','atlas'];
@@ -8,7 +8,7 @@ const atlasKind=feature=>{
 };
 
 export function setupPhoneUI(map,{getSelected,hit,stateAt,insideState,insideMetro,preview,select,deselect,reset,
-  renderSelection,setFocus,fitFeature,refreshLabels,closeKey,beforeModeChange}){
+  renderSelection,setFocus,fitFeature,stateCorners,refreshLabels,closeKey,beforeModeChange}){
   const $=selector=>document.querySelector(selector);
   const media=matchMedia(phoneMedia), reducedMotion=matchMedia('(prefers-reduced-motion: reduce)');
   const app=$('.app'),content=$('.content'),shell=$('.map-shell'),header=$('.topbar');
@@ -26,6 +26,12 @@ export function setupPhoneUI(map,{getSelected,hit,stateAt,insideState,insideMetr
   let badgeGesture=false;
   const duration=()=>reducedMotion.matches?0:360;
   const camera=()=>({center:map.getCenter(),zoom:map.getZoom(),bearing:map.getBearing()});
+  const constrainPan=bindStateAtlasPan(map,()=>{
+    const rect=map.getContainer().getBoundingClientRect();
+    const top=atlasBack.offsetHeight;
+    const height=Math.max(1,Math.min(rect.height,sheet.getBoundingClientRect().top-rect.top)-top);
+    return {x:rect.width/2,y:top+height/2,width:rect.width,height};
+  },()=>leaveAtlas({fast:true,keepPanning:true}));
   function skipTransition(){
     app.classList.add('phone-atlas-fast');
     cancelAnimationFrame(fastFrame);
@@ -57,12 +63,12 @@ export function setupPhoneUI(map,{getSelected,hit,stateAt,insideState,insideMetr
     labelTimer=setTimeout(refreshLabels,reducedMotion.matches?0:250);
   }
 
-  function openAtlas({fit=true,returnCamera}={}){
+  function openAtlas({fit=true}={}){
     const feature=getSelected();
     const kind=atlasKind(feature);
     if(stage==='atlas'||!kind)return false;
     map.stop();
-    savedCamera=returnCamera||camera();
+    savedCamera=kind==='place'?camera():null;
     closeKey();
     document.activeElement?.blur();
     const atlasName=kind==='place'?'city':'state';
@@ -71,6 +77,7 @@ export function setupPhoneUI(map,{getSelected,hit,stateAt,insideState,insideMetr
     show('atlas');
     info.scrollTop=0;
     setFocus(feature);
+    if(kind==='state')constrainPan(stateCorners(feature));
     if(fit)fitAtlas(feature,duration());else map.resize();
     return true;
   }
@@ -80,17 +87,26 @@ export function setupPhoneUI(map,{getSelected,hit,stateAt,insideState,insideMetr
     map.resize();fitFeature(feature,atlasBack.offsetHeight,sheet.firstElementChild.offsetHeight,time);
   }
 
-  function leaveAtlas({restore=true,fast=false}={}){
+  function leaveAtlas({restore=true,fast=false,keepPanning=false}={}){
     if(stage!=='atlas')return;
     const target=savedCamera;
     savedCamera=null;
-    map.stop();
+    constrainPan(null);
+    if(keepPanning){
+      // Resizing MapLibre during a drag stops its native touch handler.
+      // Show the stats now and restore the header inset after the map settles.
+      app.classList.add('phone-atlas-panning');
+      map.once('moveend',()=>{
+        app.classList.remove('phone-atlas-panning');
+        map.resize();
+      });
+    }else map.stop();
     if(fast)skipTransition();
     delete app.dataset.phoneAtlasKind;
     show(getSelected()?'summary':'tools');
     setFocus(null,{fast});
-    map.resize();
-    if(restore){
+    if(!keepPanning)map.resize();
+    if(restore&&target){
       if(fast)map.jumpTo(target);
       else map.easeTo({...target,duration:duration()});
     }
@@ -99,7 +115,7 @@ export function setupPhoneUI(map,{getSelected,hit,stateAt,insideState,insideMetr
   function openCityFromState(feature){
     map.stop();
     const full=stage==='atlas';
-    stateReturn={state:getSelected(),full,camera:camera(),returnCamera:savedCamera,scroll:info.scrollTop,
+    stateReturn={state:getSelected(),full,camera:camera(),scroll:info.scrollTop,
       sheetHeight:dock.style.getPropertyValue('--phone-atlas-facts-height')};
     if(full)leaveAtlas({restore:false,fast:true});
     select(feature,{zoom:!full});
@@ -115,7 +131,7 @@ export function setupPhoneUI(map,{getSelected,hit,stateAt,insideState,insideMetr
     select(origin.state);
     if(origin.full){
       dock.style.setProperty('--phone-atlas-facts-height',origin.sheetHeight);
-      openAtlas({fit:false,returnCamera:origin.returnCamera});
+      openAtlas({fit:false});
     }
     map.jumpTo(origin.camera);
     info.scrollTop=origin.scroll;

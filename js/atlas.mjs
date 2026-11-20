@@ -277,9 +277,12 @@ function phoneDockHeight(){
   const height=dock.querySelector('.phone-grip').offsetHeight+$('.map-controls').offsetHeight+panel.offsetHeight;
   return Math.min(shell.clientHeight*.64,height+12);
 }
-function fitStateAtlas(feature,headerHeight,sheetHeight,duration){
+function stateAtlasBounds(feature){
   const inset=INSETS.find(i=>i.abbr===feature.properties.abbr);
-  const bounds=inset?.focusBounds?.map(point=>displayPoint(point,inset.abbr))||boundsOf(feature.geometry);
+  return inset?.focusBounds?.map(point=>displayPoint(point,inset.abbr))||boundsOf(feature.geometry);
+}
+function fitStateAtlas(feature,headerHeight,sheetHeight,duration){
+  const bounds=stateAtlasBounds(feature);
   if(!bounds)return;
   const height=map.getContainer().clientHeight,bearing=map.getBearing();
   const padding={top:Math.min(headerHeight+8,height*.14),bottom:Math.min(sheetHeight+12,height*.5),left:15,right:15};
@@ -354,8 +357,7 @@ function openDesktopAtlas({frame=true,returnCamera}={}){
   setAtlasFocus(selected);
   if(kind==='metro')showMetroPlaces(selected);
   if(frame&&kind!=='place'){
-    const inset=kind==='state'&&INSETS.find(item=>item.abbr===selected.properties.abbr);
-    const bounds=inset?.focusBounds?.map(point=>displayPoint(point,inset.abbr))||boundsOf(selected.geometry);
+    const bounds=kind==='state'?stateAtlasBounds(selected):boundsOf(selected.geometry);
     if(bounds)fitAtCurrentBearing(bounds,{padding:{top:22,bottom:26,left:22,right:34},maxZoom:13,duration:atlasDuration()});
   }
 }
@@ -951,6 +953,12 @@ function setupUI() {
       desktopStateReturn=null;
       leaveDesktopAtlas();
       setSidebarHidden(false);
+    },
+    stateCorners(feature){
+      const bounds=stateAtlasBounds(feature);
+      if(!bounds)return null;
+      const box=new maplibregl.LngLatBounds(bounds);
+      return [box.getNorthWest(),box.getNorthEast(),box.getSouthEast(),box.getSouthWest()];
     },
     setFocus:setAtlasFocus,fitFeature:fitPhoneAtlas,closeKey:()=>{if(!key.hidden)setKey(false);},
   });

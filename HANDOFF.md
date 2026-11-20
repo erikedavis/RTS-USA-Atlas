@@ -1,4 +1,10 @@
-# USAtlas V0.8B preview
+# USAtlas V0.8C preview
+
+V0.8C covers phone State Atlas only. Swiping down, using the exit chevron or tapping open water returns to compact stats at the current camera. A light drag beyond the state's frame meets resistance and springs back. A longer drag returns to stats while the map continues following the finger.
+
+The PC preview uses port **8020**. The phone preview uses port **8019**. Test the two exit gestures and the drag release in iPhone Safari.
+
+## V0.8B preview
 
 V0.8B adds desktop Atlas panels for states, cities and metros. The right sidebar widens in Atlas and has a chevron to hide and restore it. Back restores the previous center, zoom and bearing, including when following a linked city from a state. Puerto Rico keeps its on-island abbreviation and bottom inset title. Wide desktop views give state abbreviations the same placement priority as the phone.
 

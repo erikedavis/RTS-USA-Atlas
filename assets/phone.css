@@ -91,7 +91,7 @@
 .phone-layout .phone-state-facts .record-value {font-size:10px;}
 .phone-layout .panel-content:has(.phone-state-overview) > :is(.census-record,.panel-action,.facts-date,.fact-sources) {display:none;}
 
-.phone-layout[data-phone-stage='atlas'] .content {margin-top:0;}
+.phone-layout:is([data-phone-stage='atlas'],.phone-atlas-panning) .content {margin-top:0;}
 .phone-layout[data-phone-stage='atlas'] :is(.topbar,.rotation-tools) {transform:translateY(-125%);opacity:0;pointer-events:none;}
 .phone-layout[data-phone-stage='atlas'] :is(.dev-zoom,.map-key-toggle,.map-key,.phone-home,.phone-grip,.inset-label) {display:none;}
 .phone-layout .state-label {transition:opacity .18s ease;}

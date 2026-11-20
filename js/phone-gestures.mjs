@@ -108,6 +108,62 @@ export function bindMapTouches(surface,{enabled,hit,preview,hold,deliberate,sing
   }};
 }
 
+export function bindStateAtlasPan(map,visibleArea,leaveAtlas){
+  const surface=map.getContainer();
+  let corners=null,gesture=null;
+
+  surface.addEventListener('touchstart',event=>{
+    gesture=corners&&event.touches.length===1?{area:visibleArea(),spring:null,released:false}:null;
+  },{passive:true,capture:true});
+  surface.addEventListener('touchcancel',()=>{gesture=null;},{passive:true,capture:true});
+
+  function constrain(transform){
+    const drag=gesture;
+    if(!drag||drag.released||!map.dragPan.isActive())return {};
+    const points=corners.map(corner=>transform.locationToScreenPoint(corner));
+    const left=Math.min(...points.map(point=>point.x)),right=Math.max(...points.map(point=>point.x));
+    const top=Math.min(...points.map(point=>point.y)),bottom=Math.max(...points.map(point=>point.y));
+    const area=drag.area;
+
+    // At closer zoom, allow travel within the state before adding resistance.
+    const overflow=(distance,span,size)=>{
+      const range=16+Math.max(0,(span-size)/2);
+      return distance-Math.max(-range,Math.min(range,distance));
+    };
+    const x=overflow((left+right)/2-area.x,right-left,area.width);
+    const y=overflow((top+bottom)/2-area.y,bottom-top,area.height);
+    const excess=Math.hypot(x,y);
+    const center=transform.centerPoint;
+    const resisted=excess?{center:transform.screenPointToLocation(center.add({x:x*.68,y:y*.68}))}:{};
+    if(excess>=62){
+      drag.released=true;
+      queueMicrotask(()=>{if(gesture===drag)leaveAtlas();});
+    }else{
+      drag.spring=excess?transform.screenPointToLocation(center.add({x,y})):null;
+    }
+    return resisted;
+  }
+
+  map.on('dragend',()=>{
+    const drag=gesture;
+    if(!drag||drag.released)return;
+    gesture=null;
+    // MapLibre schedules inertia after dragend. Replace it with the edge
+    // rebound so a short flick cannot coast out of the focused state.
+    queueMicrotask(()=>{
+      if(!corners||gesture)return;
+      map.stop();
+      if(drag.spring)map.easeTo({center:drag.spring,duration:180});
+    });
+  });
+
+  return bounds=>{
+    corners=bounds;
+    gesture=null;
+    map.setTransformCameraUpdate(bounds?constrain:null);
+  };
+}
+
 export function bindDockSwipe(surface,{enabled=()=>true,onSwipe,follow=()=>{}}){
   let start, swipedAt=-Infinity;
   surface.addEventListener('pointerdown',event=>{
