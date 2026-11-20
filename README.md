@@ -1,4 +1,4 @@
-# USAtlas V0.8D preview
+# USAtlas V0.8E preview
 
 Requires Python 3. Clone the repository or extract its source ZIP, then run **Start_Atlas.cmd** from that folder. The launcher opens **http://127.0.0.1:8020/**.
 [Development handoff](HANDOFF.md) covers the current preview, repeatable checks, and open work.
@@ -13,7 +13,7 @@ Requires Python 3. Clone the repository or extract its source ZIP, then run **St
 
 - Map view starts with a compact header, Home and the map key in the bottom corners, and a chevron in the center. Swipe the chevron up to reveal **CTY**, **MSA**, and **LAYERS**. The chevrons can also be tapped. **LAYERS** is reserved for a future update.
 - A quick double-tap on the map zooms two levels around the tap. Tap or double-tap a state abbreviation to fit the state and show its compact facts. With a state selected, tap another state's land to switch, or use the **×** by the chevrons to clear it. To select from unselected state land, tap twice with a 0.5 to 1.04 second gap.
-- Hold on a state, its abbreviation, or a city for about 0.6 seconds to open its full atlas. A city hold keeps the current zoom. Tap a city name to read its facts in place or its symbol to zoom to it. A slower double-tap on the city name opens compact facts. Swipe up on the facts or tool bar to expand them. Tap outside the highlighted metro to clear the city and keep your current map position.
+- Hold on a state or its abbreviation for about 0.6 seconds to open State Atlas. Hold a city name to fit the city above its Atlas facts. A city-symbol hold opens City Atlas at the current zoom. Drag the map far enough to move the city out of the center and City Atlas returns to compact stats while the map follows your finger. Tap a city name to read facts in place or tap its symbol to zoom. Tap outside the highlighted metro to clear the city at the current map position.
 - Tap a capital or largest city in state facts to visit the corresponding city view. **BACK** returns to the state facts or atlas you came from. One tap on another state's land switches the selection. In State Atlas, swipe down on the stats or tap open water to return to compact stats at the current camera position. A light pull beyond the state's frame springs back. A deliberate drag away returns to stats and continues panning with your finger.
 - State abbreviations have priority at wide scales and in rotated views. Puerto Rico is labeled **PR** inside the island when it fits, with the inset name along the bottom.
 - Population, capital, largest city and total area fit into the compact state facts. When capital and largest city are the same, they share one entry.

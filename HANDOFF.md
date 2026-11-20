@@ -1,4 +1,8 @@
-# USAtlas V0.8D preview
+# USAtlas V0.8E preview
+
+On phones, a city-name hold opens City Atlas and frames the city above the facts. Missing boundaries use a close view of the city marker. Panning the city out of the center returns to compact stats while keeping the camera and drag. The PC preview uses port 8020 and the phone preview uses port 8019.
+
+## V0.8D preview
 
 Phone and desktop use the same CTY and MSA scope. When enabled with a state selected, each overlay shows the areas that belong to that state at any zoom or bearing. A cross-state metro appears in every state it covers. Clear the selection for nationwide coverage. The preview ports are 8020 for PC and 8019 for phone.
 

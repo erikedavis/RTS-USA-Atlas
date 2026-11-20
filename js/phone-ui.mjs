@@ -8,7 +8,7 @@ const atlasKind=feature=>{
 };
 
 export function setupPhoneUI(map,{getSelected,hit,stateAt,insideState,insideMetro,preview,select,deselect,reset,
-  renderSelection,setFocus,fitFeature,stateCorners,refreshLabels,closeKey,beforeModeChange}){
+  renderSelection,setFocus,fitFeature,stateCorners,cityBounds,fitCity,refreshLabels,closeKey,beforeModeChange}){
   const $=selector=>document.querySelector(selector);
   const media=matchMedia(phoneMedia), reducedMotion=matchMedia('(prefers-reduced-motion: reduce)');
   const app=$('.app'),content=$('.content'),shell=$('.map-shell'),header=$('.topbar');
@@ -23,15 +23,20 @@ export function setupPhoneUI(map,{getSelected,hit,stateAt,insideState,insideMetr
   layers.type='button';layers.id='phone-layers';layers.textContent='LAYERS';layers.disabled=true;layers.hidden=true;
   controls.append(layers);shell.append(dock,atlasBack);
   let active=false,stage='closed',savedCamera=null,stateReturn=null,labelTimer=0,resizeFrame=0,fastFrame=0;
+  let cityView=null;
   let badgeGesture=false;
   const duration=()=>reducedMotion.matches?0:360;
   const camera=()=>({center:map.getCenter(),zoom:map.getZoom(),bearing:map.getBearing()});
-  const constrainPan=bindStateAtlasPan(map,()=>{
+  function visibleAtlasArea(){
     const rect=map.getContainer().getBoundingClientRect();
     const top=atlasBack.offsetHeight;
-    const height=Math.max(1,Math.min(rect.height,sheet.getBoundingClientRect().top-rect.top)-top);
+    // Use the final city sheet height while the dock animates open.
+    const bottom=cityView?rect.height-panel.offsetHeight-factsGrip.offsetHeight-sheet.firstElementChild.clientTop:
+      Math.min(rect.height,sheet.getBoundingClientRect().top-rect.top);
+    const height=Math.max(1,bottom-top);
     return {x:rect.width/2,y:top+height/2,width:rect.width,height};
-  },()=>leaveAtlas({fast:true,keepPanning:true}));
+  }
+  const constrainPan=bindStateAtlasPan(map,visibleAtlasArea,()=>leaveAtlas({fast:true,keepPanning:true}));
   function skipTransition(){
     app.classList.add('phone-atlas-fast');
     cancelAnimationFrame(fastFrame);
@@ -63,12 +68,13 @@ export function setupPhoneUI(map,{getSelected,hit,stateAt,insideState,insideMetr
     labelTimer=setTimeout(refreshLabels,reducedMotion.matches?0:250);
   }
 
-  function openAtlas({fit=true}={}){
+  function openAtlas({fit=true,frameCity=false}={}){
     const feature=getSelected();
     const kind=atlasKind(feature);
     if(stage==='atlas'||!kind)return false;
     map.stop();
     savedCamera=kind==='place'?camera():null;
+    cityView=kind==='place'?{frameCity,bounds:undefined,anchor:null,panning:false,adjusted:false}:null;
     closeKey();
     document.activeElement?.blur();
     const atlasName=kind==='place'?'city':'state';
@@ -79,18 +85,32 @@ export function setupPhoneUI(map,{getSelected,hit,stateAt,insideState,insideMetr
     setFocus(feature);
     if(kind==='state')constrainPan(stateCorners(feature));
     if(fit)fitAtlas(feature,duration());else map.resize();
+    if(frameCity){
+      const view=cityView;
+      cityBounds(feature).then(bounds=>{
+        if(cityView!==view||view.adjusted)return;
+        view.bounds=bounds;
+        fitAtlas(feature,duration());
+      });
+    }
     return true;
   }
 
   function fitAtlas(feature,time){
     dock.style.removeProperty('--phone-atlas-facts-height');
-    map.resize();fitFeature(feature,atlasBack.offsetHeight,sheet.firstElementChild.offsetHeight,time);
+    map.resize();
+    if(cityView?.adjusted)return;
+    if(cityView)cityView.anchor=null;
+    if(cityView?.frameCity){
+      if(cityView.bounds!==undefined)fitCity(cityView.bounds,visibleAtlasArea(),time);
+    }else fitFeature(feature,atlasBack.offsetHeight,sheet.firstElementChild.offsetHeight,time);
   }
 
   function leaveAtlas({restore=true,fast=false,keepPanning=false}={}){
     if(stage!=='atlas')return;
     const target=savedCamera;
     savedCamera=null;
+    cityView=null;
     constrainPan(null);
     if(keepPanning){
       // Resizing MapLibre during a drag stops its native touch handler.
@@ -186,7 +206,7 @@ export function setupPhoneUI(map,{getSelected,hit,stateAt,insideState,insideMetr
         leaveAtlas({restore:false,fast:true});
       }
       select(feature);
-      if(atlasKind(feature))openAtlas();
+      if(atlasKind(feature))openAtlas({frameCity:feature.properties.kind==='place'&&result.layer?.startsWith('city-name')});
       return true;
     },
     deliberate(feature){
@@ -234,6 +254,37 @@ export function setupPhoneUI(map,{getSelected,hit,stateAt,insideState,insideMetr
     },
   });
   map.on('zoomstart',mapTouches.onZoomStart);
+  function rememberCityCenter(view){
+    if(view.anchor)return;
+    const {x,y}=visibleAtlasArea();
+    view.anchor=map.unproject([x,y]);
+  }
+  map.getContainer().addEventListener('touchstart',event=>{
+    const view=cityView;
+    if(!view)return;
+    if(event.touches.length>1){
+      view.panning=false;
+      view.adjusted=true;
+    }else rememberCityCenter(view);
+  },{passive:true,capture:true});
+  map.on('dragstart',event=>{
+    const view=cityView;
+    if(!view||event.originalEvent?.touches?.length!==1)return;
+    rememberCityCenter(view);
+    view.adjusted=true;
+    view.panning=true;
+  });
+  map.on('move',()=>{
+    const view=cityView;
+    if(!view?.panning)return;
+    const area=visibleAtlasArea(),point=map.project(view.anchor);
+    if(Math.abs(point.x-area.x)<=area.width/4&&Math.abs(point.y-area.y)<=area.height/4)return;
+    view.panning=false;
+    queueMicrotask(()=>{
+      if(cityView===view)leaveAtlas({restore:false,fast:true,keepPanning:map.isMoving()});
+    });
+  });
+  map.on('moveend',()=>{if(cityView)cityView.panning=false;});
 
   bindDockSwipe(grip,{enabled:()=>active,onSwipe:step,follow:y=>dock.style.setProperty('--phone-drag',`${y}px`)});
   bindDockSwipe(tray,{enabled:()=>active,onSwipe:step,follow:y=>dock.style.setProperty('--phone-drag',`${y}px`)});

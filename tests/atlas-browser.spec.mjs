@@ -7,7 +7,7 @@ async function assertRendered(page, testInfo) {
   const response = await page.goto('/', { waitUntil: 'domcontentloaded' });
   expect(response?.ok(), 'The atlas must respond over HTTP').toBe(true);
   await expect(page.locator('#map-loading'), 'Atlas loading overlay must disappear').toBeHidden({ timeout: 50_000 });
-  await expect(page.locator('meta[name="atlas-version"]')).toHaveAttribute('content', 'ALPHA 0.8D');
+  await expect(page.locator('meta[name="atlas-version"]')).toHaveAttribute('content', 'ALPHA 0.8E');
   await expect(page.locator('canvas.maplibregl-canvas')).toHaveCount(1);
   const renderer = await page.evaluate(() => {
     const canvas = document.querySelector('canvas.maplibregl-canvas');
@@ -40,7 +40,7 @@ async function screenshot(page, testInfo, label) {
 async function exposeMap(page) {
   await page.route('**/js/atlas.mjs?*', async route => {
     const response = await route.fetch();
-    await route.fulfill({ response, body: (await response.text()) + '\nexport { map };' });
+    await route.fulfill({ response, body: (await response.text()) + '\nexport { map, cityLayers };' });
   });
 }
 
@@ -48,6 +48,7 @@ async function readMap(page) {
   await page.evaluate(async () => {
     const atlas = await import(document.querySelector('script[type=module]').src);
     window.testMap = atlas.map;
+    window.testCityLayers = atlas.cityLayers;
   });
 }
 
@@ -333,4 +334,94 @@ test.describe('phone viewport', () => {
     await expect(page.locator('#panel-content h1')).toHaveText('Kansas');
     expect(await page.evaluate(() => testMap.getPaintProperty('state-surface', 'fill-opacity'))).toBe(.98);
   });
+
+  for (const mode of ['portrait', 'rotated landscape', 'missing outline']) {
+    test(`a city-name hold opens and frames City Atlas in ${mode}`, async ({ page }, testInfo) => {
+      const bearing = mode === 'rotated landscape' ? 38 : 0;
+      const fallback = mode === 'missing outline';
+      if (bearing) await page.setViewportSize({ width: 744, height: 390 });
+      if (fallback) {
+        await page.route('**/data/places/27_shapes.geojson', route =>
+          route.fulfill({ json: { type: 'FeatureCollection', features: [] } }));
+      }
+      await exposeMap(page);
+      await assertRendered(page, testInfo);
+      await readMap(page);
+      await page.evaluate(bearing => testMap.jumpTo({ center: [-92.76, 44.10], zoom: 7.2, bearing }), bearing);
+
+      const label = await (await page.waitForFunction(() => {
+        const city = testCityLayers.getLayoutState().items.find(item => item.id === '2754880');
+        if (!city?.placement) return;
+        const { x0, x1, y0, y1 } = city.placement.box;
+        const x = (x0 + x1) / 2, y = (y0 + y1) / 2;
+        const rect = testMap.getContainer().getBoundingClientRect();
+        if (testCityLayers.labelNear({ x, y })?.properties.geoid !== city.id ||
+            document.elementFromPoint(x + rect.left, y + rect.top) !== testMap.getCanvas()) return;
+        return { x: x + rect.left, y: y + rect.top, marker: testMap.unproject([city.x, city.y]).toArray() };
+      })).jsonValue();
+
+      const cdp = await page.context().newCDPSession(page);
+      const touch = (type, x, y) => cdp.send('Input.dispatchTouchEvent', {
+        type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }]
+      });
+      await touch('touchStart', label.x, label.y);
+      const app = page.locator('.app');
+      await expect(app).toHaveAttribute('data-phone-atlas-kind', 'place');
+      await touch('touchEnd');
+      await expect(page.locator('#panel-content h1')).toHaveText('Rochester');
+      await expect.poll(async () => (await camera(page))[2]).toBeGreaterThan(8);
+      await waitForCamera(page);
+      if (fallback) expect((await camera(page))[2]).toBe(8.8);
+      expect((await camera(page))[3]).toBe(bearing);
+
+      const framed = await page.evaluate(async ({ marker, fallback }) => {
+        const map = testMap, rect = map.getContainer().getBoundingClientRect();
+        const top = document.querySelector('#phone-atlas-back').getBoundingClientRect().bottom - rect.top;
+        const bottom = document.querySelector('.phone-sheet').getBoundingClientRect().top - rect.top;
+        let corners = [marker];
+        if (!fallback) {
+          const data = await fetch('/data/places/27_shapes.geojson').then(response => response.json());
+          const geometry = data.features.find(feature => feature.properties.geoid === '2754880').geometry;
+          const vertices = geometry.coordinates.flat(geometry.type === 'MultiPolygon' ? 2 : 1);
+          const lngs = vertices.map(point => point[0]), lats = vertices.map(point => point[1]);
+          const west = Math.min(...lngs), east = Math.max(...lngs), south = Math.min(...lats), north = Math.max(...lats);
+          corners = [[west, south], [west, north], [east, south], [east, north]];
+        }
+        const points = corners.map(point => map.project(point));
+        const left = Math.min(...points.map(point => point.x)), right = Math.max(...points.map(point => point.x));
+        const upper = Math.min(...points.map(point => point.y)), lower = Math.max(...points.map(point => point.y));
+        return {
+          xError: Math.abs((left + right - rect.width) / 2),
+          yError: Math.abs((upper + lower - top - bottom) / 2),
+          inside: left >= 0 && upper >= top && right <= rect.width && lower <= bottom,
+          normalBackground: map.getPaintProperty('state-surface', 'fill-opacity') === .98
+        };
+      }, { marker: label.marker, fallback });
+      expect(framed.inside).toBe(true);
+      expect(framed.xError).toBeLessThan(4);
+      expect(framed.yError).toBeLessThan(4);
+      expect(framed.normalBackground).toBe(true);
+
+      if (mode !== 'portrait') return;
+      const framedCamera = await camera(page);
+      await touch('touchStart', 65, 114);
+      await touch('touchMove', 85, 114);
+      await expect.poll(async () => (await camera(page))[0]).toBeLessThan(framedCamera[0]);
+      await page.waitForTimeout(150);
+      await touch('touchEnd');
+      await waitForCamera(page);
+      await expect(app).toHaveAttribute('data-phone-stage', 'atlas');
+
+      await touch('touchStart', 72, 220);
+      for (let x = 82; x <= 202; x += 10) await touch('touchMove', x, 220);
+      await expect(app).toHaveAttribute('data-phone-stage', 'summary', { timeout: 3000 });
+      const release = await camera(page);
+      for (let x = 212; x <= 252; x += 10) await touch('touchMove', x, 220);
+      await expect.poll(async () => (await camera(page))[0]).toBeLessThan(release[0]);
+      await touch('touchEnd');
+      await waitForCamera(page);
+      await expect(page.locator('#panel-content h1')).toHaveText('Rochester');
+      expect((await camera(page)).slice(2)).toEqual(framedCamera.slice(2));
+    });
+  }
 });

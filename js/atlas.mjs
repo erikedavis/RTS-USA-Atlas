@@ -303,6 +303,18 @@ function fitPhoneAtlas(feature,headerHeight,sheetHeight,duration){
   const bottom=Math.min(sheetHeight,map.getContainer().clientHeight*.52);
   map.easeTo({center:cityAtlas?.point||map.getCenter(),offset:[0,(headerHeight-bottom)/2],duration});
 }
+function fitPhoneCityAtlas(bounds,area,duration){
+  const height=map.getContainer().clientHeight;
+  const bearing=map.getBearing();
+  if(bounds){
+    const margin=Math.min(12,area.height/4);
+    const padding={top:area.y-area.height/2+margin,bottom:height-area.y-area.height/2+margin,left:12,right:12};
+    const fitted=map.cameraForBounds(bounds,{bearing,padding,maxZoom:13});
+    if(fitted){map.easeTo({...fitted,bearing,duration});return;}
+  }
+  map.easeTo({center:cityAtlas?.point||map.getCenter(),zoom:Math.max(map.getZoom(),8.8),
+    offset:[0,area.y-height/2],bearing,duration});
+}
 const cityMetroLayers=['atlas-metro-fill','atlas-metro-outline'];
 function setAtlasFocus(feature,{fast=false}={}){
   if(cityAtlas){
@@ -555,11 +567,22 @@ function updateCountyView(){
     console.warn('County layer:',error);
   });
 }
+const placePolygons=fips=>cacheFetch(shapeCache,fips,`${BASE}places/${fips}_shapes.geojson`);
+async function cityAtlasBounds(feature){
+  const {state_fips:fips,geoid}=feature.properties;
+  if(!fips)return null;
+  try{
+    const data=await placePolygons(fips);
+    return boundsOf(data.features.find(place=>place.properties.geoid===geoid)?.geometry);
+  }catch{
+    return null;
+  }
+}
 async function loadPlacePolygons(fips) {
   if(!fips||detailPolygonState===fips)return;
   detailPolygonState=fips;
   try {
-    const data=await cacheFetch(shapeCache,fips,`${BASE}places/${fips}_shapes.geojson`);
+    const data=await placePolygons(fips);
     if(detailPolygonState===fips){map.getSource('place-areas').setData(data);applySelection();}
   }catch(error){console.warn('Place boundaries:',error);}
 }
@@ -981,7 +1004,8 @@ function setupUI() {
       const box=new maplibregl.LngLatBounds(bounds);
       return [box.getNorthWest(),box.getNorthEast(),box.getSouthEast(),box.getSouthWest()];
     },
-    setFocus:setAtlasFocus,fitFeature:fitPhoneAtlas,closeKey:()=>{if(!key.hidden)setKey(false);},
+    setFocus:setAtlasFocus,fitFeature:fitPhoneAtlas,cityBounds:cityAtlasBounds,fitCity:fitPhoneCityAtlas,
+    closeKey:()=>{if(!key.hidden)setKey(false);},
   });
   const viewMenu=$('#view-menu');
   document.addEventListener('click',event=>{
