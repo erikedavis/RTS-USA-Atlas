@@ -81,6 +81,9 @@ export function createCityLayers(map,cities,{isNational,metroOverview,phoneViewp
   });
  }
  function schedule(){if(!scheduled&&!map.isMoving())scheduled=requestAnimationFrame(layout);}
+ function labelReservations(){
+  return result.items.flatMap(item=>item.placement?[cityMarkerBox(item),item.placement.box]:[cityMarkerBox(item)]);
+ }
  function labelNear({x,y}){
   let best=null,bestGap=7,bestCenter=Infinity;
   for(const item of result.items){
@@ -96,7 +99,7 @@ export function createCityLayers(map,cities,{isNational,metroOverview,phoneViewp
   return best;
  }
  map.on('movestart',clearHover);map.getCanvas().addEventListener('mouseleave',()=>hover());
- return {hitLayers:['city-name-hover','city-name-0','city-hit'],hover,clearHover,labelNear,
+ return {hitLayers:['city-name-hover','city-name-0','city-hit'],hover,clearHover,labelNear,labelReservations,
   update(nextState,selected){
     const nextId=selected?.properties.kind==='place'?selected.properties.geoid:'';
     if(state===nextState&&selectedId===nextId)return;

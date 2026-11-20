@@ -1,11 +1,11 @@
 const HOLD_MS=600;
 // Match the bundled MapLibre double-tap window before committing a single tap.
-const MAP_DOUBLE_TAP_MS=500, DELIBERATE_TAP_MS=800, TAP_SPACING=30;
+const MAP_DOUBLE_TAP_MS=500, DELIBERATE_TAP_MS=1040, TAP_SPACING=30;
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const position=touch=>({x:touch.clientX,y:touch.clientY});
 
-export function bindMapTouches(surface,{enabled,hit,preview,hold,deliberate,single,immediate,amplifyZoom}){
-  let finger=null, pending=null, timer=0;
+export function bindMapTouches(surface,{enabled,hit,preview,hold,deliberate,single,immediate,amplifyZoom,badgeTap,setBadgeGesture,hasState}){
+  let finger=null,pending=null,lastCityTap=null,lastBadgeTap=null,timer=0;
   const tapEvents=new WeakMap();
   function clearPending(){
     clearTimeout(timer);
@@ -16,26 +16,32 @@ export function bindMapTouches(surface,{enabled,hit,preview,hold,deliberate,sing
     clearTimeout(finger?.holdTimer);
     finger=null;
     clearPending();
+    lastCityTap=lastBadgeTap=null;
+    setBadgeGesture(false);
   }
   surface.addEventListener('touchstart',event=>{
     if(!enabled())return;
     if(event.touches.length!==1){cancel();return;}
     const at=position(event.touches[0]),now=event.timeStamp;
-    const first=pending&&now-pending.time<=DELIBERATE_TAP_MS&&distance(pending.at,at)<TAP_SPACING?pending:null;
-    if(first)clearTimeout(timer);else clearPending();
-    const touch={at,first,target:event.target,held:false,moved:false};
+    const near=previous=>previous&&now-previous.time<=DELIBERATE_TAP_MS&&distance(previous.at,at)<TAP_SPACING;
+    const first=near(pending)?pending:near(lastCityTap)?lastCityTap:null;
+    const badge=event.target.closest?.('.state-label');
+    const repeat=lastBadgeTap&&now-lastBadgeTap.time<MAP_DOUBLE_TAP_MS&&distance(lastBadgeTap.at,at)<TAP_SPACING;
+    if(badge||repeat)setBadgeGesture(true);
+    if(first&&!badge&&!repeat)clearTimeout(timer);else clearPending();
+    const touch={at,first,target:event.target,badge,repeat,held:false,moved:false};
     finger=touch;
     touch.holdTimer=setTimeout(()=>{
       clearPending();
       touch.held=true;
-      touch.feedback=hold(hit(touch.at,touch.target));
+      touch.feedback=(!touch.repeat||touch.badge)&&hold(hit(touch.at,touch.target));
     },HOLD_MS);
   },{passive:true,capture:true});
   surface.addEventListener('touchmove',event=>{
     if(!finger)return;
     if(event.touches.length!==1){cancel();return;}
     if(distance(finger.at,position(event.touches[0]))>9){
-      finger.moved=true;clearTimeout(finger.holdTimer);clearPending();
+      finger.moved=true;clearTimeout(finger.holdTimer);clearPending();lastCityTap=null;
     }
   },{passive:true,capture:true});
   surface.addEventListener('touchend',event=>{
@@ -43,12 +49,23 @@ export function bindMapTouches(surface,{enabled,hit,preview,hold,deliberate,sing
     finger=null;
     if(!touch)return;
     clearTimeout(touch.holdTimer);
+    if(touch.badge||touch.repeat)requestAnimationFrame(()=>{if(!finger?.badge&&!finger?.repeat)setBadgeGesture(false);});
     if(touch.held){
       if(event.cancelable)event.preventDefault();
       if(touch.feedback)navigator.vibrate?.(14);
       return;
     }
     const at=position(event.changedTouches[0]);
+    if(touch.badge||touch.repeat){
+      if(!touch.moved&&distance(touch.at,at)<=9){
+        if(event.cancelable)event.preventDefault();
+        const result=touch.repeat?lastBadgeTap.result:hit(at,touch.badge);
+        lastBadgeTap=touch.repeat?null:{at,time:event.timeStamp,result};
+        // MapLibre stops the first camera ease on the next touchstart.
+        badgeTap(result);
+      }
+      return;
+    }
     tapEvents.set(event,touch.at);
     if(touch.moved||distance(touch.at,at)>9)return;
     const first=touch.first;
@@ -62,16 +79,19 @@ export function bindMapTouches(surface,{enabled,hit,preview,hold,deliberate,sing
       if(event.cancelable)event.preventDefault();
       return;
     }
-    if(gap<=DELIBERATE_TAP_MS&&first.preview&&result?.layer==='state-hit'&&
+    const cityName=result?.layer.startsWith('city-name');
+    if(gap<=DELIBERATE_TAP_MS&&((first.slowState&&result?.layer==='state-hit')||(cityName&&first.cityName))&&
       result.feature.properties.geoid===first.result.feature.properties.geoid){
-      clearPending();deliberate(result.feature);return;
+      clearPending();lastCityTap=null;deliberate(result.feature);return;
     }
     clearPending();
     const bareState=result?.layer==='state-hit';
-    const tap={at:touch.at,result,time:event.timeStamp,preview:bareState};
+    const slowState=bareState&&!hasState();
+    const tap={at:touch.at,result,time:event.timeStamp,preview:slowState,slowState,cityName};
     pending=tap;
-    if(bareState)preview(result.feature);
-    timer=setTimeout(()=>{clearPending();single(result,at,touch.target);},bareState?DELIBERATE_TAP_MS:MAP_DOUBLE_TAP_MS);
+    lastCityTap=cityName?tap:null;
+    if(slowState)preview(result.feature);
+    timer=setTimeout(()=>{clearPending();single(result,at,touch.target);},slowState?DELIBERATE_TAP_MS:MAP_DOUBLE_TAP_MS);
   },{passive:false,capture:true});
   surface.addEventListener('touchcancel',cancel,{passive:true,capture:true});
   surface.addEventListener('contextmenu',event=>{if(enabled())event.preventDefault();});
@@ -80,6 +100,7 @@ export function bindMapTouches(surface,{enabled,hit,preview,hold,deliberate,sing
     if(!at||!enabled())return;
     tapEvents.delete(event.originalEvent);
     clearPending();
+    lastCityTap=null;
     amplifyZoom(at);
   }};
 }

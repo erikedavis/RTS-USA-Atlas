@@ -16,12 +16,14 @@ export function setupPhoneUI(map,{getSelected,hit,insideState,insideMetro,previe
   const panel=$('#info-panel'),info=$('#panel-content'),controls=$('.map-controls');
   const dock=$('#phone-dock'),tray=$('#phone-tray'),sheet=$('.phone-sheet');
   const up=$('#phone-up'),down=$('#phone-down'),grip=$('#phone-grip');
+  const clear=$('#phone-clear');
   const atlasBack=$('#phone-atlas-back'),factsGrip=$('#phone-facts-grip'),home=$('#phone-home');
   const historyBack=$('#phone-history-back');
   const layers=document.createElement('button');
   layers.type='button';layers.id='phone-layers';layers.textContent='LAYERS';layers.disabled=true;layers.hidden=true;
   controls.append(layers);shell.append(dock,atlasBack);
   let active=false,stage='closed',savedCamera=null,stateReturn=null,labelTimer=0,resizeFrame=0,fastFrame=0;
+  let badgeGesture=false;
   const duration=()=>reducedMotion.matches?0:360;
   const camera=()=>({center:map.getCenter(),zoom:map.getZoom(),bearing:map.getBearing()});
   function skipTransition(){
@@ -42,6 +44,7 @@ export function setupPhoneUI(map,{getSelected,hit,insideState,insideMetro,previe
     const feature=getSelected();
     up.hidden=full||stage==='summary'&&!atlasKind(feature)||stage==='tools'&&!feature;
     down.hidden=full||stage==='closed';
+    clear.hidden=full||feature?.properties.kind!=='state';
     up.setAttribute('aria-label',{
       closed:'Show map tools',tools:'Show selection details',summary:`Open ${atlasKind(feature)==='place'?'city':'state'} atlas`,
     }[stage]||'Open atlas');
@@ -67,9 +70,7 @@ export function setupPhoneUI(map,{getSelected,hit,insideState,insideMetro,previe
     for(const handle of [atlasBack,factsGrip])handle.setAttribute('aria-label',`Leave ${atlasName} atlas`);
     show('atlas');
     info.scrollTop=0;
-    setFocus(feature,()=>{
-      if(fit&&stage==='atlas'&&getSelected()===feature)fitAtlas(feature,duration());
-    });
+    setFocus(feature);
     if(fit)fitAtlas(feature,duration());else map.resize();
     return true;
   }
@@ -87,7 +88,7 @@ export function setupPhoneUI(map,{getSelected,hit,insideState,insideMetro,previe
     if(fast)skipTransition();
     delete app.dataset.phoneAtlasKind;
     show(getSelected()?'summary':'tools');
-    setFocus(null,undefined,{fast});
+    setFocus(null,{fast});
     map.resize();
     if(restore){
       if(fast)map.jumpTo(target);
@@ -137,25 +138,38 @@ export function setupPhoneUI(map,{getSelected,hit,insideState,insideMetro,previe
 
   const mapTouches=bindMapTouches(map.getContainer(),{
     enabled:()=>active,hit,preview,
+    hasState:()=>getSelected()?.properties.kind==='state',
+    setBadgeGesture(blocked){
+      if(blocked===badgeGesture)return;
+      badgeGesture=blocked;
+      if(blocked)map.doubleClickZoom.disable();else map.doubleClickZoom.enable();
+    },
+    badgeTap(result){
+      if(!result?.feature)return;
+      requestAnimationFrame(()=>{
+        if(!active)return;
+        leaveAtlas({restore:false,fast:true});
+        select(result.feature,{zoom:true,duration:reducedMotion.matches?0:400});
+      });
+    },
     hold(result){
       if(!result?.feature)return false;
       const {feature}=result;
       const current=getSelected();
-      if(current?.properties.kind==='place'&&feature.properties.kind==='place'&&
-        current.properties.geoid!==feature.properties.geoid){
+      if(stage==='atlas'){
+        if(current.properties.geoid===feature.properties.geoid||!atlasKind(feature))return false;
         leaveAtlas({restore:false,fast:true});
-        select(feature);
-        return true;
       }
-      if(stage==='atlas')return false;
       select(feature);
       if(atlasKind(feature))openAtlas();
       return true;
     },
     deliberate(feature){
-      if(stage==='atlas')return;
-      if(feature.properties.geoid===getSelected()?.properties.geoid)openAtlas();
-      else select(feature);
+      if(stage==='atlas'){
+        if(feature.properties.kind!=='place'||getSelected()?.properties.kind!=='place')return;
+        leaveAtlas({restore:false,fast:true});
+      }
+      select(feature);
     },
     immediate(result,at,target){
       if(stage!=='atlas')return false;
@@ -181,8 +195,10 @@ export function setupPhoneUI(map,{getSelected,hit,insideState,insideMetro,previe
         }
         return;
       }
-      const zoom=layer==='state-label'||layer==='city-hit'||layer==='places-hit';
-      if(zoom||layer?.startsWith('city-name')||layer==='county-hit')select(result.feature,{zoom});
+      const zoom=layer==='city-hit'||layer==='places-hit';
+      if(layer==='state-hit'&&getSelected()?.properties.kind==='state'){
+        if(result.feature.properties.geoid!==getSelected().properties.geoid)select(result.feature);
+      }else if(zoom||layer?.startsWith('city-name')||layer==='county-hit'||layer==='county-names'||layer?.startsWith('metro-'))select(result.feature,{zoom});
       else if(getSelected())deselect();
     },
     amplifyZoom(at){
@@ -203,6 +219,7 @@ export function setupPhoneUI(map,{getSelected,hit,insideState,insideMetro,previe
   }
   up.addEventListener('click',()=>step(1));
   down.addEventListener('click',()=>step(-1));
+  clear.addEventListener('click',()=>{mapTouches.cancel();deselect();});
   home.addEventListener('click',()=>{mapTouches.cancel();reset();show('closed');});
   historyBack.addEventListener('click',backToState);
   document.addEventListener('pointerdown',event=>{

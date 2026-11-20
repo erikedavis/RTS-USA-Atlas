@@ -7,8 +7,8 @@
   <meta name="theme-color" content="#020307">
   <title>USAtlas | Phone Preview</title>
   <link href="./assets/vendor/maplibre-gl.css" rel="stylesheet">
-  <link rel="stylesheet" href="./assets/atlas.css?v=07c">
-  <link rel="stylesheet" href="./assets/phone.css?v=07c">
+  <link rel="stylesheet" href="./assets/atlas.css?v=08a">
+  <link rel="stylesheet" href="./assets/phone.css?v=08a">
 </head>
 <body>
   <div class="app">
@@ -20,7 +20,7 @@
       </div>
       <div class="top-actions">
         <span class="system-tag" id="source-tag">LOADING GEOGRAPHY</span>
-        <span class="version-tag">ALPHA 0.7C</span>
+        <span class="version-tag">ALPHA 0.8A</span>
       </div>
     </header>
 
@@ -126,6 +126,9 @@
           <button type="button" class="phone-control" id="phone-down" aria-label="Collapse map tools" hidden>
             <svg viewBox="0 0 20 12" aria-hidden="true"><path d="m3 3 7 6 7-6"/></svg>
           </button>
+          <button type="button" class="phone-control" id="phone-clear" aria-label="Clear state selection" hidden>
+            <svg viewBox="0 0 20 12" aria-hidden="true"><path d="m6 2 8 8m0-8-8 8"/></svg>
+          </button>
         </div>
         <div class="phone-dock-row phone-tray" id="phone-tray" inert><div id="phone-tray-inner"></div></div>
         <div class="phone-dock-row phone-sheet" inert><div id="phone-sheet-inner">
@@ -137,7 +140,7 @@
     </div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
   </div>
-  <script type="module" src="./js/atlas.mjs?v=07c"></script>
+  <script type="module" src="./js/atlas.mjs?v=08a"></script>
 </body>
 </html>
 

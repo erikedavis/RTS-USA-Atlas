@@ -12,7 +12,7 @@ export const INSETS = [
   {abbr:'HI', name:'HAWAII', from:middle(mainHawaiiBounds), to:middle(hawaiiBox), scale:1.36,
     box:hawaiiBox, labelPosition:[-137,22.7], focusBounds:mainHawaiiBounds},
   {abbr:'PR', name:'PUERTO RICO', from:[-66.583,18.2], to:[-88.5,25.5], scale:2.75,
-    box:[[-93,23],[-84,28]], labelPosition:[-88.5,23.72]}
+    box:[[-93,23],[-84,28]]}
 ];
 export const NATIONAL_BOUNDS = [[-152,20],[-66,51]];
 function region([lng,lat]) {

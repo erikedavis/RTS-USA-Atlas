@@ -88,6 +88,10 @@ export function shapeContainsPoint(polygons,point){
 }
 
 export function badgeFitsInState(map,polygons,point,size,rotated=false,plain=true){
+  if(rotated){
+    const samples=screenSamples(map,badgeBox(point,size,plain));
+    return polygons.some(p=>samples.every(sample=>landContains(p,sample)));
+  }
   const box=geographicBox(map,point,size,rotated,plain);
   return polygons.some(p=>box.corners.every(corner=>landContains(p,corner))&&
     !p.rings.some(ring=>ringTouchesBox(ring,box)));
@@ -99,21 +103,27 @@ export function badgeTouchesLand(map,polygons,point,size,rotated=false){
     p.rings.some(ring=>ringTouchesBox(ring,box)));
 }
 
-export function projectStateShapes(map,polygons,viewBounds,viewport){
+function screenSamples(map,{x0,y0,x1,y1}){
+  const x=(x0+x1)/2,y=(y0+y1)/2;
+  return [[x0,y0],[x1,y0],[x0,y1],[x1,y1],[x,y0],[x,y1],[x0,y],[x1,y],[x,y]].map(p=>map.unproject(p).toArray());
+}
+
+export function projectStateShapes(map,polygons,viewBounds,viewport,rotated=false){
   const visible=[];
   for(const polygon of polygons){
     const [w,s,e,n]=polygon.bounds;
     if(w>viewBounds.east||e<viewBounds.west||s>viewBounds.north||n<viewBounds.south)continue;
     const sw=map.project([w,s]),ne=map.project([e,n]);
-    const rect={x0:Math.max(viewport.x0,sw.x),y0:Math.max(viewport.y0,ne.y),
-      x1:Math.min(viewport.x1,ne.x),y1:Math.min(viewport.y1,sw.y)};
+    const corners=rotated?[sw,ne,map.project([w,n]),map.project([e,s])]:[sw,ne];
+    const rect={x0:Math.max(viewport.x0,Math.min(...corners.map(p=>p.x))),y0:Math.max(viewport.y0,Math.min(...corners.map(p=>p.y))),
+      x1:Math.min(viewport.x1,Math.max(...corners.map(p=>p.x))),y1:Math.min(viewport.y1,Math.max(...corners.map(p=>p.y)))};
     visible.push({polygon,rect});
   }
   return visible;
 }
 
-export function fitStateLabel(map,projected,anchor,size,viewport,obstacles,{compact=false,centerOnly=false}={}){
-  const boxFor=point=>compact?compactBadgeBox(point,size):badgeBox(point,size);
+export function fitStateLabel(map,projected,anchor,size,viewport,obstacles,{compact=false,centerOnly=false,rotated=false,nearOnly=false,labelBox}={}){
+  const boxFor=labelBox||(point=>compact?compactBadgeBox(point,size):badgeBox(point,size));
   const {x1:halfWidth,y1:halfHeight}=boxFor({x:0,y:0});
   const landHalfWidth=centerOnly?2:halfWidth;
   const landHalfHeight=centerOnly?2:halfHeight;
@@ -131,6 +141,10 @@ export function fitStateLabel(map,projected,anchor,size,viewport,obstacles,{comp
         continue;
       }
       if(box.x0<rect.x0||box.x1>rect.x1||box.y0<rect.y0||box.y1>rect.y1)continue;
+      if(rotated){
+        if(screenSamples(map,box).every(sample=>landContains(polygon,sample)))return true;
+        continue;
+      }
       const [w,s]=map.unproject([box.x0,box.y1]).toArray();
       const [e,n]=map.unproject([box.x1,box.y0]).toArray();
       const [outer,...holes]=polygon.rings;
@@ -148,6 +162,7 @@ export function fitStateLabel(map,projected,anchor,size,viewport,obstacles,{comp
   for(const [x,y] of offsets){
     const point={x:anchor.x+x,y:anchor.y+y};if(fits(point))return point;
   }
+  if(nearOnly)return null;
   for(const {rect} of visible.slice(0,6)){
     const left=rect.x0+landHalfWidth,top=rect.y0+landHalfHeight,right=rect.x1-landHalfWidth,bottom=rect.y1-landHalfHeight;
     if(right<left||bottom<top)continue;

@@ -69,7 +69,7 @@ def main():
         host = args.phone or choose_address()
         if not private_address(host):
             parser.error('Choose a private IPv4 address on this PC.')
-    port = args.port or (8009 if phone else 8015)
+    port = args.port or (8016 if phone else 8017)
     url = f'http://{host}:{port}/'
     if not phone:
         try:

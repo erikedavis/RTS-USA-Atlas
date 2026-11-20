@@ -81,6 +81,10 @@ test.describe('phone viewport', () => {
 
     await page.getByRole('button', { name: 'Show map tools' }).tap();
     await expect(page.locator('#toggle-counties')).toBeVisible();
+    await page.getByRole('button', { name: 'Select Minnesota', exact: true }).tap();
+    await expect(page.locator('#panel-content h1')).toHaveText('Minnesota');
+    await page.getByRole('button', { name: 'Clear state selection' }).tap();
+    await expect(page.locator('#selection-status')).toContainText('AWAITING');
     await page.locator('#search').fill('IN');
     await page.locator('#search').press('Enter');
     await expect(page.locator('#panel-content h1')).toHaveText('Indiana');

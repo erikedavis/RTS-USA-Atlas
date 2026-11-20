@@ -1,7 +1,7 @@
 import {displayPoint,INSETS} from './insets.mjs';
 import {overlaps} from './city-layout.mjs';
 import {isNorthUp} from './map-rotation.mjs';
-import {badgeBox,compactBadgeBox,badgeFitsInState,badgeTouchesLand,fitStateLabel,prepareStateShapes,projectStateShapes,shapeContainsPoint} from './state-label-placement.mjs';
+import {badgeBox,compactBadgeBox,badgeFitsInState,badgeTouchesLand,fitStateLabel,prepareStateShapes,projectStateShapes} from './state-label-placement.mjs';
 
 // Exterior anchors come from the marked reference views. They are geographic
 // points, not offsets that change with scale. If a point is blocked, omit it.
@@ -20,7 +20,7 @@ const SMALL_STATES=new Map([
 const collection=features=>({type:'FeatureCollection',features});
 const pointFeature=(item,coordinates)=>({type:'Feature',properties:{geoid:item.p.geoid},geometry:{type:'Point',coordinates}});
 
-export function createStateLabels(map,labels,states,Marker,onSelect,isNational,protectedMarkerBoxes,stateLabelsFirst){
+export function createStateLabels(map,labels,states,Marker,onSelect,isNational,protectedMarkerBoxes,wideStateLabels,stateLabelsFirst){
   map.addSource('state-label-anchors',{type:'geojson',data:collection([])});
   map.addImage('state-label-space',{width:29,height:21,data:new Uint8Array(29*21*4)});
   map.addLayer({id:'state-label-obstacles',type:'symbol',source:'state-label-anchors',layout:{'icon-image':'state-label-space','icon-allow-overlap':true}});
@@ -31,6 +31,7 @@ export function createStateLabels(map,labels,states,Marker,onSelect,isNational,p
     node.type='button';node.className='state-label';text.className='state-label-text';text.textContent=p.abbr;node.append(text);
     node.title='Zoom to '+p.name;node.setAttribute('aria-label','Select '+p.name);node.dataset.geoid=p.geoid;
     node.addEventListener('click',event=>{event.stopPropagation();onSelect(p.geoid,event);});
+    node.addEventListener('dblclick',event=>event.stopPropagation());
     const insetLabel=INSETS.find(inset=>inset.abbr===p.abbr)?.labelPosition;
     const small=SMALL_STATES.get(p.abbr);
     if(small)node.classList.add('state-label-small');
@@ -47,8 +48,8 @@ export function createStateLabels(map,labels,states,Marker,onSelect,isNational,p
     const center=map.getCenter(),container=map.getContainer();
     const w=container.clientWidth,h=container.clientHeight,national=isNational(),zoom=map.getZoom();
     const bearing=map.getBearing(),rotated=!isNorthUp(bearing);
-    const wide=stateLabelsFirst();
-    const key=[center.lng,center.lat,zoom,bearing,w,h,national,focusedState,wide].join('|');
+    const wide=wideStateLabels(),priority=stateLabelsFirst();
+    const key=[center.lng,center.lat,zoom,bearing,w,h,national,focusedState,wide,priority].join('|');
     if(key===lastKey)return;
     lastKey=key;
     container.classList.toggle('state-label-priority',wide);
@@ -58,7 +59,8 @@ export function createStateLabels(map,labels,states,Marker,onSelect,isNational,p
     const obstacles=[...container.parentElement.querySelectorAll('.map-controls:not(.phone-dock .map-controls),.map-only-controls button,.rotation-tools:not([inert]),.upper-left,.city-legend,.map-key-toggle,.dev-zoom,.inset-label,.phone-grip,.phone-dock-row:not([inert]),.phone-home:not([hidden]),.phone-atlas-back:not([hidden]),.phone-history-back:not([hidden])')]
       .filter(node=>node.offsetWidth&&node.offsetHeight)
       .map(node=>{const b=node.getBoundingClientRect();return {x0:b.left-origin.left,y0:b.top-origin.top,x1:b.right-origin.left,y1:b.bottom-origin.top};});
-    if(!wide)obstacles.push(...protectedMarkerBoxes());
+    const markers=wide?[]:protectedMarkerBoxes();
+    if(!priority)obstacles.push(...markers);
     const anchors=[],outsideBadges=[],shown=new Set();
     const defaultSize=w<670?10.8:13.2;
     const roomFor=(point,size,plain=false,compact=false)=>{
@@ -77,14 +79,14 @@ export function createStateLabels(map,labels,states,Marker,onSelect,isNational,p
         item.node.style.display='';item.marker.addTo(map);
       }
       anchors.push(pointFeature(item,coordinates));
-      obstacles.push(wide&&!item.small?compactBadgeBox(point,size):badgeBox(point,size,Boolean(item.small)));
+      obstacles.push((wide||item.p.abbr==='PR')&&!item.small?compactBadgeBox(point,size):badgeBox(point,size,Boolean(item.small)));
     }
     const wideShapes=new Map();
     let ordered=items;
-    if(wide&&!rotated){
+    if(wide){
       const constraints=new Map();
       for(const item of items){
-        const projected=projectStateShapes(map,item.polygons,viewBounds,viewport);
+        const projected=projectStateShapes(map,item.polygons,viewBounds,viewport,rotated);
         wideShapes.set(item,projected);
         constraints.set(item,projected.reduce((max,{rect})=>Math.max(max,Math.min(rect.x1-rect.x0,rect.y1-rect.y0)),0));
       }
@@ -97,35 +99,25 @@ export function createStateLabels(map,labels,states,Marker,onSelect,isNational,p
       const anchor=map.project(item.original);
       const dock=item.insetLabel&&national?map.project(item.insetLabel):null;
       if(dock&&roomFor(dock,defaultSize,false,wide)){show(item,dock,defaultSize);continue;}
-      if(rotated){
-        // Use the usual central anchor when angled. The existing north-up
-        // solver can still search for alternative interior positions.
-        const plain=wide||Boolean(item.small);
-        for(const size of wide?[defaultSize,8.7,7.5]:[defaultSize,8.7]){
-          if(roomFor(anchor,size,plain,wide&&!item.small)&&badgeFitsInState(map,item.polygons,anchor,size,true,plain)){
-            show(item,anchor,size);break;
-          }
-        }
-        if(!shown.has(item)&&item.small?.outside)outsideBadges.push(item);
-        continue;
-      }
       if(item.small){
         const candidates=item.small.inside.map(coordinates=>map.project(coordinates));
         for(const size of [defaultSize,10.3,8.7,7.8]){
-          const point=candidates.find(point=>roomFor(point,size,true)&&badgeFitsInState(map,item.polygons,point,size));
+          const point=candidates.find(point=>roomFor(point,size,true)&&badgeFitsInState(map,item.polygons,point,size,rotated));
           if(point){show(item,point,size);break;}
         }
         if(!shown.has(item)&&item.small.outside)outsideBadges.push(item);
         continue;
       }
-      const sizes=wide?[defaultSize,9.7,8.7,7.8,7]:national?[defaultSize,10.3,8.7,7.8,7]:[defaultSize,10.3];
-      const projected=wideShapes.get(item)||projectStateShapes(map,item.polygons,viewBounds,viewport);
+      const compact=wide||item.p.abbr==='PR';
+      const sizes=compact?[defaultSize,9.7,8.7,7.8,7]:national?[defaultSize,10.3,8.7,7.8,7]:[defaultSize,10.3];
+      const projected=wideShapes.get(item)||projectStateShapes(map,item.polygons,viewBounds,viewport,rotated);
       for(const size of sizes){
-        const point=fitStateLabel(map,projected,anchor,size,viewport,obstacles,{compact:wide});
+        const nudge=priority&&markers.length?fitStateLabel(map,projected,anchor,size,viewport,[...obstacles,...markers],{compact,rotated,nearOnly:true}):null;
+        const point=nudge||fitStateLabel(map,projected,anchor,size,viewport,obstacles,{compact,rotated});
         if(point){show(item,point,size);break;}
       }
-      if(wide&&!shown.has(item))for(const size of [8.7,7.8,7]){
-        const point=fitStateLabel(map,projected,anchor,size,viewport,obstacles,{compact:true,centerOnly:true});
+      if((priority||compact)&&!shown.has(item))for(const size of [8.7,7.8,7]){
+        const point=fitStateLabel(map,projected,anchor,size,viewport,obstacles,{compact:true,centerOnly:true,rotated});
         if(point){show(item,point,size);break;}
       }
     }
@@ -135,16 +127,6 @@ export function createStateLabels(map,labels,states,Marker,onSelect,isNational,p
         if(roomFor(point,size,true)&&!badgeTouchesLand(map,item.neighbors,point,size,rotated)){
           show(item,point,size);break;
         }
-      }
-    }
-    // At country scale some narrow states cannot enclose the entire wordmark.
-    // Keep its center on the state and reserve the whole label against cities.
-    // Small coastal states still use their approved anchors and fit rules.
-    if(wide&&rotated)for(const item of items){
-      if(shown.has(item)||item.small)continue;
-      const anchor=map.project(item.original);
-      for(const size of [defaultSize,9.7,8.7,7.8,7]){
-        if(roomFor(anchor,size,true,true)&&shapeContainsPoint(item.polygons,item.original)){show(item,anchor,size);break;}
       }
     }
     for(const item of items){
