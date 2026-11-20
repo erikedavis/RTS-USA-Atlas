@@ -1,42 +1,104 @@
 #!/usr/bin/env python3
-"""Serve USA Atlas without caching; do not launch browsers in CI/tests."""
-from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
+"""Serve USAtlas on the PC, or opt in to a separate phone preview."""
+from argparse import ArgumentParser
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+from ipaddress import IPv4Address, ip_network
 from pathlib import Path
-import os
+from socket import AF_INET, getaddrinfo, gethostname
+from urllib.parse import unquote, urlsplit
+from urllib.request import urlopen
+import re
 import webbrowser
 
-root = Path(__file__).resolve().parents[1]
-os.chdir(root)
+ROOT = Path(__file__).resolve().parents[1]
+VERSION = re.search(r'<span class="version-tag">([^<]+)</span>',
+                    (ROOT / 'index.html').read_text(encoding='utf-8'))[1]
+PRIVATE_NETWORKS = tuple(map(ip_network, ('10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16')))
 
-class NoCacheHandler(SimpleHTTPRequestHandler):
+
+def private_address(value):
+    try:
+        address = IPv4Address(value)
+    except ValueError:
+        return False
+    return any(address in network for network in PRIVATE_NETWORKS)
+
+
+def choose_address():
+    candidates = sorted({entry[4][0] for entry in getaddrinfo(gethostname(), None, AF_INET)
+                         if private_address(entry[4][0])})
+    hint = ' (' + ', '.join(candidates) + ')' if candidates else ' (see ipconfig)'
+    if len(candidates) == 1:
+        return candidates[0]
+    return input('Enter the IPv4 address of the PC on your trusted Wi-Fi' + hint + ': ').strip()
+
+
+class AtlasFiles(SimpleHTTPRequestHandler):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, directory=str(ROOT), **kwargs)
+
     def end_headers(self):
-        self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
-        self.send_header('Pragma', 'no-cache')
-        self.send_header('Expires', '0')
+        self.send_header('Cache-Control', 'no-store')
         super().end_headers()
 
-port = 8001
-try:
-    server = ThreadingHTTPServer(('127.0.0.1', port), NoCacheHandler)
-except OSError as error:
-    raise SystemExit(
-        f'Could not start on port {port}. Stop the Atlas already using it and try again. ({error})'
-    )
+    def send_head(self):
+        path = unquote(urlsplit(self.path).path)
+        parts = path.split('/')
+        if path not in ('/', '/index.html'):
+            allowed = len(parts) > 2 and parts[1] in ('assets', 'data', 'js')
+            if not allowed or any(part in ('..', '.') for part in parts):
+                self.send_error(404)
+                return None
+            target = (ROOT / path.lstrip('/')).resolve()
+            if (ROOT / parts[1]) not in target.parents or not target.is_file():
+                self.send_error(404)
+                return None
+        return super().send_head()
 
-print(f'USA Atlas 0.2D at http://localhost:{port}/', flush=True)
-print('Keep this window open. CTRL+C stops the server.', flush=True)
 
-# A test runner already owns the browser. Spawning another browser here can
-# leave descendants holding pipes open after all Playwright tests have passed.
-if not os.environ.get('CI') and not os.environ.get('ATLAS_NO_BROWSER'):
+def main():
+    parser = ArgumentParser(description=__doc__)
+    parser.add_argument('--phone', nargs='?', const='', metavar='WIFI_IP',
+                        help='Serve a phone preview on the specified private Wi-Fi address')
+    parser.add_argument('--port', type=int, help='Override the default port')
+    parser.add_argument('--no-browser', action='store_true', help='Do not open a PC browser')
+    args = parser.parse_args()
+    phone = args.phone is not None
+    host = '127.0.0.1'
+    if phone:
+        host = args.phone or choose_address()
+        if not private_address(host):
+            parser.error('Choose a private IPv4 address on this PC.')
+    port = args.port or (8009 if phone else 8015)
+    url = f'http://{host}:{port}/'
+    if not phone:
+        try:
+            with urlopen(url, timeout=1) as response:
+                running_atlas = VERSION.encode() in response.read()
+        except OSError:
+            running_atlas = False
+        if running_atlas:
+            if not args.no_browser:
+                webbrowser.open(url)
+            return
+
+    ThreadingHTTPServer.allow_reuse_address = False
     try:
-        webbrowser.open(f'http://localhost:{port}/')
-    except Exception:
-        pass
+        server = ThreadingHTTPServer((host, port), AtlasFiles)
+    except OSError as error:
+        parser.exit(1, f'Could not open {url}. Check the address or close the Atlas already using this port. ({error})\n')
+    with server:
+        print(f'USAtlas {VERSION}: {url}', flush=True)
+        if phone:
+            print('Open that address in Safari on an iPhone on the same trusted Wi-Fi.', flush=True)
+        elif not args.no_browser:
+            webbrowser.open(url)
+        print('Keep this window open. Ctrl+C stops the server.', flush=True)
+        try:
+            server.serve_forever()
+        except KeyboardInterrupt:
+            pass
 
-try:
-    server.serve_forever()
-except KeyboardInterrupt:
-    print('\nAtlas stopped.')
-finally:
-    server.server_close()
+
+if __name__ == '__main__':
+    main()

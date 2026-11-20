@@ -1,10 +1,18 @@
 // Display-only Mercator transforms. Source Census files and identifiers stay intact.
 const mercY = lat => Math.log(Math.tan(Math.PI / 4 + lat * Math.PI / 360)) * 180 / Math.PI;
 const latitude = y => (2 * Math.atan(Math.exp(y * Math.PI / 180)) - Math.PI / 2) * 180 / Math.PI;
+const middle = ([[west,south],[east,north]])=>[(west+east)/2,latitude((mercY(south)+mercY(north))/2)];
+const hawaiiBox=[[-147,21.8],[-127,29.8]];
+const mainHawaiiBounds=[[-160.545,18.9104],[-154.8068,22.2326]];
+const northwesternHawaii={from:[-170.125,25.75],to:[-144,27.65],scale:.28};
+const northwesternLongitude=-161;
+const northwesternDisplayLongitude=-141.25;
 export const INSETS = [
   {abbr:'AK', name:'ALASKA', from:[-154,64], to:[-138,38], scale:.36, box:[[-151,30],[-127,45.5]]},
-  {abbr:'HI', name:'HAWAII', from:[-157.5,20.8], to:[-131,24.4], scale:.65, box:[[-147,21.8],[-127,29.8]]},
-  {abbr:'PR', name:'PUERTO RICO', from:[-66.5,18.2], to:[-88.5,25.5], scale:1.6, box:[[-93,23],[-84,28]]}
+  {abbr:'HI', name:'HAWAII', from:middle(mainHawaiiBounds), to:middle(hawaiiBox), scale:1.36,
+    box:hawaiiBox, labelPosition:[-137,22.7], focusBounds:mainHawaiiBounds},
+  {abbr:'PR', name:'PUERTO RICO', from:[-66.583,18.2], to:[-88.5,25.5], scale:2.75,
+    box:[[-93,23],[-84,28]], labelPosition:[-88.5,23.72]}
 ];
 export const NATIONAL_BOUNDS = [[-152,20],[-66,51]];
 function region([lng,lat]) {
@@ -18,15 +26,29 @@ export function displayPoint(point,abbr) {
   if(!inset)return point;
   let [lng,lat]=point;
   if(inset.abbr==='AK' && lng>0)lng-=360;
-  return [inset.to[0]+(lng-inset.from[0])*inset.scale,
-    latitude(mercY(inset.to[1])+(mercY(lat)-mercY(inset.from[1]))*inset.scale)];
+  // Compress the distant chain separately so it doesn't push the main
+  // islands out of the middle of their frame.
+  const {from,to,scale}=inset.abbr==='HI'&&lng<northwesternLongitude?northwesternHawaii:inset;
+  return [to[0]+(lng-from[0])*scale,
+    latitude(mercY(to[1])+(mercY(lat)-mercY(from[1]))*scale)];
 }
 export function geographicPoint(point) {
   const inset=INSETS.find(({box})=>point[0]>=box[0][0] && point[0]<=box[1][0] && point[1]>=box[0][1] && point[1]<=box[1][1]);
   if(!inset)return {point,abbr:''};
-  let lng=inset.from[0]+(point[0]-inset.to[0])/inset.scale;
+  const {from,to,scale}=inset.abbr==='HI'&&point[0]<northwesternDisplayLongitude?northwesternHawaii:inset;
+  let lng=from[0]+(point[0]-to[0])/scale;
   if(lng < -180)lng+=360;
-  return {point:[lng,latitude(mercY(inset.from[1])+(mercY(point[1])-mercY(inset.to[1]))/inset.scale)],abbr:inset.abbr};
+  return {point:[lng,latitude(mercY(from[1])+(mercY(point[1])-mercY(to[1]))/scale)],abbr:inset.abbr};
+}
+
+export function hawaiiTailMarks(geometry){
+  // Use actual island boundary positions. Tiny polygons disappear below a
+  // pixel at overview scale, so the map gives them a subtle minimum mark.
+  const features=geometry.coordinates.map(polygon=>polygon[0][0])
+    .filter(([lng])=>lng<northwesternDisplayLongitude)
+    .map(coordinates=>({type:'Feature',properties:{kind:'island'},geometry:{type:'Point',coordinates}}));
+  features.push({type:'Feature',properties:{kind:'label',name:'NW ISLANDS'},geometry:{type:'Point',coordinates:[-144,26.43]}});
+  return {type:'FeatureCollection',features};
 }
 export function displayData(data) {
   if(data.type!=='FeatureCollection')return data;

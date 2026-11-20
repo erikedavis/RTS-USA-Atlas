@@ -1,0 +1,119 @@
+/* Applied only on compact, touch-first screens. Heights are shared by the
+   overlay and the map HUD, so opening the dock does not resize the canvas. */
+.app.phone-layout {
+  --phone-header: 48px;
+  --phone-grip: 30px;
+  --phone-tray: 48px;
+  --phone-summary: min(148px, 42dvh);
+  --phone-atlas-sheet: min(232px, 30dvh);
+  --phone-hud-lift: 0px;
+  position:relative;
+}
+.phone-layout[data-phone-stage='tools'] {--phone-hud-lift:calc(var(--phone-grip) + var(--phone-tray));}
+.phone-layout[data-phone-stage='summary'] {--phone-hud-lift:calc(var(--phone-grip) + var(--phone-tray) + var(--phone-summary));}
+.phone-layout .topbar {
+  position:absolute;inset:env(safe-area-inset-top) env(safe-area-inset-right) auto env(safe-area-inset-left);
+  height:var(--phone-header);min-height:var(--phone-header);padding:0 9px;gap:9px;
+  transition:transform .24s ease,opacity .2s ease;
+}
+.phone-layout .brand {gap:5px;flex:none;cursor:default;}
+.phone-layout .brand-title {letter-spacing:.10em;}
+.phone-layout .top-actions,.phone-layout .toolbar,.phone-layout .city-legend,
+.phone-layout .map-only-controls,.phone-layout .panel-top,.phone-layout .panel-footer {display:none;}
+.phone-layout .search-wrap {flex:1;min-width:0;}
+.phone-layout .search-wrap input {height:35px;border-radius:5px;}
+.phone-layout .search-results {top:39px;}
+.phone-layout .content {margin-top:var(--phone-header);flex-direction:column;}
+.phone-layout #map,.phone-layout .gridlines,.phone-layout .map-vignette,.phone-layout .map-loading {bottom:0;}
+.phone-layout .rotation-tools {transition:transform .24s ease,opacity .2s ease;}
+.phone-layout .map-key-toggle {bottom:calc(2px + var(--phone-hud-lift));}
+.phone-layout .dev-zoom {bottom:calc(19px + var(--phone-hud-lift));}
+.phone-layout .map-key {bottom:calc(51px + var(--phone-hud-lift));max-height:calc(100% - 58px - var(--phone-hud-lift));}
+.phone-layout .toast {bottom:calc(var(--phone-hud-lift) + 8px + env(safe-area-inset-bottom));}
+.phone-layout #map,.phone-layout .state-label {-webkit-touch-callout:none;user-select:none;}
+
+.phone-layout .phone-dock {
+  position:absolute;z-index:10;inset:auto 0 0;pointer-events:none;
+  transform:translateY(var(--phone-drag,0px));
+}
+.phone-layout .phone-control {
+  border:0;background:transparent;padding:0;color:#a7c4d8;opacity:.68;
+  display:grid;place-items:center;width:44px;min-width:44px;touch-action:none;
+}
+.phone-layout .phone-control[hidden] {display:none;}
+.phone-layout .phone-control:is(:focus-visible,:active) {opacity:1;}
+.phone-layout .phone-control svg {width:17px;height:11px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+.phone-layout .phone-home {position:absolute;z-index:8;bottom:calc(2px + var(--phone-hud-lift));left:7px;height:44px;}
+.phone-layout .phone-home svg {width:23px;height:23px;}
+.phone-layout .phone-history-back {
+  position:absolute;left:9px;top:clamp(55px,30%,210px);z-index:11;width:50px;min-height:52px;
+  gap:2px;color:#fff;opacity:1;font-size:9px;font-weight:700;letter-spacing:.17em;
+  filter:drop-shadow(0 1px 4px #000);
+}
+.phone-layout .phone-history-back svg {width:32px;height:26px;stroke-width:2.5;}
+.phone-layout #map.state-label-priority .state-label {min-width:0;min-height:0;padding:2px;}
+.phone-layout .phone-grip {display:flex;justify-content:center;margin:auto;width:max-content;height:var(--phone-grip);pointer-events:auto;touch-action:none;}
+.phone-layout .phone-grip[hidden] {display:none;}
+.phone-layout .phone-grip .phone-control {height:100%;background:#0b1521bb;}
+.phone-layout .phone-grip .phone-control:first-of-type {border-radius:8px 0 0 0;}
+.phone-layout .phone-grip .phone-control:last-of-type {border-radius:0 8px 0 0;}
+.phone-layout .phone-grip .phone-control:only-of-type,
+.phone-layout:not([data-phone-stage='tools']) .phone-grip .phone-control {border-radius:8px 8px 0 0;}
+.phone-layout .phone-dock-row {display:grid;grid-template-rows:0fr;transition:grid-template-rows .24s cubic-bezier(.2,.8,.25,1);}
+.phone-layout .phone-dock-row:not([inert]) {grid-template-rows:1fr;pointer-events:auto;}
+.phone-layout .phone-dock-row > div {min-height:0;overflow:hidden;}
+.phone-layout .phone-tray {touch-action:none;}
+.phone-layout .phone-tray .map-controls {
+  position:static;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+  height:var(--phone-tray);padding:3px 7px;gap:5px;background:#070d15;border-top:1px solid #233345;
+}
+.phone-layout .phone-tray .map-controls button {height:100%;width:100%;font-size:11px;font-weight:600;letter-spacing:.055em;}
+.phone-layout .phone-tray .map-controls button:not(:is(#toggle-counties,#toggle-metros,#phone-layers)) {display:none;}
+.phone-layout .phone-tray .map-controls #phone-layers[disabled] {opacity:.6;cursor:default;}
+.phone-layout .info-panel,.phone-layout .info-panel.collapsed {
+  width:100%;height:var(--phone-summary);min-height:0;border:0;border-top:1px solid #30485d;
+}
+.phone-layout .info-panel.collapsed .panel-content {display:block;}
+.phone-layout .panel-content {min-height:0;padding:10px 12px 15px;overscroll-behavior:contain;overflow-y:auto;}
+.phone-layout .phone-state-overview {display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:10px;align-items:start;}
+.phone-layout .phone-state-overview h1 {margin:4px 0 6px;letter-spacing:.025em;}
+.phone-layout .phone-state-overview .section-kicker {font-size:9px;letter-spacing:.11em;}
+.phone-layout .phone-state-overview .population-total {font-size:clamp(23px,7vw,32px);}
+.phone-layout .phone-state-overview .population-caption {font-size:8px;margin:4px 0 0;}
+.phone-layout .phone-state-facts {display:grid;align-content:start;gap:4px;}
+.phone-layout .phone-state-facts .fact-city {
+  margin:0;padding:3px 5px;min-height:0;max-width:100%;background:none;
+  border:0;border-left:1px solid #294254;gap:2px;
+}
+.phone-layout .phone-state-facts .fact-city:hover {background:#152a3a;}
+.phone-layout .phone-state-facts .fact-city-role,.phone-layout .phone-state-facts .record-label {font-size:8px;letter-spacing:.06em;}
+.phone-layout .phone-state-facts .fact-city strong {font-size:12px;line-height:1.15;}
+.phone-layout .phone-state-facts .fact-city-pop {font-size:10px;line-height:1.1;}
+.phone-layout .phone-state-facts .record-row {min-height:0;padding:4px 0 0 5px;gap:4px;justify-content:flex-start;border-top:1px solid #1d3244;border-bottom:0;}
+.phone-layout .phone-state-facts .record-value {font-size:10px;}
+.phone-layout .panel-content:has(.phone-state-overview) > :is(.census-record,.panel-action,.facts-date,.fact-sources) {display:none;}
+
+.phone-layout[data-phone-stage='atlas'] .content {margin-top:0;}
+.phone-layout[data-phone-stage='atlas'] :is(.topbar,.rotation-tools) {transform:translateY(-125%);opacity:0;pointer-events:none;}
+.phone-layout[data-phone-stage='atlas'] :is(.dev-zoom,.map-key-toggle,.map-key,.phone-home,.phone-grip,.inset-label) {display:none;}
+.phone-layout .state-label {transition:opacity .18s ease;}
+.phone-layout[data-phone-atlas-kind='state'] .state-label:not([data-phone-focused]) {opacity:0;pointer-events:none;}
+.phone-layout[data-phone-stage='atlas'] .phone-atlas-back {
+  position:absolute;top:0;left:0;width:100%;height:32px;z-index:11;
+}
+.phone-layout[data-phone-stage='atlas'] .phone-facts-grip {margin:auto;width:100%;height:24px;}
+.phone-layout[data-phone-stage='atlas'] .phone-sheet > div {background:#0b131e;border-top:1px solid #30485d;}
+.phone-layout[data-phone-stage='atlas'] .info-panel {height:var(--phone-atlas-facts-height,var(--phone-atlas-sheet));border-top:0;}
+.phone-layout[data-phone-stage='atlas'] .panel-content:has(.phone-state-overview) > :is(.census-record,.panel-action,.facts-date,.fact-sources) {display:revert;}
+.phone-layout[data-phone-stage='atlas'] .panel-content {padding-top:4px;}
+.phone-layout.phone-atlas-fast :is(.phone-dock-row,.topbar,.rotation-tools) {transition:none;}
+
+@media (orientation: landscape) {
+  .app.phone-layout {--phone-header:40px;--phone-summary:min(123px,43dvh);--phone-atlas-sheet:min(134px,32dvh);}
+  .phone-layout .phone-state-overview {grid-template-columns:minmax(0,1fr) minmax(0,1.5fr);}
+  .phone-layout .phone-state-facts {grid-template-columns:repeat(2,minmax(0,1fr));}
+  .phone-layout .phone-state-facts .record-row {grid-column:1/-1;}
+}
+@media (prefers-reduced-motion: reduce) {
+  .phone-layout :is(.phone-dock-row,.topbar,.rotation-tools) {transition:none;}
+}

@@ -69,10 +69,21 @@ test('major city searches work and produce checkable screenshots', async ({ page
   }
 });
 
-test('mobile-size viewport has visible controls and a rendered map', async ({ page }, testInfo) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await assertRendered(page, testInfo);
-  await page.waitForTimeout(900);
-  await expect(page.locator('#zoom-in')).toBeVisible();
-  await screenshot(page, testInfo, 'national-mobile-390x844');
+test.describe('phone viewport', () => {
+  test.use({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
+
+  test('wide state labels and swipe-dock controls are available', async ({ page }, testInfo) => {
+    await assertRendered(page, testInfo);
+    await expect(page.locator('.topbar #search')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Select Minnesota', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Select California', exact: true })).toBeVisible();
+    await screenshot(page, testInfo, 'national-mobile-390x844');
+
+    await page.getByRole('button', { name: 'Show map tools' }).tap();
+    await expect(page.locator('#toggle-counties')).toBeVisible();
+    await page.locator('#search').fill('IN');
+    await page.locator('#search').press('Enter');
+    await expect(page.locator('#panel-content h1')).toHaveText('Indiana');
+    await expect(page.getByRole('button', { name: /Indianapolis/ })).toBeVisible();
+  });
 });

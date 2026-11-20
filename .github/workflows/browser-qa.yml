@@ -40,7 +40,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 -u tools/serve.py > "$RUNNER_TEMP/atlas-http.log" 2>&1 &
+          python3 -u tools/serve.py --port 8001 --no-browser > "$RUNNER_TEMP/atlas-http.log" 2>&1 &
           echo $! > "$RUNNER_TEMP/atlas-http.pid"
           for i in {1..50}; do
             if curl --fail --silent http://127.0.0.1:8001/ -o /dev/null; then

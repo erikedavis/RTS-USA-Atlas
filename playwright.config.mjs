@@ -31,7 +31,7 @@ export default defineConfig({
     }
   },
   webServer: ci ? undefined : {
-    command: 'python3 tools/serve.py',
+    command: 'python tools/serve.py --port 8001 --no-browser',
     url: 'http://127.0.0.1:8001',
     timeout: 40_000,
     reuseExistingServer: true,

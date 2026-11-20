@@ -1,0 +1,5 @@
+Noto Sans Regular and Noto Sans Bold glyphs, Unicode ranges 0-255, 256-511, 768-1023.
+Source: https://github.com/maplibre/demotiles/tree/gh-pages/font
+Downloaded from raw.githubusercontent.com/maplibre/demotiles/gh-pages/font/ on 2026-11-19.
+SIL Open Font License: OFL.txt.
+All ranges required by uppercased bundled city/place names are included.

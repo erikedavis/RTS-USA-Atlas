@@ -1,33 +1,34 @@
 # RTS USA Atlas - GitHub browser QA quick start
 
-This folder is the **user-uploaded corrected v0.2D application** plus QA scaffolding. The original atlas files (index.html, js/, assets/, data/, tools/, documentation/) are preserved; these new additions are limited to .github/, tests/, package.json, playwright.config.mjs, .gitignore, and this document.
+This repository contains the **USAtlas V0.7C preview** and its browser QA workflow. See the [README](README.md) for the PC and phone launchers.
 
-## First upload (on Windows using GitHub Desktop)
+## Run locally
 
-1. Download this ZIP and extract it in Windows Explorer. Open the folder **RTS-USA-Atlas_GitHub_Ready** inside the extracted ZIP.
-2. Download and install GitHub Desktop from https://desktop.github.com/ if you do not have it already. Sign in to the same account that owns the RTS-USA-Atlas repository.
-3. Select **File > Clone repository** in GitHub Desktop, choose **RTS-USA-Atlas**, and click **Clone**. This gives you a new local repo folder on your laptop.
-4. Open that new local repository folder via GitHub Desktop (**Repository > Show in Explorer**).
-5. Copy the **contents** of RTS-USA-Atlas_GitHub_Ready into the repository folder. The new repo's top level must contain `index.html`, `data`, `js`, `assets`, `tools`, `tests`, `package.json`, and `.github`. Do not copy a wrapper folder inside it. Allow the README.md replacement only after reading it; alternatively retain GitHub's existing README.
-6. Return to GitHub Desktop. Write a summary: `Import corrected v0.2D and automated QA`. Click **Commit to main**, then **Push origin**.
-7. Open the RTS-USA-Atlas repo on GitHub, click **Actions**, and look for the **RTS Atlas browser QA** run. If prompted to enable workflows, approve them for this trusted repo.
-8. Open the run's details. After it finishes, download the **atlas-browser-qa-...** artifact. It includes screenshots, the HTML test report, and any failure traces. **Review screenshots visually**.
+With Node.js and Python 3 installed, run the following from the repository root.
+
+```sh
+npm install
+npx playwright install chromium
+npm test
+```
+
+GitHub Actions also runs the checks on pushes to `main` and on pull requests. Its **atlas-browser-qa** artifact contains screenshots, the test report, and failure traces.
 
 ## What the CI workflow actually verifies
 
-- The site is served over HTTP from its own versioned folder (port 8001), not stale localhost:8000.
+- The test copy is served over HTTP on port 8001.
 - MapLibre genuinely creates a WebGL graphics context. Without WebGL, the test FAILS and does not certify visual QA.
 - The map loads real 2025 Census data, not a blank canvas or a partial-loading screen.
 - Idaho's label selects Idaho, selected-border screenshot is saved, county selection works, reset clears selection.
 - Chicago, Denver, Phoenix, and Houston searches produce city-specific screenshots.
-- A 390x844 mobile-style viewport renders and keeps basic map controls visible.
+- A 390 × 844 touch viewport renders the national state labels, opens the phone toolbar, and finds Indiana by abbreviation.
 - Source syntax, Census record counts, and inset geographic transformations pass the original `qa_v02d.mjs` script.
 
 **Limitation:** A passing test confirms the map and interactions render and run, not that the visual appearance is flawless. Review the captured screenshots for city-label drift, blobby borders, inset layout and obvious UI collisions. A desktop-sized Chromium viewport does not emulate every behavior of real iOS Safari. If WebGL fails even with software rendering enabled, the test will report a failure rather than call that a pass.
 
 ## Public repository safety
 
-This ZIP contains public Census-derived geography, application code, a third-party renderer and its license, and tests; no secrets should be required. Do NOT add credentials, login cookies, private user data, or API keys. Preserve the original corrected v0.2D ZIP separately as your rollback reference.
+The repository uses public Census-derived geography and bundled MapLibre. Its tests run with local files and require no credentials or API keys.
 
 ## Future release discipline
 

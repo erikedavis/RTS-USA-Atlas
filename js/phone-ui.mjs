@@ -1,0 +1,269 @@
+import {bindDockSwipe,bindMapTouches} from './phone-gestures.mjs';
+
+const phoneMedia='(max-width: 670px) and (pointer: coarse), (max-width: 950px) and (pointer: coarse) and (orientation: landscape)';
+const STAGES=['closed','tools','summary','atlas'];
+const atlasKind=feature=>{
+  const kind=feature?.properties.kind;
+  return kind==='state'||kind==='place'?kind:null;
+};
+
+export function setupPhoneUI(map,{getSelected,hit,insideState,insideMetro,preview,select,deselect,reset,
+  renderSelection,setFocus,fitFeature,refreshLabels,closeKey}){
+  const $=selector=>document.querySelector(selector);
+  const media=matchMedia(phoneMedia), reducedMotion=matchMedia('(prefers-reduced-motion: reduce)');
+  const app=$('.app'),content=$('.content'),shell=$('.map-shell'),header=$('.topbar');
+  const brand=$('#home'),search=$('.search-wrap'),toolbar=$('.toolbar'),rotation=$('.rotation-tools');
+  const panel=$('#info-panel'),info=$('#panel-content'),controls=$('.map-controls');
+  const dock=$('#phone-dock'),tray=$('#phone-tray'),sheet=$('.phone-sheet');
+  const up=$('#phone-up'),down=$('#phone-down'),grip=$('#phone-grip');
+  const atlasBack=$('#phone-atlas-back'),factsGrip=$('#phone-facts-grip'),home=$('#phone-home');
+  const historyBack=$('#phone-history-back');
+  const layers=document.createElement('button');
+  layers.type='button';layers.id='phone-layers';layers.textContent='LAYERS';layers.disabled=true;layers.hidden=true;
+  controls.append(layers);shell.append(dock,atlasBack);
+  let active=false,stage='closed',savedCamera=null,stateReturn=null,labelTimer=0,resizeFrame=0,fastFrame=0;
+  const duration=()=>reducedMotion.matches?0:360;
+  const camera=()=>({center:map.getCenter(),zoom:map.getZoom(),bearing:map.getBearing()});
+  function skipTransition(){
+    app.classList.add('phone-atlas-fast');
+    cancelAnimationFrame(fastFrame);
+    fastFrame=requestAnimationFrame(()=>{
+      fastFrame=requestAnimationFrame(()=>app.classList.remove('phone-atlas-fast'));
+    });
+  }
+
+  function show(next){
+    stage=next;
+    const full=stage==='atlas';
+    app.dataset.phoneStage=stage;
+    grip.hidden=full;
+    tray.inert=stage==='closed'||full;
+    sheet.inert=stage==='closed'||stage==='tools';
+    const feature=getSelected();
+    up.hidden=full||stage==='summary'&&!atlasKind(feature)||stage==='tools'&&!feature;
+    down.hidden=full||stage==='closed';
+    up.setAttribute('aria-label',{
+      closed:'Show map tools',tools:'Show selection details',summary:`Open ${atlasKind(feature)==='place'?'city':'state'} atlas`,
+    }[stage]||'Open atlas');
+    down.setAttribute('aria-label',stage==='summary'?'Collapse selection details':'Hide map tools');
+    atlasBack.hidden=factsGrip.hidden=!full;
+    header.inert=rotation.inert=full;
+    historyBack.hidden=!stateReturn||feature?.properties.kind!=='place';
+    if(stateReturn)historyBack.setAttribute('aria-label',`Back to ${stateReturn.state.properties.name}`);
+    clearTimeout(labelTimer);
+    labelTimer=setTimeout(refreshLabels,reducedMotion.matches?0:250);
+  }
+
+  function openAtlas({fit=true,returnCamera}={}){
+    const feature=getSelected();
+    const kind=atlasKind(feature);
+    if(stage==='atlas'||!kind)return false;
+    map.stop();
+    savedCamera=returnCamera||camera();
+    closeKey();
+    document.activeElement?.blur();
+    const atlasName=kind==='place'?'city':'state';
+    app.dataset.phoneAtlasKind=kind;
+    for(const handle of [atlasBack,factsGrip])handle.setAttribute('aria-label',`Leave ${atlasName} atlas`);
+    show('atlas');
+    info.scrollTop=0;
+    setFocus(feature,()=>{
+      if(fit&&stage==='atlas'&&getSelected()===feature)fitAtlas(feature,duration());
+    });
+    if(fit)fitAtlas(feature,duration());else map.resize();
+    return true;
+  }
+
+  function fitAtlas(feature,time){
+    dock.style.removeProperty('--phone-atlas-facts-height');
+    map.resize();fitFeature(feature,atlasBack.offsetHeight,sheet.firstElementChild.offsetHeight,time);
+  }
+
+  function leaveAtlas({restore=true,fast=false}={}){
+    if(stage!=='atlas')return;
+    const target=savedCamera;
+    savedCamera=null;
+    map.stop();
+    if(fast)skipTransition();
+    delete app.dataset.phoneAtlasKind;
+    show(getSelected()?'summary':'tools');
+    setFocus(null,undefined,{fast});
+    map.resize();
+    if(restore){
+      if(fast)map.jumpTo(target);
+      else map.easeTo({...target,duration:duration()});
+    }
+  }
+
+  function openCityFromState(feature){
+    map.stop();
+    const full=stage==='atlas';
+    stateReturn={state:getSelected(),full,camera:camera(),returnCamera:savedCamera,scroll:info.scrollTop,
+      sheetHeight:dock.style.getPropertyValue('--phone-atlas-facts-height')};
+    if(full)leaveAtlas({restore:false,fast:true});
+    select(feature,{zoom:!full});
+    if(full)openAtlas();
+  }
+
+  function backToState(){
+    if(!stateReturn)return;
+    const origin=stateReturn;
+    stateReturn=null;
+    skipTransition();
+    leaveAtlas({restore:false,fast:true});
+    select(origin.state);
+    if(origin.full){
+      dock.style.setProperty('--phone-atlas-facts-height',origin.sheetHeight);
+      openAtlas({fit:false,returnCamera:origin.returnCamera});
+    }
+    map.jumpTo(origin.camera);
+    info.scrollTop=origin.scroll;
+  }
+
+  function step(direction){
+    if(direction<0&&stage==='atlas'){leaveAtlas();return;}
+    const next=STAGES[STAGES.indexOf(stage)+direction];
+    if(next==='atlas'){openAtlas();return;}
+    if(next&&(next!=='summary'||getSelected()))show(next);
+  }
+
+  function selectionChanged(feature){
+    if(!active)return;
+    if(feature?.properties.kind!=='place')stateReturn=null;
+    if(stage==='atlas')leaveAtlas();
+    if(feature){closeKey();show('summary');}
+    else show(stage==='closed'?'closed':'tools');
+  }
+
+  const mapTouches=bindMapTouches(map.getContainer(),{
+    enabled:()=>active,hit,preview,
+    hold(result){
+      if(!result?.feature)return false;
+      const {feature}=result;
+      const current=getSelected();
+      if(current?.properties.kind==='place'&&feature.properties.kind==='place'&&
+        current.properties.geoid!==feature.properties.geoid){
+        leaveAtlas({restore:false,fast:true});
+        select(feature);
+        return true;
+      }
+      if(stage==='atlas')return false;
+      select(feature);
+      if(atlasKind(feature))openAtlas();
+      return true;
+    },
+    deliberate(feature){
+      if(stage==='atlas')return;
+      if(feature.properties.geoid===getSelected()?.properties.geoid)openAtlas();
+      else select(feature);
+    },
+    immediate(result,at,target){
+      if(stage!=='atlas')return false;
+      const feature=getSelected();
+      if(atlasKind(feature)==='state'){
+        if(insideState(at,target,feature.properties.geoid))return false;
+        leaveAtlas({fast:true});
+        return true;
+      }
+      if(result?.feature?.properties.kind==='place'||insideMetro(at))return false;
+      leaveAtlas({restore:false,fast:true});
+      deselect();
+      return true;
+    },
+    single(result){
+      const layer=result?.layer;
+      if(stage==='atlas'){
+        const current=getSelected();
+        const next=result?.feature;
+        if(current.properties.kind==='place'&&next?.properties.kind==='place'&&current.properties.geoid!==next.properties.geoid){
+          leaveAtlas({restore:false,fast:true});
+          select(next,{zoom:layer==='city-hit'||layer==='places-hit'});
+        }
+        return;
+      }
+      const zoom=layer==='state-label'||layer==='city-hit'||layer==='places-hit';
+      if(zoom||layer?.startsWith('city-name')||layer==='county-hit')select(result.feature,{zoom});
+      else if(getSelected())deselect();
+    },
+    amplifyZoom(at){
+      const {left,top}=map.getContainer().getBoundingClientRect();
+      const around=map.unproject([at.x-left,at.y-top]);
+      const zoom=Math.min(map.getMaxZoom(),map.getZoom()+2);
+      // Let MapLibre recognize the tap pair, then replace its one-level ease.
+      queueMicrotask(()=>map.easeTo({around,zoom,duration:duration()}));
+    },
+  });
+  map.on('zoomstart',mapTouches.onZoomStart);
+
+  bindDockSwipe(grip,{enabled:()=>active,onSwipe:step,follow:y=>dock.style.setProperty('--phone-drag',`${y}px`)});
+  bindDockSwipe(tray,{enabled:()=>active,onSwipe:step,follow:y=>dock.style.setProperty('--phone-drag',`${y}px`)});
+  for(const handle of [atlasBack,factsGrip]){
+    bindDockSwipe(handle,{enabled:()=>stage==='atlas',onSwipe:direction=>{if(direction<0)leaveAtlas();}});
+    handle.addEventListener('click',()=>leaveAtlas());
+  }
+  up.addEventListener('click',()=>step(1));
+  down.addEventListener('click',()=>step(-1));
+  home.addEventListener('click',()=>{mapTouches.cancel();reset();show('closed');});
+  historyBack.addEventListener('click',backToState);
+  document.addEventListener('pointerdown',event=>{
+    if(active&&!map.getContainer().contains(event.target))mapTouches.cancel();
+  },true);
+
+  // Pull up from the summary to open the atlas, and pull down from the top
+  // of the atlas to close it. Scrolling within the full facts stays native.
+  let scrollStart=null;
+  info.addEventListener('touchstart',event=>{
+    const touch=event.touches[0];
+    const direction=stage==='atlas'?1:stage==='summary'&&atlasKind(getSelected())?-1:0;
+    scrollStart=direction&&event.touches.length===1&&info.scrollTop<2?
+      {x:touch.clientX,y:touch.clientY,direction}:null;
+  },{passive:true});
+  info.addEventListener('touchmove',event=>{
+    if(!scrollStart)return;
+    const touch=event.touches[0],dx=Math.abs(touch.clientX-scrollStart.x),dy=(touch.clientY-scrollStart.y)*scrollStart.direction;
+    if(event.touches.length!==1||dy< -6||dx>Math.max(12,dy))scrollStart=null;
+    else if(dy>8&&event.cancelable)event.preventDefault();
+  },{passive:false});
+  info.addEventListener('touchend',event=>{
+    if(!scrollStart)return;
+    const {x,y,direction}=scrollStart;
+    const touch=event.changedTouches[0],dx=Math.abs(touch.clientX-x),dy=(touch.clientY-y)*direction;
+    scrollStart=null;
+    if(dy>=28&&dy>dx*1.25){
+      if(event.cancelable)event.preventDefault();
+      if(direction>0)leaveAtlas();else openAtlas();
+    }
+  },{passive:false});
+  info.addEventListener('touchcancel',()=>{scrollStart=null;});
+
+  function updateMode(){
+    if(active===media.matches)return;
+    if(stage==='atlas')leaveAtlas();
+    mapTouches.cancel();
+    active=media.matches;
+    app.classList.toggle('phone-layout',active);
+    app.classList.remove('map-menu-hidden');
+    home.hidden=dock.hidden=layers.hidden=!active;
+    brand.inert=active;
+    if(active){
+      header.insertBefore(search,$('.top-actions'));
+      $('#phone-tray-inner').append(controls);
+      $('#phone-sheet-inner').append(panel);
+      show(getSelected()?'summary':'closed');
+    }else{
+      toolbar.append(search);shell.insertBefore(controls,rotation);content.append(panel);
+      delete app.dataset.phoneStage;
+      historyBack.hidden=true;
+    }
+    renderSelection();
+    map.resize();refreshLabels();
+  }
+  media.addEventListener('change',updateMode);
+  window.addEventListener('resize',()=>{
+    if(stage!=='atlas'||!active)return;
+    cancelAnimationFrame(resizeFrame);
+    resizeFrame=requestAnimationFrame(()=>{if(stage==='atlas')fitAtlas(getSelected(),0);});
+  });
+  updateMode();
+  return {get active(){return active;},get focused(){return stage==='atlas'&&active;},selectionChanged,leaveAtlas,openCityFromState};
+}

@@ -1,0 +1,14 @@
+{
+  "unchanged_boundary_files": 113,
+  "changed_boundary_files": [],
+  "sha256": {
+    "data\\cities.geojson": "e68d8caab0fcad00ffc804a660f6d6b5cbad4fc9abc22fa2c53047999e53cb39",
+    "data\\basic_facts.json": "64cf76059756bc694edb940281b009126be0f7298e2d8691fe08a5d51b817ce7",
+    "assets\\fonts\\Noto Sans Bold\\0-255.pbf": "f60ce4cb899455c2203bd8293b550394ade53ffce8032bf9cc7f59255e49259c",
+    "assets\\fonts\\Noto Sans Bold\\256-511.pbf": "77c830f114b84a58f8829ca1eac4627a6a688bbce4bdb6a04de00f98fa74bb52",
+    "assets\\fonts\\Noto Sans Bold\\768-1023.pbf": "3c7ea7f7b52a97c75bfc123a303badd4fd7c5eaa1bfe66ebaba38cf3fce16ee7",
+    "assets\\fonts\\Noto Sans Regular\\0-255.pbf": "ef1f38a3f1978591e846e9eaddf8a54f7047f546fc6aaed7872cc53151a5de78",
+    "assets\\fonts\\Noto Sans Regular\\256-511.pbf": "992557f9e2574cfb9a75e16c7b52832578849772b7c9a6e480d6213fb008fe5d",
+    "assets\\fonts\\Noto Sans Regular\\768-1023.pbf": "6e27cdd6edce5b11c469a24b333ecefc0d4b082491b71d6924ce0be6eeba71c3"
+  }
+}

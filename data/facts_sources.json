@@ -1,0 +1,50 @@
+{
+  "prepared_on": "2026-11-18",
+  "population_reference_date": "2025-07-01",
+  "population_vintage": 2025,
+  "notes": "Latest completed Census population-estimate vintage available at preparation. 2020 fallback counts retain their own date. Raw downloads are not bundled; hashes identify the exact source inputs.",
+  "sources": [
+    {
+      "file": "state2025.csv",
+      "url": "https://www2.census.gov/programs-surveys/popest/datasets/2020-2025/state/totals/NST-EST2025-ALLDATA.csv",
+      "bytes": 53555,
+      "sha256": "92188e29cb0a67dcf95afa7d6c47359409782f086478b70ea4128eb70e223ca9"
+    },
+    {
+      "file": "city2025.csv",
+      "url": "https://www2.census.gov/programs-surveys/popest/datasets/2020-2025/cities/totals/sub-est2025.csv",
+      "bytes": 7464556,
+      "sha256": "e3508f5201465913476d4ddf91740f191f7977c9f2614a2a7e30b5fd22027934"
+    },
+    {
+      "file": "gaz-place2025.zip",
+      "url": "https://www2.census.gov/geo/docs/maps-data/data/gazetteer/2025_Gazetteer/2025_Gaz_place_national.zip",
+      "bytes": 1214053,
+      "sha256": "49644173a453469d9bd77fb7a493b027f87567e209edaf2078aac7543ac2ee29"
+    },
+    {
+      "file": "gaz-state2025.zip",
+      "url": "https://www2.census.gov/geo/docs/maps-data/data/gazetteer/2025_Gazetteer/2025_Gaz_state_national.zip",
+      "bytes": 2863,
+      "sha256": "5c0bb56f4824af366538d73bffd229e790d301356624302eeca24d09cf27ba30"
+    },
+    {
+      "file": "census2020-25.json",
+      "url": "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Places_CouSub_ConCity_SubMCD/MapServer/25/query?where=1%3D1&outFields=GEOID%2CNAME%2CSTATE%2CPOP100%2CAREALAND%2CAREAWATER&returnGeometry=false&f=json",
+      "bytes": 2403461,
+      "sha256": "691ef5c4624456fb2d487ff285583c571d255cfd30dd931c12962b8ee8f5d1e0"
+    },
+    {
+      "file": "census2020-26.json",
+      "url": "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Places_CouSub_ConCity_SubMCD/MapServer/26/query?where=1%3D1&outFields=GEOID%2CNAME%2CSTATE%2CPOP100%2CAREALAND%2CAREAWATER&returnGeometry=false&f=json",
+      "bytes": 1511086,
+      "sha256": "e4d27509cc59d11bd1e0f146cccfb75889cfe0df31d6bdc372a8416b0600a83a"
+    },
+    {
+      "file": "census2020-states.json",
+      "url": "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/State_County/MapServer/54/query?where=1%3D1&outFields=GEOID%2CNAME%2CPOP100%2CAREALAND%2CAREAWATER&returnGeometry=false&f=json",
+      "bytes": 6864,
+      "sha256": "77f48cf440b66daa103d770197c6fc8a22b9bd36f8248fee761dbc22c4cab10c"
+    }
+  ]
+}
