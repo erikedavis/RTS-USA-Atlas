@@ -1,21 +1,27 @@
-# USAtlas V0.8A preview
+# USAtlas V0.8B preview
 
-Requires Python 3. Clone the repository or extract its source ZIP, then run **Start_Atlas.cmd** from that folder. The launcher opens **http://127.0.0.1:8017/**.
+Requires Python 3. Clone the repository or extract its source ZIP, then run **Start_Atlas.cmd** from that folder. The launcher opens **http://127.0.0.1:8018/**.
 [Development handoff](HANDOFF.md) covers the current preview, repeatable checks, and open work.
+
+## Desktop controls
+
+- Select a state, city or metro, then choose **Atlas** in the right sidebar. The sidebar widens. State Atlas frames the outline and fades out surrounding states. City Atlas keeps the zoom and highlights its metro when one exists. Metro Atlas frames the metro and includes a list of Census places with points inside its boundary.
+- **Back** restores the previous map position, zoom and bearing. A linked city opened from a state returns to that state's atlas or stats.
+- The chevron midway down the sidebar hides it. Click the remaining chevron to reopen it, or make a new selection. Home sits in the upper-left corner of the map. The header contains **VIEW: STATISTICAL** and Search.
 
 ## Phone controls
 
 - Map view starts with a compact header, Home and the map key in the bottom corners, and a chevron in the center. Swipe the chevron up to reveal **CTY**, **MSA**, and **LAYERS**. The chevrons can also be tapped. **LAYERS** is reserved for a future update.
 - A quick double-tap on the map zooms two levels around the tap. Tap or double-tap a state abbreviation to fit the state and show its compact facts. With a state selected, tap another state's land to switch, or use the **×** by the chevrons to clear it. To select from unselected state land, tap twice with a 0.5 to 1.04 second gap.
 - Hold on a state, its abbreviation, or a city for about 0.6 seconds to open its full atlas. A city hold keeps the current zoom. Tap a city name to read its facts in place or its symbol to zoom to it. A slower double-tap on the city name opens compact facts. Swipe up on the facts or tool bar to expand them. Tap outside the highlighted metro to clear the city and keep your current map position.
-- Tap a capital or largest city in state facts to visit the corresponding city view. **BACK** returns to the state facts or atlas you came from. In the state atlas, tapping outside the outline returns immediately to the prior view.
-- State abbreviations have priority at wide phone scales and in rotated views. Puerto Rico is labeled **PR** inside the island when it fits, with the inset name along the bottom.
+- Tap a capital or largest city in state facts to visit the corresponding city view. **BACK** returns to the state facts or atlas you came from. One tap on another state's land switches the selection. In the state atlas, a tap over open water returns to the prior view.
+- State abbreviations have priority at wide scales and in rotated views. Puerto Rico is labeled **PR** inside the island when it fits, with the inset name along the bottom.
 - Population, capital, largest city and total area fit into the compact state facts. When capital and largest city are the same, they share one entry.
 - A hold gives visual feedback. Browsers exposing the vibration API can also give a short pulse on release.
 
 ## Counties and metros
 
-Enable **CTY** to tap and open county facts. From zoom 7, county names appear where they fit at 120% of the regular city label size. Enable **MSA** to select a metro and see its July 1, 2025 population and total area. With both layers enabled, select a metro by its name or outline, or tap county land to read county facts.
+Enable **CTY** from a state or the map controls. With a state selected, its county boundaries stay visible when zooming, panning, or rotating. With no state selected, county boundaries are drawn nationwide. County selection is available from zoom 4.5 and names appear from zoom 7 where they fit. Enable **MSA** to select a metro and see its July 1, 2025 population and total area.
 
 ## Rotation and search
 
@@ -35,7 +41,7 @@ Pass 2 covers the finished compass artwork, label priorities by scale, and the o
 
 1. Connect the PC and iPhone to the same trusted Wi-Fi network.
 2. On the PC, open this extracted folder and run **Start_Phone_Preview.cmd**. Keep the window open.
-3. Enter the address shown in that window into Safari on the iPhone. This preview uses port **8016**.
+3. Enter the address shown in that window into Safari on the iPhone. This preview uses port **8019**.
 4. Drag and pinch, try both kinds of double-tap, search for California, and swipe into and out of the state atlas. Press Ctrl+C in the PC window when finished.
 
 If Safari can't reach the address, check that both devices are on the same trusted Wi-Fi. Guest Wi-Fi and Windows firewall rules can block connections between devices.
@@ -69,7 +75,7 @@ City populations refer to municipal/place boundaries, not metro areas.
 Clicking empty ocean clears selection and hover. State and city panels
 retain population, dated sources, and square miles. State panels include capital
 and largest city with their populations. Alaska and Hawaii remain in western
-insets; Puerto Rico stays in its Gulf inset. AK, HI and PR zoom buttons are available on desktop.
+insets and Puerto Rico stays in its Gulf inset. Select their abbreviations or find them in Search.
 
 ## Data and limitations
 

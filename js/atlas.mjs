@@ -14,6 +14,7 @@ import {INSETS, NATIONAL_BOUNDS, displayData, displayPoint, geographicPoint, haw
 
 const BASE = './data/';
 const $ = (selector) => document.querySelector(selector);
+const app = $('.app');
 const info = $('#panel-content');
 const panel = $('#info-panel');
 const emptyFC = {type:'FeatureCollection',features:[]};
@@ -27,6 +28,7 @@ let detailPlaceState = '';
 let detailPolygonState = '';
 let countySet = emptyFC;
 let countyNames,countyAnchors=null,countyAnchorLoad=null,countyViewKey='',countyViewRevision=0;
+let renderedCountyScope;
 let countiesById=new Map();
 let metroSet = null;
 let metroFacts = {};
@@ -40,6 +42,7 @@ let searchLoading = null;
 let toastTimer;
 let stateLabelsController, cityLayers, mappedCityIds;
 let phone, atlasFocus=null,cityAtlas=null,metroBounds;
+let desktopAtlas=null,desktopStateReturn=null;
 const insetMarkers = [];
 
 const countyCache = new Map();
@@ -65,9 +68,9 @@ function isNationalView(){
 }
 function wideStateLabels(){
   const span=map.getContainer().clientWidth*360/(512*2**map.getZoom());
-  return Boolean(phone?.active&&!phone.focused&&span>=26);
+  return !atlasFocus&&!desktopAtlas&&!phone?.focused&&span>=26;
 }
-const stateLabelsFirst=()=>!atlasFocus&&(Boolean(phone?.active)||!isNorthUp(map.getBearing()));
+const stateLabelsFirst=()=>!atlasFocus&&(wideStateLabels()||Boolean(phone?.active)||!isNorthUp(map.getBearing()));
 const metroOverview=()=>metroPreference!==false&&isMetroScale(map.getZoom());
 const metroMode=()=>metroPreference===true?'manual':metroOverview()?'auto':'off';
 function emptyPanel() {
@@ -125,8 +128,9 @@ function basicFacts(f,overview) {
       button.addEventListener('click',()=>{
         const feature=cities.features.find(f=>f.properties.geoid===id);
         if(!feature)return;
-        if(phone?.active&&p.kind==='state')phone.openCityFromState(feature);
-        else select(feature,{zoom:true});
+        if(p.kind!=='state')select(feature,{zoom:true});
+        else if(phone?.active)phone.openCityFromState(feature);
+        else openDesktopCityFromState(feature);
       });
       factList.append(button);
     }
@@ -182,7 +186,7 @@ function display(f) {
   info.append(record);
   if(p.kind==='state'){
     const button=element('button','panel-action','SHOW / SELECT COUNTIES');button.type='button';
-    button.addEventListener('click',()=>{phone?.leaveAtlas();toggleCountySelection(true);zoomTo(f,7.4);});
+    button.addEventListener('click',()=>toggleCountySelection(true));
     info.append(button);
     if(!phone?.active)info.append(element('div','panel-help','Click a state abbreviation to zoom to that state. Select a city above to visit it.'));
   }
@@ -192,17 +196,29 @@ function display(f) {
 }
 
 function setPanelOpen(open) {
-  panel.classList.toggle('collapsed',!open);
   if(phone?.active){phone.selectionChanged(open?selected:null);return;}
-  if(open)$('#map').closest('.app').classList.remove('map-menu-hidden');
-  const minus=$('#panel-close');
-  minus.setAttribute('aria-expanded',String(open));
-  minus.setAttribute('aria-label',open?'Deselect and close details':'Hide map menu');
-  $('#panel-open').disabled=open;
-  if(compactLayout.matches){
-    map.resize();
-    scheduleSettledView();
-  }
+  if(open)setSidebarHidden(false);
+  updateDesktopAtlasButtons();
+}
+
+function setSidebarHidden(hidden){
+  const changed=app.classList.contains('sidebar-hidden')!==hidden;
+  app.classList.toggle('sidebar-hidden',hidden);
+  const toggle=$('#sidebar-toggle');
+  toggle.setAttribute('aria-expanded',String(!hidden));
+  const label=hidden?'Show stats':'Hide stats';
+  toggle.setAttribute('aria-label',label);
+  toggle.title=label;
+  if(changed){map.resize();scheduleSettledView();}
+}
+
+function updateDesktopAtlasButtons(){
+  const kind=selected?.properties.kind;
+  const toggle=$('#desktop-atlas-toggle');
+  toggle.hidden=!['state','place','metro'].includes(kind);
+  toggle.textContent=desktopAtlas?'Back':'Atlas';
+  toggle.setAttribute('aria-expanded',String(Boolean(desktopAtlas)));
+  $('#desktop-state-back').hidden=!desktopStateReturn||Boolean(desktopAtlas);
 }
 
 function boundsOf(geom) {
@@ -283,12 +299,13 @@ function fitPhoneAtlas(feature,headerHeight,sheetHeight,duration){
   map.easeTo({center:cityAtlas?.point||map.getCenter(),offset:[0,(headerHeight-bottom)/2],duration});
 }
 const cityMetroLayers=['atlas-metro-fill','atlas-metro-outline'];
-function setPhoneAtlasFocus(feature,{fast=false}={}){
+function setAtlasFocus(feature,{fast=false}={}){
   if(cityAtlas){
     cityAtlas.fact.remove();
     cityAtlas=null;
-    for(const id of cityMetroLayers)map.setFilter(id,['==',['get','geoid'],'__none__']);
   }
+  const metroId=feature?.properties.kind==='metro'?feature.properties.geoid:'__none__';
+  for(const id of cityMetroLayers)map.setFilter(id,['==',['get','geoid'],metroId]);
   const isState=feature?.properties.kind==='state';
   focusStateAtlas(isState?feature.properties.geoid:null,fast);
   if(feature?.properties.kind!=='place')return;
@@ -321,6 +338,87 @@ function setPhoneAtlasFocus(feature,{fast=false}={}){
     console.warn('City atlas metro:',error);
   });
 }
+const mapCamera=()=>({center:map.getCenter(),zoom:map.getZoom(),bearing:map.getBearing()});
+const atlasDuration=()=>matchMedia('(prefers-reduced-motion: reduce)').matches?0:360;
+
+function openDesktopAtlas({frame=true,returnCamera}={}){
+  const kind=selected?.properties.kind;
+  if(desktopAtlas||!['state','place','metro'].includes(kind))return;
+  map.stop();
+  desktopAtlas={returnCamera:returnCamera||mapCamera()};
+  app.dataset.desktopAtlas=kind;
+  setSidebarHidden(false);
+  updateDesktopAtlasButtons();
+  map.resize();
+  info.scrollTop=0;
+  setAtlasFocus(selected);
+  if(kind==='metro')showMetroPlaces(selected);
+  if(frame&&kind!=='place'){
+    const inset=kind==='state'&&INSETS.find(item=>item.abbr===selected.properties.abbr);
+    const bounds=inset?.focusBounds?.map(point=>displayPoint(point,inset.abbr))||boundsOf(selected.geometry);
+    if(bounds)fitAtCurrentBearing(bounds,{padding:{top:22,bottom:26,left:22,right:34},maxZoom:13,duration:atlasDuration()});
+  }
+}
+
+function leaveDesktopAtlas({restore=true}={}){
+  if(!desktopAtlas)return;
+  const {returnCamera}=desktopAtlas;
+  desktopAtlas=null;
+  map.stop();
+  delete app.dataset.desktopAtlas;
+  info.querySelector('.metro-atlas-places')?.remove();
+  setAtlasFocus(null);
+  updateDesktopAtlasButtons();
+  map.resize();
+  if(restore)map.easeTo({...returnCamera,duration:atlasDuration()});
+  scheduleSettledView();
+}
+
+function openDesktopCityFromState(feature){
+  desktopStateReturn={state:selected,camera:mapCamera(),scroll:info.scrollTop,atlas:desktopAtlas};
+  select(feature,{zoom:!desktopStateReturn.atlas,preserveStateReturn:true});
+  if(desktopStateReturn.atlas){
+    openDesktopAtlas();
+    if(cityAtlas?.point)map.easeTo({center:cityAtlas.point,duration:atlasDuration()});
+  }
+}
+
+function backFromDesktopAtlas(){
+  if(!desktopStateReturn){leaveDesktopAtlas();return;}
+  const origin=desktopStateReturn;
+  leaveDesktopAtlas({restore:false});
+  select(origin.state);
+  if(origin.atlas)openDesktopAtlas({frame:false,returnCamera:origin.atlas.returnCamera});
+  map.jumpTo(origin.camera);
+  info.scrollTop=origin.scroll;
+  const toggle=$('#desktop-atlas-toggle');
+  if(!toggle.hidden)toggle.focus();
+}
+
+function showMetroPlaces(metro){
+  const details=element('details','census-record metro-atlas-places');
+  details.append(element('summary','','Cities and places'));
+  info.querySelector('.census-record').before(details);
+  details.addEventListener('toggle',()=>{
+    if(!details.open||details.children.length>1)return;
+    const shape=prepareStateShapes(metro.geometry);
+    const [[west,south],[east,north]]=boundsOf(metro.geometry);
+    const places=cities.features.filter(city=>{
+      const [lng,lat]=city.geometry.coordinates;
+      return lng>=west&&lng<=east&&lat>=south&&lat<=north&&shapeContainsPoint(shape,[lng,lat]);
+    }).sort((a,b)=>b.properties.population-a.properties.population||a.properties.name.localeCompare(b.properties.name));
+    if(!places.length){details.append(element('p','','No bundled Census places have a mapped point within this area.'));return;}
+    details.append(element('p','','Census places with a mapped point inside the metro boundary.'));
+    const list=element('ul','metro-place-list');
+    for(const {properties:p} of places){
+      const item=element('li');
+      item.append(element('span','',p.name+', '+p.state_abbr));
+      if(p.population_known)item.append(element('span','',number(p.population)));
+      list.append(item);
+    }
+    details.append(list);
+  });
+}
 function focusStateAtlas(fips,fast){
   if(atlasFocus===fips)return;
   atlasFocus=fips;
@@ -338,11 +436,12 @@ function focusStateAtlas(fips,fast){
   for(const id of ['hawaii-tail-islands','hawaii-tail-label']){
     if(map.getLayer(id))map.setLayoutProperty(id,'visibility',!fips||fips==='15'?'visible':'none');
   }
-  for(const id of ['county-hit','county-lines','places-hit','place-area-hit','place-area-lines']){
+  for(const id of ['places-hit','place-area-hit','place-area-lines']){
     map.setFilter(id,fips?['==',['get','state_fips'],fips]:null);
   }
   stateLabelsController.setFocus(fips);
   cityLayers.setFocus(fips);
+  updateCountyView();
   updateMetroMode();
   scheduleSettledView();
 }
@@ -355,7 +454,9 @@ function applySelection() {
   map.setFilter('place-selected',['==',['get','geoid'],selected?.properties?.kind==='place'?selected.properties.geoid:'__none__']);
   map.setFilter('metro-selected',['==',['get','geoid'],selected?.properties?.kind==='metro'?selected.properties.geoid:'__none__']);
 }
-function select(f,{zoom=false,duration}={}) {
+function select(f,{zoom=false,duration,preserveStateReturn=false}={}) {
+  if(!preserveStateReturn)desktopStateReturn=null;
+  leaveDesktopAtlas({restore:false});
   selectionRevision++;
   selected=f;
   const p=f.properties||{};
@@ -363,15 +464,19 @@ function select(f,{zoom=false,duration}={}) {
   else if(p.state_fips)selectedState=p.state_fips;
   else selectedState=null;
   applySelection();display(f);
+  updateCountyView();
 
   if(zoom)zoomTo(f,p.kind==='state'?13:p.kind==='metro'?9.5:10.5,duration);
   if(selectedState)loadStateDetail(selectedState);
 }
 function deselect() {
+  desktopStateReturn=null;
+  leaveDesktopAtlas({restore:false});
   cityLayers?.clearHover();
   selectionRevision++;
   selected=null;selectedState=null;
   applySelection();emptyPanel();
+  updateCountyView();
   $('#search').value='';$('#search-results').hidden=true;
 }
 function reset() {
@@ -391,7 +496,6 @@ async function cacheFetch(cache, key, path) {
 async function loadStateDetail(fips) {
   if(!fips)return;
   detailState=fips;
-  updateCountyView();
   detailPlaceState=fips;
   try {
     const data=await cacheFetch(pointCache,fips,`${BASE}places/${fips}_points.geojson`);
@@ -401,13 +505,23 @@ async function loadStateDetail(fips) {
 }
 function updateCountyNames(){
   if(!countySelectionOverride||map.getZoom()<COUNTY_LABEL_ZOOM||map.isMoving()||!countyAnchors)return;
-  const counties=atlasFocus?countySet.features.filter(f=>f.properties.state_fips===atlasFocus):countySet.features;
-  countyNames.layout(counties,countyAnchors,[...mapReservations(),...cityLayers.labelReservations()]);
+  countyNames.layout(countySet.features,countyAnchors,[...mapReservations(),...cityLayers.labelReservations()]);
 }
 function updateCountyView(){
-  const showNames=countySelectionOverride&&map.getZoom()>=COUNTY_LABEL_ZOOM;
-  const loadFips=new Set([atlasFocus||detailState].filter(Boolean));
-  if(showNames&&!atlasFocus){
+  if(!countySelectionOverride)return;
+  const kind=selected?.properties.kind;
+  const scope=atlasFocus||((kind==='state'||kind==='county')?selectedState:null);
+  if(scope!==renderedCountyScope){
+    renderedCountyScope=scope;
+    const filter=scope?['==',['get','state_fips'],scope]:null;
+    for(const id of ['county-hit','county-lines','county-names'])map.setFilter(id,filter);
+    map.setPaintProperty('county-lines','line-color',scope?'#6685a0':'#3b5268');
+    map.setPaintProperty('county-lines','line-opacity',scope ? .86 : .58);
+    countyNames.clear();
+  }
+  const showNames=map.getZoom()>=COUNTY_LABEL_ZOOM;
+  const loadFips=new Set(scope?[scope]:[]);
+  if(!scope){
     const bounds=map.getBounds();
     const west=bounds.getWest(),east=bounds.getEast(),south=bounds.getSouth(),north=bounds.getNorth();
     for(const {p,polygons} of stateLabelsController.items){
@@ -495,18 +609,17 @@ function toggleCountySelection(force){
   updateCountyButton();
   for(const id of ['county-hit','county-lines','county-selected','county-names'])map.setLayoutProperty(id,'visibility',countySelectionOverride?'visible':'none');
   if(!countySelectionOverride && selected?.properties?.kind==='county')deselect();
-  const noticeDuration=phone?.active?2200:3200;
   if(countySelectionOverride){
-    toast('COUNTY SELECTION ENABLED - ZOOM INTO A STATE FOR DETAILS',noticeDuration);
-    if(selectedState)loadStateDetail(selectedState);
+    updateCountyView();
   }else{
-    toast('COUNTY SELECTION OFF / CITIES AND STATES REMAIN SELECTABLE',noticeDuration);
+    countyViewKey='';
+    countyViewRevision++;
   }
   scheduleSettledView();
 }
 function mapReservations(){
   const r=map.getContainer().getBoundingClientRect();
-  const controls=[...document.querySelectorAll('.map-controls:not(.phone-dock .map-controls),.map-only-controls button,.rotation-tools:not([inert]),.map-hud,.city-legend,.inset-label,.map-key-toggle,.map-key:not([hidden]),.phone-grip,.phone-dock-row:not([inert]),.phone-home:not([hidden]),.phone-atlas-back:not([hidden]),.phone-history-back:not([hidden])')]
+  const controls=[...document.querySelectorAll('.map-controls:not(.phone-dock .map-controls),#reset-view,#sidebar-toggle,.rotation-tools:not([inert]),.map-hud,.inset-label,.map-key-toggle,.map-key:not([hidden]),.phone-grip,.phone-dock-row:not([inert]),.phone-home:not([hidden]),.phone-atlas-back:not([hidden]),.phone-history-back:not([hidden])')]
     .filter(n=>n.offsetWidth&&n.offsetHeight).map(n=>{const b=n.getBoundingClientRect();return {x0:b.left-r.left,y0:b.top-r.top,x1:b.right-r.left,y1:b.bottom-r.top};});
   const pr=INSETS.find(inset=>inset.abbr==='PR');
   const prFrame={...screenBounds(map,pr.box),inset:pr.abbr};
@@ -552,10 +665,6 @@ function scheduleSettledView(){
     if(map.isMoving())return;
     updateMapHud();
     updateMetroMode();
-    const legend=metroOverview()
-      ? (hoverInput.matches?'METRO AREAS · HOVER FOR MORE CITY NAMES':'METRO AREAS · TAP CITY SYMBOLS FOR DETAILS')
-      : 'CITIES / POPULATION & SPACE';
-    if($('#map-mode').textContent!==legend)$('#map-mode').textContent=legend;
     updateInsetTitles();
     stateLabelsController.layout();
     cityLayers.layout();
@@ -596,7 +705,7 @@ function addSourcesAndLayers() {
   map.addLayer({id:'state-atlas-surface',type:'fill',source:'states',filter:['==',['get','geoid'],'__none__'],paint:{'fill-color':'#101923','fill-opacity':0}});
   map.addLayer({id:'state-hit',type:'fill',source:'states',paint:{'fill-color':'#182637','fill-opacity':.01}});
   map.addLayer({id:'county-hit',type:'fill',source:'counties',minzoom:4.5,layout:{visibility:'none'},paint:{'fill-color':'#3d5977','fill-opacity':.01}});
-  map.addLayer({id:'county-lines',type:'line',layout:{visibility:'none','line-join':'bevel','line-cap':'butt'},source:'counties',minzoom:4.5,paint:{'line-color':'#34475d','line-width':['interpolate',['linear'],['zoom'],4.5,.6,8,1.0],'line-opacity':['interpolate',['linear'],['zoom'],4.5,.48,7,.6,10,.8]}});
+  map.addLayer({id:'county-lines',type:'line',layout:{visibility:'none','line-join':'bevel','line-cap':'butt'},source:'counties',paint:{'line-color':'#3b5268','line-width':['interpolate',['linear'],['zoom'],2,.45,4.5,.7,8,1.15],'line-opacity':.58}});
   map.addLayer({id:'place-area-hit',type:'fill',source:'place-areas',minzoom:8.3,paint:{'fill-color':'#40597a','fill-opacity':.01}});
   map.addLayer({id:'place-area-lines',type:'line',layout:{'line-join':'bevel','line-cap':'butt'},source:'place-areas',minzoom:8.3,paint:{'line-color':'#546b83','line-opacity':.38,'line-width':.6}});
   map.addLayer({id:'metro-hit',type:'fill',source:'metros',minzoom:4.4,layout:{visibility:'none'},paint:{'fill-color':'#a7bbcc','fill-opacity':.01}});
@@ -639,6 +748,7 @@ function addSourcesAndLayers() {
       event.originalEvent.sourceCapabilities?.firesTouchEvents||touchInput.matches;
     const result=mapFeatureAt(event.point,isTouch);
     if(!result){deselect();return;}
+    if(desktopAtlas&&result.feature?.properties.geoid===selected?.properties.geoid){setSidebarHidden(false);return;}
     if(result.feature)select(result.feature,{zoom:result.layer==='city-hit'||result.layer==='places-hit'});
   });
 }
@@ -775,13 +885,8 @@ function setupUI() {
   $('#home').addEventListener('click',reset);
   $('#home').addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();reset();}});
   $('#reset-view').addEventListener('click',reset);
-  $('#map-only-home').addEventListener('click',reset);
   $('#zoom-in').addEventListener('click',()=>map.zoomIn());
   $('#zoom-out').addEventListener('click',()=>map.zoomOut());
-  for(const inset of INSETS)$('#go-'+inset.abbr.toLowerCase()).addEventListener('click',()=>{
-    const feature=states.features.find(f=>f.properties.abbr===inset.abbr);
-    if(feature)zoomTo(feature,13);
-  });
   const keyToggle=$('#map-key-toggle'),key=$('#map-key');
   populateMapKey($('#map-key-symbols'));
   function setKey(open){key.hidden=!open;keyToggle.setAttribute('aria-expanded',String(open));cityLayers.layout();}
@@ -792,29 +897,19 @@ function setupUI() {
   document.addEventListener('keydown',event=>{
     if(event.key!=='Escape')return;
     if(phone?.focused){phone.leaveAtlas();return;}
+    if(desktopAtlas){backFromDesktopAtlas();return;}
     if(key.hidden)deselect();else{setKey(false);keyToggle.focus();}
   });
   $('#toggle-counties').addEventListener('click',()=>toggleCountySelection());
   $('#toggle-metros').addEventListener('click',toggleMetros);
-  const app=$('.app');
-  function dismissMenuStep(){
-    if(!compactLayout.matches)return;
-    if(!panel.classList.contains('collapsed')){
-      deselect();
-      return;
-    }
-    setKey(false);
-    app.classList.add('map-menu-hidden');
-    map.resize();
-    scheduleSettledView();
-  }
-  $('#panel-close').addEventListener('click',dismissMenuStep);
-  $('#panel-open').addEventListener('click',()=>setPanelOpen(true));
-  $('#restore-map-menu').addEventListener('click',()=>{
-    app.classList.remove('map-menu-hidden');
-    setPanelOpen(false);
+  $('#sidebar-toggle').addEventListener('click',()=>{
+    setSidebarHidden(!app.classList.contains('sidebar-hidden'));
   });
-  addPanelSwipe(dismissMenuStep);
+  $('#desktop-atlas-toggle').addEventListener('click',()=>{
+    if(desktopAtlas)backFromDesktopAtlas();
+    else{setKey(false);openDesktopAtlas();}
+  });
+  $('#desktop-state-back').addEventListener('click',backFromDesktopAtlas);
   phone=setupPhoneUI(map,{
     getSelected:()=>selected,select,deselect,reset,refreshLabels(){
       if(!map.isMoving())stateLabelsController.refresh();
@@ -825,6 +920,11 @@ function setupUI() {
       if(badge)return {feature:findStateByGeoid(badge.dataset.geoid),layer:'state-label'};
       const {x,y}=phoneMapPoint(at);
       return mapFeatureAt(new maplibregl.Point(x,y),true,true);
+    },
+    stateAt(at){
+      const {x,y}=phoneMapPoint(at);
+      const state=map.queryRenderedFeatures([x,y],{layers:['state-hit']})[0];
+      return state&&findStateByGeoid(state.properties.geoid);
     },
     insideState(at,target,geoid){
       const {x,y}=phoneMapPoint(at);
@@ -847,50 +947,34 @@ function setupUI() {
       map.setPaintProperty('state-selected','line-opacity',.68);
     },
     renderSelection(){if(selected)display(selected);},
-    setFocus:setPhoneAtlasFocus,fitFeature:fitPhoneAtlas,closeKey:()=>{if(!key.hidden)setKey(false);},
+    beforeModeChange(){
+      desktopStateReturn=null;
+      leaveDesktopAtlas();
+      setSidebarHidden(false);
+    },
+    setFocus:setAtlasFocus,fitFeature:fitPhoneAtlas,closeKey:()=>{if(!key.hidden)setKey(false);},
+  });
+  const viewMenu=$('#view-menu');
+  document.addEventListener('click',event=>{
+    if(viewMenu.open&&!viewMenu.contains(event.target))viewMenu.open=false;
+  });
+  viewMenu.addEventListener('keydown',event=>{
+    if(event.key==='Escape'&&viewMenu.open){
+      event.stopPropagation();
+      viewMenu.open=false;
+      viewMenu.querySelector('summary').focus();
+    }
   });
   for(const button of document.querySelectorAll('[data-view]')){
     button.addEventListener('click',()=>{
-      if(button.dataset.view==='statistical')return;
-      toast(`${button.dataset.view.toUpperCase()} view is reserved for a later release; same Census geographic engine.`);
+      viewMenu.open=false;
+      viewMenu.querySelector('summary').focus();
+      toast(`${button.dataset.view.toUpperCase()} view is reserved for a later release.`);
     });
   }
   setupSearch();
 }
 
-function addPanelSwipe(dismiss){
-  let start;
-  function begin(event){
-    start=null;
-    if(phone?.active||!compactLayout.matches||event.touches.length!==1||
-      (info.contains(event.target)&&info.scrollTop>1))return;
-    const {clientX:x,clientY:y}=event.touches[0];
-    start={x,y};
-  }
-  function move(event){
-    if(!start)return;
-    if(event.touches.length!==1){start=null;return;}
-    const dx=event.touches[0].clientX-start.x,dy=event.touches[0].clientY-start.y;
-    if(dy< -8||(Math.abs(dx)>12&&Math.abs(dx)>dy)){start=null;return;}
-    if(dy>12&&dy>Math.abs(dx)*1.25&&event.cancelable)event.preventDefault();
-  }
-  function finish(event){
-    if(!start)return;
-    const touch=event.changedTouches[0];
-    const dx=touch.clientX-start.x,dy=touch.clientY-start.y;
-    start=null;
-    const threshold=panel.classList.contains('collapsed')?24:44;
-    if(dy<threshold||dy<Math.abs(dx)*1.25)return;
-    if(event.cancelable)event.preventDefault();
-    dismiss();
-  }
-  for(const surface of [panel,$('.map-controls')]){
-    surface.addEventListener('touchstart',begin,{passive:true});
-    surface.addEventListener('touchmove',move,{passive:false});
-    surface.addEventListener('touchend',finish,{passive:false});
-    surface.addEventListener('touchcancel',()=>{start=null;});
-  }
-}
 async function initialize() {
   try {
     [manifest,states,stateLabels,cities,facts]=await Promise.all([
@@ -899,7 +983,6 @@ async function initialize() {
     ]);
     mappedCityIds=new Set(cities.features.map(f=>f.properties.geoid));
     for(const state of states.features)stateNames.set(state.properties.geoid,state.properties.name);
-    $('#source-tag').textContent='CENSUS 2025 / VERIFIED SOURCE';
     map=new maplibregl.Map({
       container:'map',center:[-98.4,38.5],zoom:3.3,minZoom:1.1,maxZoom:16,
       attributionControl:false,pitchWithRotate:false,dragRotate:false,touchPitch:false,maxPitch:0,bearingSnap:0,renderWorldCopies:false,
@@ -917,7 +1000,6 @@ async function initialize() {
       scheduleSettledView();
       $('#map-loading').classList.add('done');
       setTimeout(()=>{$('#map-loading').style.display='none';},470);
-      if(!compactLayout.matches)toast('CENSUS 2025 GEOGRAPHY LOADED - SELECT A REGION');
     });
     map.on('error',event=>console.warn('MapLibre:',event.error||event));
   }catch(error){

@@ -56,7 +56,7 @@ export function createStateLabels(map,labels,states,Marker,onSelect,isNational,p
     const origin=container.getBoundingClientRect(),viewport={x0:5,y0:5,x1:w-5,y1:h-5};
     const bounds=map.getBounds();
     const viewBounds={west:bounds.getWest(),east:bounds.getEast(),south:bounds.getSouth(),north:bounds.getNorth()};
-    const obstacles=[...container.parentElement.querySelectorAll('.map-controls:not(.phone-dock .map-controls),.map-only-controls button,.rotation-tools:not([inert]),.upper-left,.city-legend,.map-key-toggle,.dev-zoom,.inset-label,.phone-grip,.phone-dock-row:not([inert]),.phone-home:not([hidden]),.phone-atlas-back:not([hidden]),.phone-history-back:not([hidden])')]
+    const obstacles=[...container.parentElement.parentElement.querySelectorAll('.map-controls:not(.phone-dock .map-controls),#reset-view,#sidebar-toggle,.rotation-tools:not([inert]),.map-key-toggle,.dev-zoom,.inset-label,.phone-grip,.phone-dock-row:not([inert]),.phone-home:not([hidden]),.phone-atlas-back:not([hidden]),.phone-history-back:not([hidden])')]
       .filter(node=>node.offsetWidth&&node.offsetHeight)
       .map(node=>{const b=node.getBoundingClientRect();return {x0:b.left-origin.left,y0:b.top-origin.top,x1:b.right-origin.left,y1:b.bottom-origin.top};});
     const markers=wide?[]:protectedMarkerBoxes();

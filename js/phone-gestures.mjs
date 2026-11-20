@@ -4,7 +4,7 @@ const MAP_DOUBLE_TAP_MS=500, DELIBERATE_TAP_MS=1040, TAP_SPACING=30;
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const position=touch=>({x:touch.clientX,y:touch.clientY});
 
-export function bindMapTouches(surface,{enabled,hit,preview,hold,deliberate,single,immediate,amplifyZoom,badgeTap,setBadgeGesture,hasState}){
+export function bindMapTouches(surface,{enabled,hit,preview,hold,deliberate,single,immediate,amplifyZoom,badgeTap,setBadgeGesture,hasState,switchState}){
   let finger=null,pending=null,lastCityTap=null,lastBadgeTap=null,timer=0;
   const tapEvents=new WeakMap();
   function clearPending(){
@@ -56,18 +56,21 @@ export function bindMapTouches(surface,{enabled,hit,preview,hold,deliberate,sing
       return;
     }
     const at=position(event.changedTouches[0]);
+    if(touch.moved||distance(touch.at,at)>9)return;
+    if(!touch.badge&&switchState(at)){
+      clearPending();lastCityTap=lastBadgeTap=null;
+      if(event.cancelable)event.preventDefault();
+      return;
+    }
     if(touch.badge||touch.repeat){
-      if(!touch.moved&&distance(touch.at,at)<=9){
-        if(event.cancelable)event.preventDefault();
-        const result=touch.repeat?lastBadgeTap.result:hit(at,touch.badge);
-        lastBadgeTap=touch.repeat?null:{at,time:event.timeStamp,result};
-        // MapLibre stops the first camera ease on the next touchstart.
-        badgeTap(result);
-      }
+      if(event.cancelable)event.preventDefault();
+      const result=touch.repeat?lastBadgeTap.result:hit(at,touch.badge);
+      lastBadgeTap=touch.repeat?null:{at,time:event.timeStamp,result};
+      // MapLibre stops the first camera ease on the next touchstart.
+      badgeTap(result);
       return;
     }
     tapEvents.set(event,touch.at);
-    if(touch.moved||distance(touch.at,at)>9)return;
     const first=touch.first;
     const gap=first?event.timeStamp-first.time:Infinity;
     if(gap<MAP_DOUBLE_TAP_MS){

@@ -18,9 +18,8 @@
 }
 .phone-layout .brand {gap:5px;flex:none;cursor:default;}
 .phone-layout .brand-title {letter-spacing:.10em;}
-.phone-layout .top-actions,.phone-layout .toolbar,.phone-layout .city-legend,
-.phone-layout .map-only-controls,.phone-layout .panel-top,.phone-layout .panel-footer {display:none;}
-.phone-layout .search-wrap {flex:1;min-width:0;}
+.phone-layout :is(.view-menu,#reset-view,#sidebar-toggle,.panel-top,.panel-footer) {display:none;}
+.phone-layout .search-wrap {flex:1;min-width:0;max-width:none;}
 .phone-layout .search-wrap input {height:35px;border-radius:5px;}
 .phone-layout .search-results {top:39px;}
 .phone-layout .content {margin-top:var(--phone-header);flex-direction:column;}
@@ -70,10 +69,9 @@
 .phone-layout .phone-tray .map-controls button {height:100%;width:100%;font-size:11px;font-weight:600;letter-spacing:.055em;}
 .phone-layout .phone-tray .map-controls button:not(:is(#toggle-counties,#toggle-metros,#phone-layers)) {display:none;}
 .phone-layout .phone-tray .map-controls #phone-layers[disabled] {opacity:.6;cursor:default;}
-.phone-layout .info-panel,.phone-layout .info-panel.collapsed {
+.phone-layout .info-panel {
   width:100%;height:var(--phone-summary);min-height:0;border:0;border-top:1px solid #30485d;
 }
-.phone-layout .info-panel.collapsed .panel-content {display:block;}
 .phone-layout .panel-content {min-height:0;padding:10px 12px 15px;overscroll-behavior:contain;overflow-y:auto;}
 .phone-layout .phone-state-overview {display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:10px;align-items:start;}
 .phone-layout .phone-state-overview h1 {margin:4px 0 6px;letter-spacing:.025em;}

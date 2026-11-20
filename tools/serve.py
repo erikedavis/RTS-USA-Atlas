@@ -11,7 +11,7 @@ import re
 import webbrowser
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = re.search(r'<span class="version-tag">([^<]+)</span>',
+VERSION = re.search(r'<meta name="atlas-version" content="([^"]+)">',
                     (ROOT / 'index.html').read_text(encoding='utf-8'))[1]
 PRIVATE_NETWORKS = tuple(map(ip_network, ('10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16')))
 
@@ -69,7 +69,7 @@ def main():
         host = args.phone or choose_address()
         if not private_address(host):
             parser.error('Choose a private IPv4 address on this PC.')
-    port = args.port or (8016 if phone else 8017)
+    port = args.port or (8019 if phone else 8018)
     url = f'http://{host}:{port}/'
     if not phone:
         try:

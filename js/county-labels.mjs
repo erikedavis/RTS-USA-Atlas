@@ -50,5 +50,9 @@ export function createCountyLabels(map){
     lastKey=key;
     map.getSource('county-labels').setData({type:'FeatureCollection',features});
   }
-  return {layout};
+  return {layout,clear(){
+    if(!lastKey)return;
+    lastKey='';
+    map.getSource('county-labels').setData({type:'FeatureCollection',features:[]});
+  }};
 }

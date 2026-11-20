@@ -7,12 +7,12 @@ const atlasKind=feature=>{
   return kind==='state'||kind==='place'?kind:null;
 };
 
-export function setupPhoneUI(map,{getSelected,hit,insideState,insideMetro,preview,select,deselect,reset,
-  renderSelection,setFocus,fitFeature,refreshLabels,closeKey}){
+export function setupPhoneUI(map,{getSelected,hit,stateAt,insideState,insideMetro,preview,select,deselect,reset,
+  renderSelection,setFocus,fitFeature,refreshLabels,closeKey,beforeModeChange}){
   const $=selector=>document.querySelector(selector);
   const media=matchMedia(phoneMedia), reducedMotion=matchMedia('(prefers-reduced-motion: reduce)');
   const app=$('.app'),content=$('.content'),shell=$('.map-shell'),header=$('.topbar');
-  const brand=$('#home'),search=$('.search-wrap'),toolbar=$('.toolbar'),rotation=$('.rotation-tools');
+  const brand=$('#home'),rotation=$('.rotation-tools');
   const panel=$('#info-panel'),info=$('#panel-content'),controls=$('.map-controls');
   const dock=$('#phone-dock'),tray=$('#phone-tray'),sheet=$('.phone-sheet');
   const up=$('#phone-up'),down=$('#phone-down'),grip=$('#phone-grip');
@@ -139,6 +139,15 @@ export function setupPhoneUI(map,{getSelected,hit,insideState,insideMetro,previe
   const mapTouches=bindMapTouches(map.getContainer(),{
     enabled:()=>active,hit,preview,
     hasState:()=>getSelected()?.properties.kind==='state',
+    switchState(at){
+      const current=getSelected();
+      if(current?.properties.kind!=='state')return false;
+      const next=stateAt(at);
+      if(!next||next.properties.geoid===current.properties.geoid)return false;
+      leaveAtlas({restore:false,fast:true});
+      select(next);
+      return true;
+    },
     setBadgeGesture(blocked){
       if(blocked===badgeGesture)return;
       badgeGesture=blocked;
@@ -196,9 +205,8 @@ export function setupPhoneUI(map,{getSelected,hit,insideState,insideMetro,previe
         return;
       }
       const zoom=layer==='city-hit'||layer==='places-hit';
-      if(layer==='state-hit'&&getSelected()?.properties.kind==='state'){
-        if(result.feature.properties.geoid!==getSelected().properties.geoid)select(result.feature);
-      }else if(zoom||layer?.startsWith('city-name')||layer==='county-hit'||layer==='county-names'||layer?.startsWith('metro-'))select(result.feature,{zoom});
+      if(layer==='state-hit'&&getSelected()?.properties.kind==='state')return;
+      if(zoom||layer?.startsWith('city-name')||layer==='county-hit'||layer==='county-names'||layer?.startsWith('metro-'))select(result.feature,{zoom});
       else if(getSelected())deselect();
     },
     amplifyZoom(at){
@@ -257,18 +265,17 @@ export function setupPhoneUI(map,{getSelected,hit,insideState,insideMetro,previe
     if(active===media.matches)return;
     if(stage==='atlas')leaveAtlas();
     mapTouches.cancel();
+    beforeModeChange();
     active=media.matches;
     app.classList.toggle('phone-layout',active);
-    app.classList.remove('map-menu-hidden');
     home.hidden=dock.hidden=layers.hidden=!active;
     brand.inert=active;
     if(active){
-      header.insertBefore(search,$('.top-actions'));
       $('#phone-tray-inner').append(controls);
       $('#phone-sheet-inner').append(panel);
       show(getSelected()?'summary':'closed');
     }else{
-      toolbar.append(search);shell.insertBefore(controls,rotation);content.append(panel);
+      shell.insertBefore(controls,rotation);content.append(panel);
       delete app.dataset.phoneStage;
       historyBack.hidden=true;
     }

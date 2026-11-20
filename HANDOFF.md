@@ -1,4 +1,13 @@
-# USAtlas V0.8A handoff to RTS Workchat 3
+# USAtlas V0.8B preview
+
+V0.8B adds desktop Atlas panels for states, cities and metros. The right sidebar widens in Atlas and has a chevron to hide and restore it. Back restores the previous center, zoom and bearing, including when following a linked city from a state. Puerto Rico keeps its on-island abbreviation and bottom inset title. Wide desktop views give state abbreviations the same placement priority as the phone.
+
+County outlines are independent of zoom. With a state or one of its counties selected, only that state's counties draw. Clear the selection for nationwide county mode. On a phone, tapping another state's land switches the state and its county scope immediately, including from State Atlas.
+
+- Desktop preview: `Start_Atlas.cmd` on port **8018**. Phone preview: `Start_Phone_Preview.cmd` on port **8019**. The regular Windows shortcut still points to the approved V0.5C build.
+- `npm test` checks Census data and browser behavior including the desktop panels, restoring a rotated view, immediate phone state switching and county scope below zoom 4.5. A physical iPhone Safari check of V0.8B is open.
+
+## V0.8A baseline and design reference
 
 Updated November 20, 2026. RTS Workchat 2 started at V0.3A.7 and finished at V0.8A. Start from the latest main checkout and use the next request to set scope. The V0.8A preview runs the same source on phone and PC. The regular Windows shortcut opens the approved V0.5C desktop build.
 
