@@ -1,4 +1,8 @@
-# USAtlas V0.8C preview
+# USAtlas V0.8D preview
+
+Phone and desktop use the same CTY and MSA scope. When enabled with a state selected, each overlay shows the areas that belong to that state at any zoom or bearing. A cross-state metro appears in every state it covers. Clear the selection for nationwide coverage. The preview ports are 8020 for PC and 8019 for phone.
+
+## V0.8C preview
 
 V0.8C covers phone State Atlas only. Swiping down, using the exit chevron or tapping open water returns to compact stats at the current camera. A light drag beyond the state's frame meets resistance and springs back. A longer drag returns to stats while the map continues following the finger.
 

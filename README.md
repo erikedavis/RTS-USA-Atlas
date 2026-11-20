@@ -1,4 +1,4 @@
-# USAtlas V0.8C preview
+# USAtlas V0.8D preview
 
 Requires Python 3. Clone the repository or extract its source ZIP, then run **Start_Atlas.cmd** from that folder. The launcher opens **http://127.0.0.1:8020/**.
 [Development handoff](HANDOFF.md) covers the current preview, repeatable checks, and open work.
@@ -21,7 +21,7 @@ Requires Python 3. Clone the repository or extract its source ZIP, then run **St
 
 ## Counties and metros
 
-Enable **CTY** from a state or the map controls. With a state selected, its county boundaries stay visible when zooming, panning, or rotating. With no state selected, county boundaries are drawn nationwide. County selection is available from zoom 4.5 and names appear from zoom 7 where they fit. Enable **MSA** to select a metro and see its July 1, 2025 population and total area.
+Enable **CTY** or **MSA** from a state's details or the map controls. With a state selected, county and metro outlines stay scoped to that state while you zoom, pan, or rotate. A metro spanning several states appears for any state it covers. Clear the state selection for nationwide coverage. County selection is available from zoom 4.5 and names appear from zoom 7 where they fit. Select a metro to see its July 1, 2025 population and total area.
 
 ## Rotation and search
 

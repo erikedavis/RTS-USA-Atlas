@@ -7,7 +7,7 @@ async function assertRendered(page, testInfo) {
   const response = await page.goto('/', { waitUntil: 'domcontentloaded' });
   expect(response?.ok(), 'The atlas must respond over HTTP').toBe(true);
   await expect(page.locator('#map-loading'), 'Atlas loading overlay must disappear').toBeHidden({ timeout: 50_000 });
-  await expect(page.locator('meta[name="atlas-version"]')).toHaveAttribute('content', 'ALPHA 0.8C');
+  await expect(page.locator('meta[name="atlas-version"]')).toHaveAttribute('content', 'ALPHA 0.8D');
   await expect(page.locator('canvas.maplibregl-canvas')).toHaveCount(1);
   const renderer = await page.evaluate(() => {
     const canvas = document.querySelector('canvas.maplibregl-canvas');
@@ -185,6 +185,41 @@ test('major city searches work and produce checkable screenshots', async ({ page
     await screenshot(page, testInfo, `${name.toLowerCase()}-selected`);
   }
 });
+
+for (const isPhone of [false, true]) {
+  test.describe(isPhone ? 'phone MSA' : 'desktop MSA', () => {
+    if (isPhone) test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+
+    test('metro outlines follow the state selection at a rotated overview zoom', async ({ page }, testInfo) => {
+      await exposeMap(page);
+      await assertRendered(page, testInfo);
+      await readMap(page);
+      await searchFor(page, 'Tennessee');
+      await expect(page.locator('#panel-content h1')).toHaveText('Tennessee');
+      await waitForCamera(page);
+      await page.evaluate(() => testMap.jumpTo({ center: [-88, 36.4], zoom: 4.05, bearing: 38 }));
+
+      const beforeToggle = await camera(page);
+      const msa = page.locator('#toggle-metros');
+      if (isPhone) await msa.tap();
+      else await page.getByRole('button', { name: 'SHOW / SELECT METROS' }).click();
+      await expect(msa).toHaveAttribute('aria-pressed', 'true');
+      expect(await camera(page)).toEqual(beforeToggle);
+
+      const metros = () => page.evaluate(() => [...new Set(testMap.queryRenderedFeatures({ layers: ['metro-lines'] })
+        .map(feature => feature.properties.name))]);
+      await expect.poll(metros).toContain('Memphis, TN-MS-AR');
+      expect((await metros()).every(name => name.split(', ').at(-1).split('-').includes('TN'))).toBe(true);
+
+      if (isPhone) await page.getByRole('button', { name: 'Clear state selection' }).tap();
+      else await page.keyboard.press('Escape');
+      await expect.poll(async () => (await metros()).some(name => !name.split(', ').at(-1).split('-').includes('TN'))).toBe(true);
+      if (isPhone) await msa.tap();
+      else await msa.click();
+      await expect.poll(metros).toEqual([]);
+    });
+  });
+}
 
 test.describe('phone viewport', () => {
   test.use({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });

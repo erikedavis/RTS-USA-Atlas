@@ -71,7 +71,7 @@ function wideStateLabels(){
   return !atlasFocus&&!desktopAtlas&&!phone?.focused&&span>=26;
 }
 const stateLabelsFirst=()=>!atlasFocus&&(wideStateLabels()||Boolean(phone?.active)||!isNorthUp(map.getBearing()));
-const metroOverview=()=>metroPreference!==false&&isMetroScale(map.getZoom());
+const metroOverview=()=>!atlasFocus&&metroPreference!==false&&isMetroScale(map.getZoom());
 const metroMode=()=>metroPreference===true?'manual':metroOverview()?'auto':'off';
 function emptyPanel() {
   info.replaceChildren(
@@ -185,9 +185,11 @@ function display(f) {
   }
   info.append(record);
   if(p.kind==='state'){
-    const button=element('button','panel-action','SHOW / SELECT COUNTIES');button.type='button';
-    button.addEventListener('click',()=>toggleCountySelection(true));
-    info.append(button);
+    for(const [label,enable] of [['SHOW / SELECT COUNTIES',toggleCountySelection],['SHOW / SELECT METROS',toggleMetros]]){
+      const button=element('button','panel-action',label);button.type='button';
+      button.addEventListener('click',()=>enable(true));
+      info.append(button);
+    }
     if(!phone?.active)info.append(element('div','panel-help','Click a state abbreviation to zoom to that state. Select a city above to visit it.'));
   }
   $('#selection-status').textContent=(p.kind||'FEATURE').toUpperCase()+' SELECTED';
@@ -467,6 +469,7 @@ function select(f,{zoom=false,duration,preserveStateReturn=false}={}) {
   else selectedState=null;
   applySelection();display(f);
   updateCountyView();
+  updateMetroMode();
 
   if(zoom)zoomTo(f,p.kind==='state'?13:p.kind==='metro'?9.5:10.5,duration);
   if(selectedState)loadStateDetail(selectedState);
@@ -479,6 +482,7 @@ function deselect() {
   selected=null;selectedState=null;
   applySelection();emptyPanel();
   updateCountyView();
+  updateMetroMode();
   $('#search').value='';$('#search-results').hidden=true;
 }
 function reset() {
@@ -509,10 +513,13 @@ function updateCountyNames(){
   if(!countySelectionOverride||map.getZoom()<COUNTY_LABEL_ZOOM||map.isMoving()||!countyAnchors)return;
   countyNames.layout(countySet.features,countyAnchors,[...mapReservations(),...cityLayers.labelReservations()]);
 }
+function stateOverlayScope(){
+  const kind=selected?.properties.kind;
+  return atlasFocus||((kind==='state'||kind==='county')?selectedState:null);
+}
 function updateCountyView(){
   if(!countySelectionOverride)return;
-  const kind=selected?.properties.kind;
-  const scope=atlasFocus||((kind==='state'||kind==='county')?selectedState:null);
+  const scope=stateOverlayScope();
   if(scope!==renderedCountyScope){
     renderedCountyScope=scope;
     const filter=scope?['==',['get','state_fips'],scope]:null;
@@ -567,6 +574,12 @@ function autoLoadRegion() {
 }
 function loadMetros(){
   if(!metroLoad)metroLoad=Promise.all([loadJSON(BASE+'metros.geojson'),loadJSON(BASE+'metro-labels.geojson'),loadJSON(BASE+'metro_facts.json')]).then(([areas,names,records])=>{
+    // Census CBSA names end in the abbreviations of all states they cover.
+    // Use delimited strings so MapLibre can match exact codes in both sources.
+    for(const {properties:p} of [...areas.features,...names.features]){
+      const codes=p.name.match(/, ([A-Z]{2}(?:-[A-Z]{2})*)$/)?.[1]||'';
+      p.state_codes='|'+codes.replaceAll('-','|')+'|';
+    }
     metroSet=areas;
     metroFacts=records.records;
     map.getSource('metros').setData(areas);
@@ -576,8 +589,9 @@ function loadMetros(){
   return metroLoad;
 }
 function updateMetroMode(){
-  const mode=atlasFocus?'off':metroMode(),overview=!atlasFocus&&metroOverview();
-  const modeKey=`${mode}:${overview}`;
+  const mode=metroMode(),overview=metroOverview();
+  const scope=mode==='off'?null:stateOverlayScope();
+  const modeKey=`${mode}:${overview}:${scope}`;
   if(modeKey===currentMetroMode)return;
   currentMetroMode=modeKey;
   const visible=mode!=='off',btn=$('#toggle-metros');
@@ -587,13 +601,20 @@ function updateMetroMode(){
   for(const id of ['metro-surface','metro-lines','metro-hit','metro-outline-hit','metro-selected','metro-names']){
     map.setLayoutProperty(id,'visibility',visible?'visible':'none');
   }
-  for(const id of ['metro-surface','metro-lines','metro-hit','metro-outline-hit'])map.setFilter(id,mode==='manual'?null:['==',['get','class'],'metro']);
+  const abbr=scope&&findStateByGeoid(scope)?.properties.abbr;
+  const inState=abbr?['in','|'+abbr+'|',['get','state_codes']]:null;
+  const autoFilter=['==',['get','class'],'metro'];
+  const filter=mode==='auto'?(inState?['all',autoFilter,inState]:autoFilter):inState;
+  for(const id of ['metro-surface','metro-lines','metro-hit','metro-outline-hit'])map.setFilter(id,filter);
+  map.setFilter('metro-names',inState);
+  map.setPaintProperty('metro-lines','line-opacity',scope ? .87 : .58);
   for(const id of ['place-area-lines','place-area-hit'])map.setLayoutProperty(id,'visibility',overview?'none':'visible');
   if(visible)loadMetros().catch(error=>{console.warn('Metro areas:',error);toast('Could not load metro areas.');});
 }
-function toggleMetros(){
-  metroPreference=metroMode()==='off';
+function toggleMetros(force){
+  metroPreference=typeof force==='boolean'?force:metroMode()==='off';
   if(!metroPreference&&selected?.properties.kind==='metro')deselect();
+  updateMetroMode();
   scheduleSettledView();
 }
 function findStateByGeoid(geoid){
@@ -628,7 +649,7 @@ function mapReservations(){
   return [...stateLabelsController.reservations(),...controls,...(atlasFocus?[]:[prFrame])];
 }
 function makeLabels() {
-  cityLayers=createCityLayers(map,cities,{isNational:isNationalView,metroOverview:()=>!atlasFocus&&metroOverview(),phoneViewport:()=>Boolean(phone?.active),stateLabelsFirst});
+  cityLayers=createCityLayers(map,cities,{isNational:isNationalView,metroOverview,phoneViewport:()=>Boolean(phone?.active),stateLabelsFirst});
   stateLabelsController=createStateLabels(map,stateLabels,states,maplibregl.Marker,(geoid,event)=>{
     const state=findStateByGeoid(geoid);
     if(state&&(!phone?.active||event.detail===0))select(state,{zoom:true});
@@ -711,8 +732,8 @@ function addSourcesAndLayers() {
   map.addLayer({id:'place-area-hit',type:'fill',source:'place-areas',minzoom:8.3,paint:{'fill-color':'#40597a','fill-opacity':.01}});
   map.addLayer({id:'place-area-lines',type:'line',layout:{'line-join':'bevel','line-cap':'butt'},source:'place-areas',minzoom:8.3,paint:{'line-color':'#546b83','line-opacity':.38,'line-width':.6}});
   map.addLayer({id:'metro-hit',type:'fill',source:'metros',minzoom:4.4,layout:{visibility:'none'},paint:{'fill-color':'#a7bbcc','fill-opacity':.01}});
-  map.addLayer({id:'metro-surface',type:'fill',source:'metros',minzoom:4.4,layout:{visibility:'none'},paint:{'fill-color':'#506c90','fill-opacity':.095}});
-  map.addLayer({id:'metro-lines',type:'line',source:'metros',minzoom:4.4,layout:{visibility:'none','line-join':'bevel','line-cap':'butt'},paint:{'line-color':'#839bb9','line-width':1.15,'line-opacity':.58,'line-dasharray':[2,3]}});
+  map.addLayer({id:'metro-surface',type:'fill',source:'metros',layout:{visibility:'none'},paint:{'fill-color':'#506c90','fill-opacity':.095}});
+  map.addLayer({id:'metro-lines',type:'line',source:'metros',layout:{visibility:'none','line-join':'bevel','line-cap':'butt'},paint:{'line-color':'#839bb9','line-width':['interpolate',['linear'],['zoom'],2,.5,5,1.15],'line-opacity':.58,'line-dasharray':[2,3]}});
   map.addLayer({id:'metro-outline-hit',type:'line',source:'metros',minzoom:4.4,layout:{visibility:'none'},
     paint:{'line-width':7,'line-opacity':.01}});
   map.addLayer({id:cityMetroLayers[0],type:'fill',source:'metros',filter:['==',['get','geoid'],'__none__'],
@@ -755,7 +776,7 @@ function addSourcesAndLayers() {
   });
 }
 function hitLayers(onPhone=false){
-  const metroSelectable=!atlasFocus&&metroMode()!=='off';
+  const metroSelectable=metroMode()!=='off';
   return [...cityLayers.hitLayers,'places-hit',...(onPhone?[]:['place-area-hit']),
     ...(countySelectable()?['county-names']:[]),...(metroSelectable?['metro-names','metro-outline-hit']:[]),
     ...(countySelectable()?['county-hit']:[]),...(metroSelectable?['metro-hit']:[]),'state-hit'];
