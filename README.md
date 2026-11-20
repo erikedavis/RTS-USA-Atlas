@@ -2,6 +2,8 @@
 
 Requires Python 3. Clone the repository or extract its source ZIP, then run **Start_Atlas.cmd** from that folder. The launcher opens **http://127.0.0.1:8015/**.
 
+[Development handoff](HANDOFF.md) covers the working baseline, checks, and open work.
+
 ## Phone controls
 
 - Map view starts with a compact header, Home and the map key in the bottom corners, and a chevron in the center. Swipe the chevron up to reveal **CTY**, **MSA**, and **LAYERS**. The chevrons can also be tapped. **LAYERS** is reserved for a future update.
