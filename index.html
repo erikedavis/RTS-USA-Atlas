@@ -5,11 +5,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#020307">
-  <meta name="atlas-version" content="ALPHA 0.8F">
-  <title>USAtlas | V0.8F</title>
+  <meta name="atlas-version" content="ALPHA 0.8G">
+  <title>USAtlas | V0.8G</title>
   <link href="./assets/vendor/maplibre-gl.css" rel="stylesheet">
-  <link rel="stylesheet" href="./assets/atlas.css?v=08f">
-  <link rel="stylesheet" href="./assets/phone.css?v=08f">
+  <link rel="stylesheet" href="./assets/atlas.css?v=08g">
+  <link rel="stylesheet" href="./assets/phone.css?v=08g">
 </head>
 <body>
   <div class="app">
@@ -19,8 +19,9 @@
         <span class="brand-title">US<span>Atlas</span></span>
       </div>
       <details class="view-menu" id="view-menu">
-        <summary>VIEW: STATISTICAL</summary>
+        <summary><span>VIEW<span class="view-current">: STATISTICAL</span></span></summary>
         <div class="view-options">
+          <div class="view-active" aria-current="true">STATISTICAL</div>
           <button type="button" data-view="geographic">GEOGRAPHIC</button>
           <button type="button" data-view="strategic">STRATEGIC</button>
         </div>
@@ -131,7 +132,7 @@
     </div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
   </div>
-  <script type="module" src="./js/atlas.mjs?v=08f"></script>
+  <script type="module" src="./js/atlas.mjs?v=08g"></script>
 </body>
 </html>
 

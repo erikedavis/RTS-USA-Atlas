@@ -13,6 +13,7 @@ export function setupPhoneUI(map,{getSelected,hit,stateAt,insideState,insideMetr
   const media=matchMedia(phoneMedia), reducedMotion=matchMedia('(prefers-reduced-motion: reduce)');
   const app=$('.app'),content=$('.content'),shell=$('.map-shell'),header=$('.topbar');
   const brand=$('#home'),rotation=$('.rotation-tools');
+  const searchWrap=$('.search-wrap'),viewMenu=$('#view-menu');
   const panel=$('#info-panel'),info=$('#panel-content'),controls=$('.map-controls');
   const dock=$('#phone-dock'),tray=$('#phone-tray'),sheet=$('.phone-sheet');
   const dockBody=$('#phone-dock-body'),mapHud=[$('#zoom-text'),$('#map-key-toggle'),$('#map-key')];
@@ -341,11 +342,13 @@ export function setupPhoneUI(map,{getSelected,hit,stateAt,insideState,insideMetr
     dock.hidden=layers.hidden=!active;
     brand.inert=active;
     if(active){
+      searchWrap.after(viewMenu);
       dockBody.append(...mapHud);
       $('#phone-tray-inner').append(controls);
       $('#phone-sheet-inner').append(panel);
       show(getSelected()?'summary':'closed');
     }else{
+      searchWrap.before(viewMenu);
       shell.append(...mapHud);
       shell.insertBefore(controls,rotation);content.append(panel);
       delete app.dataset.phoneStage;

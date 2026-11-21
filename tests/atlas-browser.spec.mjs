@@ -7,7 +7,7 @@ async function assertRendered(page, testInfo) {
   const response = await page.goto('/', { waitUntil: 'domcontentloaded' });
   expect(response?.ok(), 'The atlas must respond over HTTP').toBe(true);
   await expect(page.locator('#map-loading'), 'Atlas loading overlay must disappear').toBeHidden({ timeout: 50_000 });
-  await expect(page.locator('meta[name="atlas-version"]')).toHaveAttribute('content', 'ALPHA 0.8F');
+  await expect(page.locator('meta[name="atlas-version"]')).toHaveAttribute('content', 'ALPHA 0.8G');
   await expect(page.locator('canvas.maplibregl-canvas')).toHaveCount(1);
   const renderer = await page.evaluate(() => {
     const canvas = document.querySelector('canvas.maplibregl-canvas');
@@ -234,6 +234,49 @@ test.describe('phone viewport', () => {
     await expect(page.locator('#sidebar-toggle')).toBeHidden();
     const map = await page.locator('.map-shell').boundingBox();
     expect(map.width).toBe(390);
+  });
+
+  test('phone View shares the header with Search in portrait and landscape', async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: 320, height: 680 });
+    await assertRendered(page, testInfo);
+    const search = page.getByRole('textbox', { name: 'Find a state, county or city' });
+    const view = page.locator('#view-menu summary');
+    const results = page.locator('#search-results');
+    const geographic = page.getByRole('button', { name: 'GEOGRAPHIC', exact: true });
+    for (const viewport of [{ width: 320, height: 680 }, { width: 744, height: 390 }]) {
+      await page.setViewportSize(viewport);
+      const idleSearch = await search.boundingBox();
+      const idleView = await view.boundingBox();
+      expect(idleSearch.x + idleSearch.width).toBeLessThan(idleView.x);
+      expect(idleView.width).toBeGreaterThanOrEqual(44);
+
+      await search.tap();
+      await search.fill('MN');
+      await expect(results).toBeVisible();
+      expect((await search.boundingBox()).width).toBeGreaterThan(idleSearch.width);
+      expect((await view.boundingBox()).width).toBeLessThan(idleView.width);
+
+      await view.tap();
+      await expect(results).toBeHidden();
+      await expect(search).not.toBeFocused();
+      await expect(page.locator('#view-menu [aria-current]')).toHaveText('STATISTICAL');
+      await expect(geographic).toBeVisible();
+      await expect(page.getByRole('button', { name: 'STRATEGIC', exact: true })).toBeVisible();
+      const menu = await page.locator('.view-options').boundingBox();
+      expect(menu.x + menu.width).toBeLessThanOrEqual(viewport.width);
+      expect(menu.y).toBeGreaterThan(idleView.y + idleView.height);
+      await screenshot(page, testInfo, `phone-view-${viewport.width}`);
+
+      await geographic.tap();
+      await expect(geographic).toBeHidden();
+      await expect(page.locator('#toast')).toContainText('GEOGRAPHIC view is reserved');
+      await view.tap();
+      await search.tap();
+      await expect(geographic).toBeHidden();
+      await search.fill('CO');
+      await results.getByRole('button', { name: /Colorado/ }).tap();
+      await expect(page.locator('#panel-content h1')).toHaveText('Colorado');
+    }
   });
 
   test('phone Home, Zoom and Key follow the top of the tools and stats bar', async ({ page }, testInfo) => {

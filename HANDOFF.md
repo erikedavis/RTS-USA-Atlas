@@ -1,4 +1,8 @@
-# USAtlas V0.8F preview
+# USAtlas V0.8G preview
+
+The phone header now has **View** to the right of Search. Search gains room while active, and opening View closes Search. Statistical is the active view. Geographic and Strategic show the same later-release notice as on desktop. The PC preview uses port 8020 and the phone preview uses port 8019.
+
+## V0.8F preview
 
 On phones, the desktop sidebar stays hidden during startup. Holding a state fits its outline above the Atlas facts on the first open. Home, the zoom readout, and the map key sit at the bottom of the map or directly above the tools and stats bar. Test all three on a physical iPhone. The PC preview uses port 8020 and the phone preview uses port 8019.
 

@@ -1,6 +1,15 @@
-/* Hide the desktop panel before the map has initialized the phone layout. */
 @media (max-width: 670px) and (pointer: coarse), (max-width: 950px) and (pointer: coarse) and (orientation: landscape) {
+  /* Match the phone header before the map has initialized its layout. */
   .app:not(.phone-layout) .info-panel {display:none;}
+  .topbar .view-menu {order:1;flex:0 0 92px;}
+  .topbar:has(.search-wrap:focus-within, .search-results:not([hidden])) .view-menu:not([open]) {flex-basis:64px;}
+  .view-menu summary {min-height:44px;justify-content:center;gap:6px;padding:0 6px;}
+  .view-current {display:none;}
+  .view-options {left:auto;right:0;min-width:156px;}
+  .view-options :is(.view-active,button) {display:flex;align-items:center;min-height:44px;padding:0 12px;}
+  .view-options .view-active {color:#b7d6ed;border-bottom:1px solid #233548;}
+  .topbar .search-wrap {max-width:none;}
+  .topbar .search-wrap input {text-overflow:ellipsis;}
 }
 
 .app.phone-layout {
@@ -21,7 +30,7 @@
 }
 .phone-layout .brand {gap:5px;flex:none;cursor:default;}
 .phone-layout .brand-title {letter-spacing:.10em;}
-.phone-layout :is(.view-menu,#reset-view,#sidebar-toggle,.panel-top,.panel-footer) {display:none;}
+.phone-layout :is(#reset-view,#sidebar-toggle,.panel-top,.panel-footer) {display:none;}
 .phone-layout .search-wrap {flex:1;min-width:0;max-width:none;}
 .phone-layout .search-wrap input {height:35px;border-radius:5px;}
 .phone-layout .search-results {top:39px;}
@@ -114,7 +123,7 @@
 .phone-layout.phone-atlas-fast :is(.phone-dock-row,.topbar,.rotation-tools) {transition:none;}
 
 @media (orientation: landscape) {
-  .app.phone-layout {--phone-header:40px;--phone-summary:min(123px,43dvh);--phone-atlas-sheet:min(134px,32dvh);}
+  .app.phone-layout {--phone-header:44px;--phone-summary:min(123px,43dvh);--phone-atlas-sheet:min(134px,32dvh);}
   .phone-layout .phone-state-overview {grid-template-columns:minmax(0,1fr) minmax(0,1.5fr);}
   .phone-layout .phone-state-facts {grid-template-columns:repeat(2,minmax(0,1fr));}
   .phone-layout .phone-state-facts .record-row {grid-column:1/-1;}

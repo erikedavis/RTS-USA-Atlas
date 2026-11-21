@@ -19,6 +19,7 @@ button { color:inherit; cursor:pointer; }
 .view-menu summary::-webkit-details-marker {display:none;}
 .view-menu summary::after {content:"";width:5px;height:5px;border:solid currentColor;border-width:0 1px 1px 0;transform:translateY(-2px) rotate(45deg);}
 .view-options {position:absolute;top:calc(100% + 4px);left:0;min-width:100%;background:#0b1420;border:1px solid #34485e;box-shadow:0 8px 22px #000a;}
+.view-active {display:none;}
 .view-options button {display:block;width:100%;padding:10px 9px;border:0;background:transparent;text-align:left;letter-spacing:inherit;}
 .view-options button:is(:hover,:focus-visible),.view-menu summary:hover {background:#1a2d3f;}
 .search-wrap {position:relative;width:min(250px,30vw);margin-left:auto;}

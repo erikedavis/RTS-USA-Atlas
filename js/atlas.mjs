@@ -8,7 +8,7 @@ import {addGeographyLabels} from './geography-labels.mjs';
 import {createStateLabels} from './state-labels.mjs';
 import {prepareStateShapes,shapeContainsPoint} from './state-label-placement.mjs';
 import {isNorthUp,screenBounds,setupRotation} from './map-rotation.mjs';
-import {setupPhoneUI} from './phone-ui.mjs?v=08f';
+import {setupPhoneUI} from './phone-ui.mjs?v=08g';
 import {COUNTY_LABEL_ZOOM,createCountyLabels} from './county-labels.mjs';
 import {INSETS, NATIONAL_BOUNDS, displayData, displayPoint, geographicPoint, hawaiiTailMarks, insetFrames} from './insets.mjs';
 
@@ -1007,7 +1007,9 @@ function setupUI() {
     setFocus:setAtlasFocus,fitFeature:fitPhoneAtlas,cityBounds:cityAtlasBounds,fitCity:fitPhoneCityAtlas,
     closeKey:()=>{if(!key.hidden)setKey(false);},
   });
-  const viewMenu=$('#view-menu');
+  const viewMenu=$('#view-menu'),searchBox=$('#search');
+  searchBox.addEventListener('focus',()=>{viewMenu.open=false;});
+  viewMenu.addEventListener('toggle',()=>{if(viewMenu.open)searchBox.blur();});
   document.addEventListener('click',event=>{
     if(viewMenu.open&&!viewMenu.contains(event.target))viewMenu.open=false;
   });

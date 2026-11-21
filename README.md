@@ -1,4 +1,4 @@
-# USAtlas V0.8F preview
+# USAtlas V0.8G preview
 
 Requires Python 3. Clone the repository or extract its source ZIP, then run **Start_Atlas.cmd** from that folder. The launcher opens **http://127.0.0.1:8020/**.
 [Development handoff](HANDOFF.md) covers the current preview, repeatable checks, and open work.
@@ -11,6 +11,7 @@ Requires Python 3. Clone the repository or extract its source ZIP, then run **St
 
 ## Phone controls
 
+- **View** is to the right of Search and shows the current mode, Statistical. Geographic and Strategic are reserved for later releases. Search expands while you're using it.
 - Map view starts with a compact header and a chevron in the center. Home, the zoom readout, and the map key sit along the bottom and move with the tools and stats bar. Swipe the chevron up to reveal **CTY**, **MSA**, and **LAYERS**. The chevrons can also be tapped. **LAYERS** is reserved for a future update.
 - A quick double-tap on the map zooms two levels around the tap. Tap or double-tap a state abbreviation to fit the state and show its compact facts. With a state selected, tap another state's land to switch, or use the **×** by the chevrons to clear it. To select from unselected state land, tap twice with a 0.5 to 1.04 second gap.
 - Hold on a state or its abbreviation for about 0.6 seconds to open State Atlas. Hold a city name to fit the city above its Atlas facts. A city-symbol hold opens City Atlas at the current zoom. Drag the map far enough to move the city out of the center and City Atlas returns to compact stats while the map follows your finger. Tap a city name to read facts in place or tap its symbol to zoom. Tap outside the highlighted metro to clear the city at the current map position.
