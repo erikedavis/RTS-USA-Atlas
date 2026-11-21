@@ -8,7 +8,7 @@ import {addGeographyLabels} from './geography-labels.mjs';
 import {createStateLabels} from './state-labels.mjs';
 import {prepareStateShapes,shapeContainsPoint} from './state-label-placement.mjs';
 import {isNorthUp,screenBounds,setupRotation} from './map-rotation.mjs';
-import {setupPhoneUI} from './phone-ui.mjs';
+import {setupPhoneUI} from './phone-ui.mjs?v=08f';
 import {COUNTY_LABEL_ZOOM,createCountyLabels} from './county-labels.mjs';
 import {INSETS, NATIONAL_BOUNDS, displayData, displayPoint, geographicPoint, hawaiiTailMarks, insetFrames} from './insets.mjs';
 
@@ -287,7 +287,7 @@ function fitStateAtlas(feature,headerHeight,sheetHeight,duration){
   const bounds=stateAtlasBounds(feature);
   if(!bounds)return;
   const height=map.getContainer().clientHeight,bearing=map.getBearing();
-  const padding={top:Math.min(headerHeight+8,height*.14),bottom:Math.min(sheetHeight+12,height*.5),left:15,right:15};
+  const padding={top:headerHeight+8,bottom:sheetHeight+12,left:15,right:15};
   const camera=map.cameraForBounds(bounds,{bearing,padding,maxZoom:13});
   if(!camera)return;
   const box=screenBounds(map,bounds);

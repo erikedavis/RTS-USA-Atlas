@@ -1,4 +1,8 @@
-# USAtlas V0.8E preview
+# USAtlas V0.8F preview
+
+On phones, the desktop sidebar stays hidden during startup. Holding a state fits its outline above the Atlas facts on the first open. Home, the zoom readout, and the map key sit at the bottom of the map or directly above the tools and stats bar. Test all three on a physical iPhone. The PC preview uses port 8020 and the phone preview uses port 8019.
+
+## V0.8E preview
 
 On phones, a city-name hold opens City Atlas and frames the city above the facts. Missing boundaries use a close view of the city marker. Panning the city out of the center returns to compact stats while keeping the camera and drag. The PC preview uses port 8020 and the phone preview uses port 8019.
 

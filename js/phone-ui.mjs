@@ -15,6 +15,7 @@ export function setupPhoneUI(map,{getSelected,hit,stateAt,insideState,insideMetr
   const brand=$('#home'),rotation=$('.rotation-tools');
   const panel=$('#info-panel'),info=$('#panel-content'),controls=$('.map-controls');
   const dock=$('#phone-dock'),tray=$('#phone-tray'),sheet=$('.phone-sheet');
+  const dockBody=$('#phone-dock-body'),mapHud=[$('#zoom-text'),$('#map-key-toggle'),$('#map-key')];
   const up=$('#phone-up'),down=$('#phone-down'),grip=$('#phone-grip');
   const clear=$('#phone-clear');
   const atlasBack=$('#phone-atlas-back'),factsGrip=$('#phone-facts-grip'),home=$('#phone-home');
@@ -27,11 +28,13 @@ export function setupPhoneUI(map,{getSelected,hit,stateAt,insideState,insideMetr
   let badgeGesture=false;
   const duration=()=>reducedMotion.matches?0:360;
   const camera=()=>({center:map.getCenter(),zoom:map.getZoom(),bearing:map.getBearing()});
+  // The sheet's grid row can still be opening when the camera fit starts.
+  const atlasSheetHeight=()=>panel.offsetHeight+factsGrip.offsetHeight+sheet.firstElementChild.clientTop;
   function visibleAtlasArea(){
     const rect=map.getContainer().getBoundingClientRect();
     const top=atlasBack.offsetHeight;
     // Use the final city sheet height while the dock animates open.
-    const bottom=cityView?rect.height-panel.offsetHeight-factsGrip.offsetHeight-sheet.firstElementChild.clientTop:
+    const bottom=cityView?rect.height-atlasSheetHeight():
       Math.min(rect.height,sheet.getBoundingClientRect().top-rect.top);
     const height=Math.max(1,bottom-top);
     return {x:rect.width/2,y:top+height/2,width:rect.width,height};
@@ -103,7 +106,7 @@ export function setupPhoneUI(map,{getSelected,hit,stateAt,insideState,insideMetr
     if(cityView)cityView.anchor=null;
     if(cityView?.frameCity){
       if(cityView.bounds!==undefined)fitCity(cityView.bounds,visibleAtlasArea(),time);
-    }else fitFeature(feature,atlasBack.offsetHeight,sheet.firstElementChild.offsetHeight,time);
+    }else fitFeature(feature,atlasBack.offsetHeight,atlasSheetHeight(),time);
   }
 
   function leaveAtlas({restore=true,fast=false,keepPanning=false}={}){
@@ -335,13 +338,15 @@ export function setupPhoneUI(map,{getSelected,hit,stateAt,insideState,insideMetr
     beforeModeChange();
     active=media.matches;
     app.classList.toggle('phone-layout',active);
-    home.hidden=dock.hidden=layers.hidden=!active;
+    dock.hidden=layers.hidden=!active;
     brand.inert=active;
     if(active){
+      dockBody.append(...mapHud);
       $('#phone-tray-inner').append(controls);
       $('#phone-sheet-inner').append(panel);
       show(getSelected()?'summary':'closed');
     }else{
+      shell.append(...mapHud);
       shell.insertBefore(controls,rotation);content.append(panel);
       delete app.dataset.phoneStage;
       historyBack.hidden=true;

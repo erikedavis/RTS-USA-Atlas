@@ -7,7 +7,7 @@ async function assertRendered(page, testInfo) {
   const response = await page.goto('/', { waitUntil: 'domcontentloaded' });
   expect(response?.ok(), 'The atlas must respond over HTTP').toBe(true);
   await expect(page.locator('#map-loading'), 'Atlas loading overlay must disappear').toBeHidden({ timeout: 50_000 });
-  await expect(page.locator('meta[name="atlas-version"]')).toHaveAttribute('content', 'ALPHA 0.8E');
+  await expect(page.locator('meta[name="atlas-version"]')).toHaveAttribute('content', 'ALPHA 0.8F');
   await expect(page.locator('canvas.maplibregl-canvas')).toHaveCount(1);
   const renderer = await page.evaluate(() => {
     const canvas = document.querySelector('canvas.maplibregl-canvas');
@@ -224,6 +224,90 @@ for (const isPhone of [false, true]) {
 
 test.describe('phone viewport', () => {
   test.use({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
+
+  test('phone startup hides the desktop sidebar while the map loads', async ({ page }) => {
+    await page.route('**/js/atlas.mjs?*', route => route.abort());
+    await page.goto('/');
+    await expect(page.locator('.app')).not.toHaveClass(/phone-layout/);
+    await expect(page.locator('#map-loading')).toBeVisible();
+    await expect(page.locator('#info-panel')).toBeHidden();
+    await expect(page.locator('#sidebar-toggle')).toBeHidden();
+    const map = await page.locator('.map-shell').boundingBox();
+    expect(map.width).toBe(390);
+  });
+
+  test('phone Home, Zoom and Key follow the top of the tools and stats bar', async ({ page }, testInfo) => {
+    await assertRendered(page, testInfo);
+    const app = page.locator('.app');
+    const key = page.getByRole('button', { name: 'Map key', exact: true });
+    const home = page.getByRole('button', { name: 'National view', exact: true });
+    const checkDock = async stage => {
+      await expect(app).toHaveAttribute('data-phone-stage', stage);
+      await expect.poll(() => page.evaluate(() => {
+        const rect = selector => document.querySelector(selector).getBoundingClientRect();
+        const tray = rect('#phone-tray');
+        const edge = tray.height > 0 ? tray.top : rect('#map').bottom;
+        const zoom = rect('#zoom-text');
+        const key = rect('#map-key-toggle');
+        return Math.max(Math.abs(rect('#phone-home').bottom - edge), Math.abs(key.bottom - edge),
+          Math.abs((zoom.top + zoom.bottom - key.top - key.bottom) / 2));
+      })).toBeLessThan(1);
+    };
+    await checkDock('closed');
+    await key.tap();
+    await expect(page.locator('#map-key')).toBeVisible();
+    await key.tap();
+    await expect(page.locator('#map-key')).toBeHidden();
+    await page.getByRole('button', { name: 'Show map tools' }).tap();
+    await checkDock('tools');
+    await searchFor(page, 'Minnesota');
+    await checkDock('summary');
+    await home.tap();
+    await checkDock('closed');
+  });
+
+  for (const { state, center, bearing } of [
+    { state: 'Colorado', center: [-105.5, 39], bearing: 0 },
+    { state: 'Illinois', center: [-89, 40], bearing: 38 }
+  ]) {
+    test(`direct state hold fits ${state} above the facts on the first open`, async ({ page }, testInfo) => {
+      if (bearing) await page.setViewportSize({ width: 744, height: 390 });
+      await exposeMap(page);
+      await assertRendered(page, testInfo);
+      await readMap(page);
+      await page.evaluate(({ center, bearing }) => testMap.jumpTo({ center, zoom: 5.4, bearing }), { center, bearing });
+      if (bearing) await page.getByRole('button', { name: 'Show map tools' }).tap();
+      const label = page.getByRole('button', { name: `Select ${state}`, exact: true });
+      await expect(label).toBeVisible();
+      const { x, y, width, height } = await label.boundingBox();
+      const cdp = await page.context().newCDPSession(page);
+      await cdp.send('Input.dispatchTouchEvent', {
+        type: 'touchStart', touchPoints: [{ x: x + width / 2, y: y + height / 2 }]
+      });
+      await expect(page.locator('.app')).toHaveAttribute('data-phone-atlas-kind', 'state');
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+      await expect(page.locator('#panel-content h1')).toHaveText(state);
+      await waitForCamera(page);
+      await page.waitForFunction(() => testMap.queryRenderedFeatures({ layers: ['state-atlas-surface'] }).length > 0);
+      const framed = await page.evaluate(async name => {
+        const { features } = await fetch('/data/states.geojson').then(response => response.json());
+        const { coordinates, type } = features.find(feature => feature.properties.name === name).geometry;
+        const points = coordinates.flat(type === 'MultiPolygon' ? 2 : 1).map(point => testMap.project(point));
+        const rect = testMap.getContainer().getBoundingClientRect();
+        const top = document.querySelector('#phone-atlas-back').getBoundingClientRect().bottom - rect.top;
+        const bottom = document.querySelector('.phone-sheet').getBoundingClientRect().top - rect.top;
+        return points.every(({ x, y }) => x >= 0 && x <= rect.width && y >= top && y <= bottom);
+      }, state);
+      expect(framed).toBe(true);
+      await screenshot(page, testInfo, `${state.toLowerCase()}-direct-phone-atlas`);
+      const first = await camera(page);
+      expect(first[3]).toBe(bearing);
+      await page.locator('#phone-atlas-back').tap();
+      await page.getByRole('button', { name: 'Open state atlas' }).tap();
+      await waitForCamera(page);
+      expect(await camera(page)).toEqual(first);
+    });
+  }
 
   test('wide state labels and swipe-dock controls are available', async ({ page }, testInfo) => {
     await assertRendered(page, testInfo);

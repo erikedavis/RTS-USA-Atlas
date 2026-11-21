@@ -1,5 +1,8 @@
-/* Applied only on compact, touch-first screens. Heights are shared by the
-   overlay and the map HUD, so opening the dock does not resize the canvas. */
+/* Hide the desktop panel before the map has initialized the phone layout. */
+@media (max-width: 670px) and (pointer: coarse), (max-width: 950px) and (pointer: coarse) and (orientation: landscape) {
+  .app:not(.phone-layout) .info-panel {display:none;}
+}
+
 .app.phone-layout {
   --phone-header: 48px;
   --phone-grip: 30px;
@@ -25,9 +28,13 @@
 .phone-layout .content {margin-top:var(--phone-header);flex-direction:column;}
 .phone-layout #map,.phone-layout .gridlines,.phone-layout .map-vignette,.phone-layout .map-loading {bottom:0;}
 .phone-layout .rotation-tools {transition:transform .24s ease,opacity .2s ease;}
-.phone-layout .map-key-toggle {bottom:calc(2px + var(--phone-hud-lift));}
-.phone-layout .dev-zoom {bottom:calc(19px + var(--phone-hud-lift));}
-.phone-layout .map-key {bottom:calc(51px + var(--phone-hud-lift));max-height:calc(100% - 58px - var(--phone-hud-lift));}
+.phone-layout .phone-dock-body {position:relative;}
+.phone-layout .map-key-toggle {bottom:100%;pointer-events:auto;}
+.phone-layout .dev-zoom {bottom:calc(100% + 17px);}
+.phone-layout .map-key {
+  bottom:calc(100% + 49px);pointer-events:auto;overflow:auto;
+  max-height:calc(100dvh - var(--phone-header) - var(--phone-hud-lift) - 60px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+}
 .phone-layout .toast {bottom:calc(var(--phone-hud-lift) + 8px + env(safe-area-inset-bottom));}
 .phone-layout #map,.phone-layout .state-label {-webkit-touch-callout:none;user-select:none;}
 
@@ -42,7 +49,7 @@
 .phone-layout .phone-control[hidden] {display:none;}
 .phone-layout .phone-control:is(:focus-visible,:active) {opacity:1;}
 .phone-layout .phone-control svg {width:17px;height:11px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
-.phone-layout .phone-home {position:absolute;z-index:8;bottom:calc(2px + var(--phone-hud-lift));left:7px;height:44px;}
+.phone-layout .phone-home {position:absolute;z-index:8;bottom:100%;left:7px;height:44px;pointer-events:auto;}
 .phone-layout .phone-home svg {width:23px;height:23px;}
 .phone-layout .phone-history-back {
   position:absolute;left:9px;top:clamp(55px,30%,210px);z-index:11;width:50px;min-height:52px;
