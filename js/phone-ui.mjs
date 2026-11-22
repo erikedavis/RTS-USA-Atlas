@@ -1,4 +1,4 @@
-import {bindDockSwipe,bindMapTouches,bindStateAtlasPan} from './phone-gestures.mjs';
+import {bindDockSwipe,bindMapTouches,bindStateAtlasPan} from './phone-gestures.mjs?v=08h';
 
 const phoneMedia='(max-width: 670px) and (pointer: coarse), (max-width: 950px) and (pointer: coarse) and (orientation: landscape)';
 const STAGES=['closed','tools','summary','atlas'];
@@ -213,13 +213,6 @@ export function setupPhoneUI(map,{getSelected,hit,stateAt,insideState,insideMetr
       if(atlasKind(feature))openAtlas({frameCity:feature.properties.kind==='place'&&result.layer?.startsWith('city-name')});
       return true;
     },
-    deliberate(feature){
-      if(stage==='atlas'){
-        if(feature.properties.kind!=='place'||getSelected()?.properties.kind!=='place')return;
-        leaveAtlas({restore:false,fast:true});
-      }
-      select(feature);
-    },
     immediate(result,at,target){
       if(stage!=='atlas')return false;
       const feature=getSelected();
@@ -245,7 +238,10 @@ export function setupPhoneUI(map,{getSelected,hit,stateAt,insideState,insideMetr
         return;
       }
       const zoom=layer==='city-hit'||layer==='places-hit';
-      if(layer==='state-hit'&&getSelected()?.properties.kind==='state')return;
+      if(layer==='state-hit'){
+        if(getSelected()?.properties.kind!=='state')select(result.feature);
+        return;
+      }
       if(zoom||layer?.startsWith('city-name')||layer==='county-hit'||layer==='county-names'||layer?.startsWith('metro-'))select(result.feature,{zoom});
       else if(getSelected())deselect();
     },
@@ -272,8 +268,10 @@ export function setupPhoneUI(map,{getSelected,hit,stateAt,insideState,insideMetr
     }else rememberCityCenter(view);
   },{passive:true,capture:true});
   map.on('dragstart',event=>{
+    if(!active||event.originalEvent?.touches?.length!==1)return;
+    mapTouches.cancel();
     const view=cityView;
-    if(!view||event.originalEvent?.touches?.length!==1)return;
+    if(!view)return;
     rememberCityCenter(view);
     view.adjusted=true;
     view.panning=true;

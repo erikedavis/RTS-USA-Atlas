@@ -1,4 +1,8 @@
-# USAtlas V0.8G preview
+# USAtlas V0.8H preview
+
+On phones, a single tap on bare state land opens compact facts at the current camera. Ordinary map taps still wait up to 500 ms to allow quick double-tap zoom. Slow double-tap selection has been removed. State abbreviations still fit the state, and holding geography still opens Atlas. The PC preview uses port 8020 and the phone preview uses port 8019.
+
+## V0.8G preview
 
 The phone header now has **View** to the right of Search. Search gains room while active, and opening View closes Search. Statistical is the active view. Geographic and Strategic show the same later-release notice as on desktop. The PC preview uses port 8020 and the phone preview uses port 8019.
 
@@ -36,7 +40,7 @@ Updated November 20, 2026. RTS Workchat 2 started at V0.3A.7 and finished at V0.
 - Start the PC preview with `python tools/serve.py` at `http://127.0.0.1:8017/`. For an iPhone on the same Wi-Fi, run `python tools/serve.py --phone` and open the address printed by the server on port 8016.
 - The exact V0.8A preview is pinned in the [source commit](https://github.com/erikedavis/RTS-USA-Atlas/commit/6fb8daee30888d007d0fe10f225ddd23a9890ac1) and [downloadable source ZIP](https://github.com/erikedavis/RTS-USA-Atlas/archive/6fb8daee30888d007d0fe10f225ddd23a9890ac1.zip). The runtime matches the installed preview.
 
-## Phone baseline
+## V0.8A phone baseline
 
 - The single-row header holds search. Home and the map key sit in the lower corners. The chevrons reveal CTY, MSA and the reserved LAYERS button, then compact stats for the selection. Swipe up on the stats or tools to expand the state or city atlas. The full atlas hides map controls, gives the facts their own scroll area and provides a down chevron to exit. A full state atlas fits the state and fades neighboring geography. A full city atlas keeps its surroundings visible.
 - Tap or double-tap a state abbreviation on the phone to fit the state and show its compact facts. Hold its abbreviation or land for 600 ms to open the full state atlas. When a state is selected, tap another state's land to switch in place or tap × beside the chevrons to clear it.
@@ -74,7 +78,7 @@ For an expanded desktop atlas, the first useful comparison is Kansas or Californ
 
 ## Open work
 
-A physical iPhone Safari pass and performance measurements are still open. In portrait and landscape, check actual tap targets, slow versus quick double-taps, hold, scroll versus swipe, facts and Back, CTY and MSA selection, keyboard search, and rotation with facts open. Record device, iOS version, view and timings. Also check the Northeast at several bearings and compare the same map view on the PC.
+A physical iPhone Safari pass and performance measurements are still open. In portrait and landscape, check actual tap targets, single-tap selection, quick double-tap zoom, hold, scroll versus swipe, facts and Back, CTY and MSA selection, keyboard search, and rotation with facts open. Record device, iOS version, view and timings. Also check the Northeast at several bearings and compare the same map view on the PC.
 
 Rotation Pass 2 is pending approval. It covers the finished compass and lock, scale-specific collision priorities and the optional Labels control. Preserve the current visibility of close-view places when adjusting collision rules.
 

@@ -1,4 +1,4 @@
-# USAtlas V0.8G preview
+# USAtlas V0.8H preview
 
 Requires Python 3. Clone the repository or extract its source ZIP, then run **Start_Atlas.cmd** from that folder. The launcher opens **http://127.0.0.1:8020/**.
 [Development handoff](HANDOFF.md) covers the current preview, repeatable checks, and open work.
@@ -13,7 +13,7 @@ Requires Python 3. Clone the repository or extract its source ZIP, then run **St
 
 - **View** is to the right of Search and shows the current mode, Statistical. Geographic and Strategic are reserved for later releases. Search expands while you're using it.
 - Map view starts with a compact header and a chevron in the center. Home, the zoom readout, and the map key sit along the bottom and move with the tools and stats bar. Swipe the chevron up to reveal **CTY**, **MSA**, and **LAYERS**. The chevrons can also be tapped. **LAYERS** is reserved for a future update.
-- A quick double-tap on the map zooms two levels around the tap. Tap or double-tap a state abbreviation to fit the state and show its compact facts. With a state selected, tap another state's land to switch, or use the **×** by the chevrons to clear it. To select from unselected state land, tap twice with a 0.5 to 1.04 second gap.
+- One tap on state land opens compact facts at the current map position. A quick double-tap on the map zooms two levels around the tap. Tap or double-tap a state abbreviation to fit the state and show its compact facts. With a state selected, tap another state's land to switch, or use the **×** by the chevrons to clear it.
 - Hold on a state or its abbreviation for about 0.6 seconds to open State Atlas. Hold a city name to fit the city above its Atlas facts. A city-symbol hold opens City Atlas at the current zoom. Drag the map far enough to move the city out of the center and City Atlas returns to compact stats while the map follows your finger. Tap a city name to read facts in place or tap its symbol to zoom. Tap outside the highlighted metro to clear the city at the current map position.
 - Tap a capital or largest city in state facts to visit the corresponding city view. **BACK** returns to the state facts or atlas you came from. One tap on another state's land switches the selection. In State Atlas, swipe down on the stats or tap open water to return to compact stats at the current camera position. A light pull beyond the state's frame springs back. A deliberate drag away returns to stats and continues panning with your finger.
 - State abbreviations have priority at wide scales and in rotated views. Puerto Rico is labeled **PR** inside the island when it fits, with the inset name along the bottom.
@@ -43,7 +43,7 @@ Pass 2 covers the finished compass artwork, label priorities by scale, and the o
 1. Connect the PC and iPhone to the same trusted Wi-Fi network.
 2. On the PC, open this extracted folder and run **Start_Phone_Preview.cmd**. Keep the window open.
 3. Enter the address shown in that window into Safari on the iPhone. This preview uses port **8019**.
-4. Drag and pinch, try both kinds of double-tap, search for California, and swipe into and out of the state atlas. Press Ctrl+C in the PC window when finished.
+4. Drag and pinch, tap state land, try quick double-tap zoom, search for California, and swipe into and out of State Atlas. Press Ctrl+C in the PC window when finished.
 
 If Safari can't reach the address, check that both devices are on the same trusted Wi-Fi. Guest Wi-Fi and Windows firewall rules can block connections between devices.
 

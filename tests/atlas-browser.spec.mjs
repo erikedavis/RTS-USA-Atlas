@@ -7,7 +7,7 @@ async function assertRendered(page, testInfo) {
   const response = await page.goto('/', { waitUntil: 'domcontentloaded' });
   expect(response?.ok(), 'The atlas must respond over HTTP').toBe(true);
   await expect(page.locator('#map-loading'), 'Atlas loading overlay must disappear').toBeHidden({ timeout: 50_000 });
-  await expect(page.locator('meta[name="atlas-version"]')).toHaveAttribute('content', 'ALPHA 0.8G');
+  await expect(page.locator('meta[name="atlas-version"]')).toHaveAttribute('content', 'ALPHA 0.8H');
   await expect(page.locator('canvas.maplibregl-canvas')).toHaveCount(1);
   const renderer = await page.evaluate(() => {
     const canvas = document.querySelector('canvas.maplibregl-canvas');
@@ -370,6 +370,83 @@ test.describe('phone viewport', () => {
     await expect(page.locator('#panel-content h1')).toHaveText('Indiana');
     await expect(page.getByRole('button', { name: /Indianapolis/ })).toBeVisible();
   });
+
+  for (const { name, viewport, bearing } of [
+    { name: 'portrait', viewport: { width: 390, height: 844 }, bearing: 0 },
+    { name: 'rotated landscape', viewport: { width: 744, height: 390 }, bearing: 38 }
+  ]) {
+    test(`one clean tap selects state land and map gestures stay separate in ${name}`, async ({ page }, testInfo) => {
+      await page.setViewportSize(viewport);
+      await exposeMap(page);
+      await assertRendered(page, testInfo);
+      await readMap(page);
+      const app = page.locator('.app');
+      const heading = page.locator('#panel-content h1');
+      const cdp = await page.context().newCDPSession(page);
+      const touch = (type, ...touchPoints) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints });
+      const statePoint = async () => {
+        await page.evaluate(bearing => testMap.jumpTo({ center: [-107.5, 39.9], zoom: 5.4, bearing }), bearing);
+        return (await page.waitForFunction(() => {
+          const map = testMap;
+          const point = map.project([-107.5, 39.9]);
+          const rect = map.getContainer().getBoundingClientRect();
+          const x = Math.round(rect.left + point.x), y = Math.round(rect.top + point.y);
+          if (document.elementFromPoint(x, y) !== map.getCanvas() ||
+              !map.queryRenderedFeatures(point, { layers: ['state-hit'] }).some(f => f.properties.name === 'Colorado')) return;
+          return { x, y, id: 0 };
+        })).jsonValue();
+      };
+
+      let point = await statePoint();
+      let before = await camera(page);
+      await touch('touchStart', point);
+      await expect(app).toHaveAttribute('data-phone-stage', 'closed');
+      await touch('touchEnd');
+      await expect(heading).toHaveText('Colorado', { timeout: 950 });
+      await expect(app).toHaveAttribute('data-phone-stage', 'summary');
+      expect(await camera(page)).toEqual(before);
+      await page.getByRole('button', { name: 'National view', exact: true }).tap();
+      await waitForCamera(page);
+
+      point = await statePoint();
+      before = await camera(page);
+      await touch('touchStart', point);
+      for (const dx of [5, 10, 16, 24, 34]) {
+        await touch('touchMove', { ...point, x: point.x + dx });
+        await page.waitForTimeout(35);
+      }
+      await touch('touchEnd');
+      await expect.poll(async () => (await camera(page))[0]).not.toBe(before[0]);
+      await page.waitForTimeout(550);
+      await expect(app).toHaveAttribute('data-phone-stage', 'closed');
+
+      point = await statePoint();
+      before = await camera(page);
+      await touch('touchStart', point);
+      await touch('touchStart', point, { x: point.x + 44, y: point.y, id: 1 });
+      for (const dx of [9, 18, 30, 44]) {
+        await touch('touchMove', { ...point, x: point.x - dx }, { x: point.x + 44 + dx, y: point.y, id: 1 });
+      }
+      await touch('touchEnd');
+      await expect.poll(async () => (await camera(page))[2]).toBeGreaterThan(before[2] + .3);
+      await page.waitForTimeout(550);
+      await expect(app).toHaveAttribute('data-phone-stage', 'closed');
+
+      point = await statePoint();
+      await touch('touchStart', point);
+      await touch('touchCancel');
+      await page.waitForTimeout(650);
+      await expect(app).toHaveAttribute('data-phone-stage', 'closed');
+
+      point = await statePoint();
+      before = await camera(page);
+      await page.touchscreen.tap(point.x, point.y);
+      await page.touchscreen.tap(point.x, point.y);
+      await expect.poll(async () => (await camera(page))[2]).toBeCloseTo(before[2] + 2, 3);
+      await page.waitForTimeout(550);
+      await expect(app).toHaveAttribute('data-phone-stage', 'closed');
+    });
+  }
 
   test('one tap switches states immediately with county mode enabled and keeps county scope', async ({ page }, testInfo) => {
     await exposeMap(page);
