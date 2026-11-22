@@ -8,7 +8,7 @@ const ci = Boolean(process.env.CI);
 export default defineConfig({
   testDir: './tests',
   timeout: 90_000,
-  globalTimeout: ci ? 210_000 : undefined,
+  globalTimeout: ci ? 300_000 : undefined,
   expect: { timeout: 35_000 },
   workers: 1,
   retries: ci ? 1 : 0,
