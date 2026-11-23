@@ -191,6 +191,18 @@ test('desktop compass turns with the map and highlights one direction on hover',
   await tapRoseSpoke(page);
   await expect(lock).toHaveAttribute('aria-pressed', 'true');
   await expect(controls).toHaveClass(/rotation-north-locked/);
+  await east.click();
+  await expectBearing(page,90);
+  await lock.click();
+  await expect(lock).toHaveAttribute('aria-pressed','false');
+  await waitForCompassShift(page);
+  const {x,y,width,height}=await lock.boundingBox();
+  await page.mouse.move(x+width/2,y+height/2);
+  await page.mouse.down();
+  await expect(lock).toHaveAttribute('aria-pressed','true');
+  await expectBearing(page,0);
+  await page.mouse.up();
+  await expect(lock).toHaveAttribute('aria-pressed','true');
 });
 
 test('desktop compass tucks into the corner and its return chevron tracks the sidebar', async ({ page }, testInfo) => {
@@ -707,6 +719,14 @@ test.describe('phone viewport', () => {
     await lock.tap();
     await expect(lock).toHaveAttribute('aria-pressed', 'false');
     await tapRoseSpoke(page, true);
+    await expect(lock).toHaveAttribute('aria-pressed', 'true');
+    await expectBearing(page, 135);
+    await tapRoseSpoke(page, true);
+    await expect(lock).toHaveAttribute('aria-pressed', 'false');
+    await controls.getByRole('button', {name:'North up',exact:true}).tap();
+    await expectBearing(page, 0);
+    await expect(lock).toHaveAttribute('aria-pressed', 'false');
+    await tapRoseSpoke(page, true);
     await expectBearing(page, 0);
     await expect(controls).toHaveClass(/rotation-north-locked/);
     await page.getByRole('button', { name: 'Open state atlas' }).tap();
@@ -785,6 +805,12 @@ test.describe('phone viewport', () => {
     await expectBearing(page,23);
     await page.getByRole('button',{name:'West up',exact:true}).tap();
     await expectBearing(page,270);
+    const center=await lock.boundingBox();
+    await touch('touchStart',{x:center.x+center.width/2,y:center.y+center.height/2});
+    await expect(lock).toHaveAttribute('aria-pressed','true');
+    await expectBearing(page,0);
+    await touch('touchEnd');
+    await expect(lock).toHaveAttribute('aria-pressed','true');
   });
 
   test('phone USA Stats opens Atlas by long press or by swiping up inside the facts', async ({ page }, testInfo) => {

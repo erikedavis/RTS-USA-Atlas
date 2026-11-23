@@ -1,4 +1,5 @@
-const HOLD_MS=600;
+export const HOLD_MS=600;
+export const HOLD_SLOP=9;
 // Match the bundled MapLibre double-tap window before committing a single tap.
 const MAP_DOUBLE_TAP_MS=500, TAP_SPACING=30;
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
@@ -39,7 +40,7 @@ export function bindMapTouches(surface,{enabled,hit,preview,hold,single,immediat
   surface.addEventListener('touchmove',event=>{
     if(!finger)return;
     if(event.touches.length!==1){cancel();return;}
-    if(distance(finger.at,position(event.touches[0]))>9){
+    if(distance(finger.at,position(event.touches[0]))>HOLD_SLOP){
       finger.moved=true;clearTimeout(finger.holdTimer);clearPending();
     }
   },{passive:true,capture:true});
@@ -55,7 +56,7 @@ export function bindMapTouches(surface,{enabled,hit,preview,hold,single,immediat
       return;
     }
     const at=position(event.changedTouches[0]);
-    if(touch.moved||distance(touch.at,at)>9){
+    if(touch.moved||distance(touch.at,at)>HOLD_SLOP){
       clearPending();return;
     }
     if(!touch.badge&&switchState(at)){

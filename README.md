@@ -38,7 +38,7 @@ Use **COUNTIES** and **METROS** in the map controls, including from State Atlas.
 
 ## Rotation and search
 
-Click or tap the compass center to unlock rotation or lock the current angle. A gold padlock marks the locked state. The shackle opens and the icon fades shortly after unlocking. Right-drag on a PC or twist with two fingers on a phone. The rose and the positions of its letters follow the map bearing, with each letter upright. Click or tap any direction to snap to that heading. Click or tap a spoke outside the center to return to north and lock rotation. **R** returns north while retaining the current lock setting.
+Click or tap the rose or its center to toggle the lock at the current bearing. Hold the center for about 0.6 seconds to return north and lock. You can also choose **N**, then tap the rose to lock. A gold padlock marks the locked state. The shackle opens and the icon fades shortly after unlocking. Right-drag on a PC or twist with two fingers on a phone. The rose and its upright letters follow the map bearing. Choose any direction to snap to that heading. **R** returns north while retaining the current lock setting.
 
 Use one finger to drag around the center from a direction label or the outer half of a compass spoke. A locked circular gesture holds the bearing until release, then unlocks. An unlocked circular gesture turns the map as the rose follows your finger.
 

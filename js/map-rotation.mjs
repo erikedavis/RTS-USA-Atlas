@@ -1,3 +1,5 @@
+import {HOLD_MS,HOLD_SLOP} from './phone-gestures.mjs?v=09e';
+
 export const isNorthUp=bearing=>Math.abs(((bearing%360+540)%360)-180)<1e-6;
 
 export function screenBounds(map,[[west,south],[east,north]]){
@@ -18,20 +20,14 @@ export function setupRotation(map,controls,onChange){
   const lock=controls.querySelector('#rotation-lock');
   const heading=controls.querySelector('#rotation-bearing');
   let locked=true,minimized=false;
-  let drag=null,skipClick=false;
+  let drag=null,centerHold=null,skipClick=false;
 
   function showBearing(){
     const bearing=map.getBearing(),degrees=Math.round((bearing+360)%360)%360;
-    const northLocked=locked&&isNorthUp(bearing);
     const display=`Bearing ${degrees} degrees`;
     if(heading.textContent!==display)heading.textContent=display;
     controls.style.setProperty('--compass-angle',-bearing+'deg');
-    controls.classList.toggle('rotation-north-locked',northLocked);
-    const action=northLocked?'Unlock map rotation':'Return to north and lock rotation';
-    if(rose.title!==action){
-      rose.title=action;
-      rose.setAttribute('aria-label',action);
-    }
+    controls.classList.toggle('rotation-north-locked',locked&&isNorthUp(bearing));
   }
 
   function setLocked(value){
@@ -44,8 +40,11 @@ export function setupRotation(map,controls,onChange){
       map.dragRotate.enable();
       map.touchZoomRotate.enableRotation();
     }
+    const action=locked?'Unlock map rotation':'Lock map rotation in place';
     lock.setAttribute('aria-pressed',String(locked));
-    lock.setAttribute('aria-label',locked?'Unlock map rotation':'Lock map rotation in place');
+    lock.setAttribute('aria-label',action);
+    rose.setAttribute('aria-label',action);
+    rose.title=action;
     lock.dataset.hint=locked?'Map rotation is locked. Click to unlock.':'Click to lock rotation here.';
     controls.classList.toggle('rotation-unlocked',!locked);
     toggle.hidden=!locked;
@@ -95,6 +94,24 @@ export function setupRotation(map,controls,onChange){
   function snap(bearing){
     map.rotateTo(bearing,{duration:280});
   }
+  function northAndLock(){
+    setLocked(true);
+    snap(0);
+  }
+
+  function cancelCenterHold(){
+    clearTimeout(centerHold?.timer);
+    centerHold=null;
+  }
+  document.addEventListener('pointerdown',event=>{
+    if(centerHold&&event.pointerId!==centerHold.id)cancelCenterHold();
+  },true);
+  lock.addEventListener('pointerleave',event=>{
+    if(event.pointerType==='mouse'&&event.pointerId===centerHold?.id)cancelCenterHold();
+  });
+  lock.addEventListener('contextmenu',event=>{
+    if(centerHold||skipClick||event.pointerType==='touch')event.preventDefault();
+  });
 
   function onOuterSpoke(event){
     const local=new DOMPoint(event.clientX,event.clientY).matrixTransform(roseArt.getScreenCTM().inverse());
@@ -106,9 +123,19 @@ export function setupRotation(map,controls,onChange){
   }
   const angleAt=(event,{x,y})=>Math.atan2(event.clientY-y,event.clientX-x)*180/Math.PI;
   controls.addEventListener('pointerdown',event=>{
-    if(event.isPrimary)skipClick=false;
-    if(!event.isPrimary||event.pointerType==='mouse')return;
+    if(!event.isPrimary)return;
+    skipClick=false;
     const button=event.target.closest('button');
+    if(button===lock&&event.button===0){
+      const {pointerId:id,clientX:x,clientY:y}=event;
+      centerHold={id,x,y,timer:setTimeout(()=>{
+        centerHold=null;
+        if(drag?.id===id)drag=null;
+        skipClick=true;
+        northAndLock();
+      },HOLD_MS)};
+    }
+    if(event.pointerType==='mouse')return;
     const canTurn=button?.matches('[data-bearing]')||(button===rose&&onOuterSpoke(event));
     const canHide=locked&&!minimized&&event.pointerType==='touch'&&face.contains(event.target)&&isPhone();
     if(!canTurn&&!canHide)return;
@@ -119,6 +146,11 @@ export function setupRotation(map,controls,onChange){
       startX:event.clientX,startY:event.clientY,bearing:map.getBearing(),started:false};
   });
   controls.addEventListener('pointermove',event=>{
+    if(event.pointerId===centerHold?.id&&
+      Math.hypot(event.clientX-centerHold.x,event.clientY-centerHold.y)>HOLD_SLOP){
+      cancelCenterHold();
+      skipClick=true;
+    }
     if(event.pointerId!==drag?.id)return;
     drag.maxY=Math.max(drag.maxY,Math.abs(event.clientY-drag.startY));
     if(!drag.canTurn)return;
@@ -132,6 +164,7 @@ export function setupRotation(map,controls,onChange){
     if(drag.started&&!locked)map.setBearing(drag.bearing-drag.turn);
   });
   controls.addEventListener('pointerup',event=>{
+    if(event.pointerId===centerHold?.id)cancelCenterHold();
     if(event.pointerId!==drag?.id)return;
     const dx=event.clientX-drag.startX,dy=event.clientY-drag.startY;
     // Only a deliberate, nearly horizontal pass can hide the locked rose.
@@ -139,7 +172,7 @@ export function setupRotation(map,controls,onChange){
     const hide=locked&&drag.canHide&&dx>=drag.swipeDistance&&
       Math.max(drag.maxY,Math.abs(dy))<=Math.max(10,dx*.23);
     const turned=drag.started;
-    skipClick=turned||Math.hypot(dx,dy)>=10;
+    skipClick=skipClick||turned||Math.hypot(dx,dy)>=10;
     drag=null;
     if(hide)setMinimized(true);
     else if(turned&&locked)setLocked(false);
@@ -147,6 +180,7 @@ export function setupRotation(map,controls,onChange){
   });
   for(const type of ['pointercancel','lostpointercapture']){
     controls.addEventListener(type,event=>{
+      if(event.pointerId===centerHold?.id)cancelCenterHold();
       if(event.pointerId!==drag?.id)return;
       const turned=drag.started;
       drag=null;
@@ -165,14 +199,7 @@ export function setupRotation(map,controls,onChange){
   setLocked(true);
   map.on('rotate',showBearing);
   map.on('moveend',showBearing);
-  rose.addEventListener('click',()=>{
-    if(locked&&isNorthUp(map.getBearing()))setLocked(false);
-    else{
-      setLocked(true);
-      snap(0);
-    }
-  });
-  lock.addEventListener('click',()=>setLocked(!locked));
+  for(const button of [rose,lock])button.addEventListener('click',()=>setLocked(!locked));
   controls.addEventListener('click',event=>{
     const button=event.target.closest('button[data-bearing]');
     if(button)snap(Number(button.dataset.bearing));

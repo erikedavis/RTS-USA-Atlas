@@ -8,7 +8,7 @@ import {createGeographyLabels} from './geography-labels.mjs?v=09d';
 import {createStateLabels} from './state-labels.mjs?v=09c';
 import {prepareStateShapes,shapeContainsPoint} from './state-label-placement.mjs';
 import {isNorthUp,screenBounds,setupRotation} from './map-rotation.mjs?v=09e';
-import {setupPhoneUI} from './phone-ui.mjs?v=09d';
+import {setupPhoneUI} from './phone-ui.mjs?v=09e';
 import {COUNTY_LABEL_ZOOM,createCountyLabels} from './county-labels.mjs';
 import {createSelectedAreaLabel} from './selected-area-label.mjs';
 import {INSETS, NATIONAL_BOUNDS, CONUS_BOUNDS, displayData, displayPoint, geographicPoint, hawaiiTailMarks, insetFrames} from './insets.mjs';

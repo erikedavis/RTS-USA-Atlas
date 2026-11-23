@@ -232,7 +232,7 @@ button { color:inherit; cursor:pointer; }
   pointer-events:auto;touch-action:manipulation;
 }
 .rotation-tools button:focus-visible {outline:1px solid #d4a85f;outline-offset:1px;}
-.rotation-tools :is(#compass-home,.compass-direction) {touch-action:none;user-select:none;-webkit-touch-callout:none;}
+.rotation-tools :is(#compass-home,#rotation-lock,.compass-direction) {touch-action:none;user-select:none;-webkit-touch-callout:none;}
 .compass-face {
   position:relative;transform:translate(var(--compass-edge-shift),calc(0px - var(--compass-edge-shift)));
   transition:transform .24s ease;

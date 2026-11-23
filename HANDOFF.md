@@ -1,6 +1,6 @@
 # USAtlas V0.9E preview
 
-The locked compass sits against the upper-right map edge and expands inward on unlock. Desktop hover shows Hide compass or Return compass. A straight rightward swipe hides the locked compass on phones, and the edge chevron brings it back.
+The locked compass sits against the upper-right map edge and expands inward on unlock. Desktop hover shows Hide compass or Return compass. A straight rightward swipe hides the locked compass on phones, and the edge chevron brings it back. A center hold uses the State Atlas timing to return north and lock. A quick rose tap toggles the lock at the current bearing.
 
 ## V0.9D preview
 
