@@ -126,4 +126,4 @@ A physical iPhone Safari pass and performance measurements are still open. In po
 
 The compass and lock preview is ready for review. The full rotation matrix, scale-specific collision priorities and optional Labels control remain open. Preserve the current visibility of close-view places when adjusting collision rules.
 
-Publish verified source for every numbered build and record the exact commit, QA and open checks. Keep at most seven separate numbered snapshots and preserve Git history.
+Publish only major numbered releases to GitHub. The next uploads are **1.0A**, then **2.0A**, unless Erik says otherwise. Keep interim builds local. Record the exact commit, QA and open checks for each build. Keep at most seven separate numbered snapshots and preserve Git history.
