@@ -2,7 +2,7 @@
   --void: #020307; --land: #0b1119; --panel: #070b11; --line: #233345;
   --line-soft:#16212e; --ink:#d9e4ee; --muted:#75889b; --soft:#a9b8c7;
   --cold:#7c9fbf; --bright:#b7d6ed; --accent:#86adc8;
-  --active-gold:#f3d99e; --active-border:#b98946; --active-background:#2b2114;
+  --active-gold:#f3d99e; --active-border:#b98946;
 }
 * { box-sizing:border-box; }
 html, body { padding:0; margin:0; height:100%; width:100%; background:var(--void); color:var(--ink); font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif; }
@@ -108,7 +108,7 @@ button { color:inherit; cursor:pointer; }
 .panel-action {background:#101e2b;color:#bcd8ea;border:1px solid #38536a;padding:9px 12px;margin-top:14px;font-size:11px;letter-spacing:.08em;}
 .panel-action:hover{background:#182d3d;}
 .map-controls button[aria-pressed="true"],.state-layer-actions button[aria-pressed="true"] {
-  border-color:var(--active-border);background:var(--active-background);color:var(--active-gold);
+  border-color:var(--active-border);color:var(--active-gold);
 }
 .panel-help {color:#7e96aa;font-size:10px;line-height:1.5;margin-top:8px;}
 .state-layer-actions {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0 0;}

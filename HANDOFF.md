@@ -1,4 +1,8 @@
-# USAtlas V0.8K preview
+# USAtlas V0.8L preview
+
+Enabled county and metro buttons use gold text and borders with their standard backgrounds on phone and PC.
+
+## V0.8K preview
 
 The locked compass, active CTY and MSA controls, their State Atlas buttons and the open map key use gold. City facts link to the state beside the city name. Selecting it uses the map's state-abbreviation fit on PC and phone. The regular map includes all five Great Lakes shorelines at national and regional scales. The data source and version are recorded in `data/manifest.json`.
 
