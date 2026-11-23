@@ -1,4 +1,4 @@
-# USAtlas V0.8H preview
+# USAtlas V0.8I preview
 
 Requires Python 3. Clone the repository or extract its source ZIP, then run **Start_Atlas.cmd** from that folder. The launcher opens **http://127.0.0.1:8020/**.
 [Development handoff](HANDOFF.md) covers the current preview, repeatable checks, and open work.
@@ -26,11 +26,11 @@ Enable **CTY** or **MSA** from a state's details or the map controls. With a sta
 
 ## Rotation and search
 
-Use the top-right arrow or **Unlock** to enable rotation. Right-drag on a PC or twist with two fingers on a phone. **Lock** holds the current angle. Click the arrow again to return north and lock. Open the current-bearing menu to choose any of the eight compass directions. **R** returns north while retaining the current lock setting.
+Use the padlock under the top-right compass to enable rotation or lock the current angle. Right-drag on a PC or twist with two fingers on a phone. The rose and the positions of its letters follow the map bearing, with each letter upright. Click or tap any direction to snap to that heading. The rose center unlocks a north-up map, or returns to north and locks from other states. **R** returns north while retaining the current lock setting. The open padlock stays faintly visible on the phone so it can be tapped again.
 
 Type a state abbreviation such as **MN** in Search. It appears first, and Enter opens its facts and fits the state. The angle is preserved.
 
-Pass 2 covers the finished compass artwork, label priorities by scale, and the optional more-labels control.
+The remaining rotation work covers the full bearing matrix, label priorities by scale, and the optional more-labels control.
 
 ## What's new in V0.5C
 

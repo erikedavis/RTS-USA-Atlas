@@ -36,7 +36,7 @@
 .phone-layout .search-results {top:39px;}
 .phone-layout .content {margin-top:var(--phone-header);flex-direction:column;}
 .phone-layout #map,.phone-layout .gridlines,.phone-layout .map-vignette,.phone-layout .map-loading {bottom:0;}
-.phone-layout .rotation-tools {transition:transform .24s ease,opacity .2s ease;}
+.phone-layout .rotation-tools {--compass-size:166px;transition:transform .24s ease,opacity .2s ease;}
 .phone-layout .phone-dock-body {position:relative;}
 .phone-layout .map-key-toggle {bottom:100%;pointer-events:auto;}
 .phone-layout .dev-zoom {bottom:calc(100% + 17px);}
@@ -124,6 +124,9 @@
 
 @media (orientation: landscape) {
   .app.phone-layout {--phone-header:44px;--phone-summary:min(123px,43dvh);--phone-atlas-sheet:min(134px,32dvh);}
+  .phone-layout[data-phone-stage='summary'] .rotation-tools {
+    --compass-size:clamp(100px,calc(100dvh - var(--phone-header) - var(--phone-summary) - var(--phone-tray) - var(--compass-lock-row) - 10px - env(safe-area-inset-top) - env(safe-area-inset-bottom)),166px);
+  }
   .phone-layout .phone-state-overview {grid-template-columns:minmax(0,1fr) minmax(0,1.5fr);}
   .phone-layout .phone-state-facts {grid-template-columns:repeat(2,minmax(0,1fr));}
   .phone-layout .phone-state-facts .record-row {grid-column:1/-1;}

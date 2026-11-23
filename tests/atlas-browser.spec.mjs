@@ -7,7 +7,7 @@ async function assertRendered(page, testInfo) {
   const response = await page.goto('/', { waitUntil: 'domcontentloaded' });
   expect(response?.ok(), 'The atlas must respond over HTTP').toBe(true);
   await expect(page.locator('#map-loading'), 'Atlas loading overlay must disappear').toBeHidden({ timeout: 50_000 });
-  await expect(page.locator('meta[name="atlas-version"]')).toHaveAttribute('content', 'ALPHA 0.8H');
+  await expect(page.locator('meta[name="atlas-version"]')).toHaveAttribute('content', 'ALPHA 0.8I');
   await expect(page.locator('canvas.maplibregl-canvas')).toHaveCount(1);
   const renderer = await page.evaluate(() => {
     const canvas = document.querySelector('canvas.maplibregl-canvas');
@@ -68,6 +68,13 @@ async function camera(page) {
     .map(value => Number(value.toFixed(5))));
 }
 
+async function expectBearing(page, expected) {
+  await expect.poll(() => page.evaluate(() => {
+    if (testMap.isMoving()) return null;
+    return Math.round((testMap.getBearing() + 360) % 360) % 360;
+  })).toBe(expected);
+}
+
 async function countyStates(page) {
   return page.evaluate(() => [...new Set(testMap.queryRenderedFeatures({ layers: ['county-lines'] })
     .map(feature => feature.properties.state_fips))].sort());
@@ -92,6 +99,52 @@ test('desktop national map loads, has working WebGL, and renders', async ({ page
   await page.mouse.move(550, 105);
   await page.waitForTimeout(1000);
   await screenshot(page, testInfo, 'national-desktop');
+});
+
+test('desktop compass turns with the map and highlights one direction on hover', async ({ page }, testInfo) => {
+  await exposeMap(page);
+  await assertRendered(page, testInfo);
+  await readMap(page);
+  const controls = page.getByRole('group', { name: 'Map rotation' });
+  const rose = page.locator('#compass-home');
+  const lock = page.locator('#rotation-lock');
+  const north = controls.getByRole('button', { name: 'North up', exact: true });
+  const east = controls.getByRole('button', { name: 'East up', exact: true });
+
+  await expect(controls.locator('[data-bearing]')).toHaveCount(8);
+  await expect(controls).toHaveClass(/rotation-north-locked/);
+  await expect(rose.locator('.compass-light')).toHaveCSS('fill', 'rgb(167, 196, 216)');
+  await north.hover();
+  await expect(north.locator('span')).toHaveCSS('transform', 'matrix(1.22, 0, 0, 1.22, 0, 0)');
+  await expect(east.locator('span')).toHaveCSS('opacity', '0.66');
+  await expectBearing(page, 0);
+  await screenshot(page, testInfo, 'compass-hover-desktop');
+
+  const initial = await camera(page);
+  await east.click();
+  await expectBearing(page, 90);
+  await expect(lock).toHaveAttribute('aria-pressed', 'true');
+  expect((await camera(page)).slice(0, 3)).toEqual(initial.slice(0, 3));
+  const northGeometry = await north.evaluate(button => {
+    const dial = button.parentElement;
+    const rect = dial.getBoundingClientRect(), label = button.getBoundingClientRect();
+    const rotation = new DOMMatrixReadOnly(getComputedStyle(dial).transform)
+      .multiply(new DOMMatrixReadOnly(getComputedStyle(button).transform));
+    return { x: label.left + label.width / 2 - rect.left - rect.width / 2,
+      y: label.top + label.height / 2 - rect.top - rect.height / 2, upright: Math.abs(rotation.b) < .001 };
+  });
+  expect(northGeometry.x).toBeLessThan(-40);
+  expect(Math.abs(northGeometry.y)).toBeLessThan(1);
+  expect(northGeometry.upright).toBe(true);
+
+  await lock.click();
+  await expect(lock).toHaveAttribute('aria-pressed', 'false');
+  await page.keyboard.press('r');
+  await expectBearing(page, 0);
+  await expect(lock).toHaveAttribute('aria-pressed', 'false');
+  await rose.click();
+  await expect(lock).toHaveAttribute('aria-pressed', 'true');
+  await expect(controls).toHaveClass(/rotation-north-locked/);
 });
 
 test('desktop Atlas expands, restores a rotated camera, and reopens the hidden sidebar on selection', async ({ page }, testInfo) => {
@@ -224,6 +277,40 @@ for (const isPhone of [false, true]) {
 
 test.describe('phone viewport', () => {
   test.use({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
+
+  test('phone compass keeps all eight directions and the lock tappable', async ({ page }, testInfo) => {
+    await exposeMap(page);
+    await assertRendered(page, testInfo);
+    await readMap(page);
+    const controls = page.getByRole('group', { name: 'Map rotation' });
+    const lock = page.locator('#rotation-lock');
+    const rose = page.locator('#compass-home');
+    await expect(controls.locator('[data-bearing]')).toHaveCount(8);
+    await screenshot(page, testInfo, 'compass-locked-phone');
+
+    await lock.tap();
+    await expect(lock).toHaveAttribute('aria-pressed', 'false');
+    await expect(lock).toHaveCSS('opacity', '0.45');
+    await controls.getByRole('button', { name: 'Southeast up', exact: true }).tap();
+    await expectBearing(page, 135);
+    await lock.tap();
+    await expect(lock).toHaveAttribute('aria-pressed', 'true');
+    await expectBearing(page, 135);
+    await expect(controls).not.toHaveClass(/rotation-north-locked/);
+    await screenshot(page, testInfo, 'compass-locked-angle-phone');
+
+    await page.setViewportSize({ width: 744, height: 390 });
+    await searchFor(page, 'CO');
+    await expect(page.locator('#panel-content h1')).toHaveText('Colorado');
+    await expectBearing(page, 135);
+    await lock.tap();
+    await expect(lock).toHaveAttribute('aria-pressed', 'false');
+    await rose.tap();
+    await expectBearing(page, 0);
+    await expect(controls).toHaveClass(/rotation-north-locked/);
+    await page.getByRole('button', { name: 'Open state atlas' }).tap();
+    await expect(page.locator('.rotation-tools')).toHaveAttribute('inert', '');
+  });
 
   test('phone startup hides the desktop sidebar while the map loads', async ({ page }) => {
     await page.route('**/js/atlas.mjs?*', route => route.abort());

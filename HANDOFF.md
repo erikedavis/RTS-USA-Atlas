@@ -1,4 +1,8 @@
-# USAtlas V0.8H preview
+# USAtlas V0.8I preview
+
+The standalone compass has eight directly selectable directions, an animated padlock below, and a subdued blue-gray state when locked at north. Direction letters move with their points and stay upright. On desktop, hovering or focusing a direction enlarges and brightens it. The faint open padlock is always reachable by touch. The existing lock, heading snaps, and north reset use the same map rotation controller.
+
+## V0.8H preview
 
 On phones, a single tap on bare state land opens compact facts at the current camera. Ordinary map taps still wait up to 500 ms to allow quick double-tap zoom. Slow double-tap selection has been removed. State abbreviations still fit the state, and holding geography still opens Atlas. The PC preview uses port 8020 and the phone preview uses port 8019.
 
@@ -80,6 +84,6 @@ For an expanded desktop atlas, the first useful comparison is Kansas or Californ
 
 A physical iPhone Safari pass and performance measurements are still open. In portrait and landscape, check actual tap targets, single-tap selection, quick double-tap zoom, hold, scroll versus swipe, facts and Back, CTY and MSA selection, keyboard search, and rotation with facts open. Record device, iOS version, view and timings. Also check the Northeast at several bearings and compare the same map view on the PC.
 
-Rotation Pass 2 is pending approval. It covers the finished compass and lock, scale-specific collision priorities and the optional Labels control. Preserve the current visibility of close-view places when adjusting collision rules.
+The compass and lock preview is ready for review. The full rotation matrix, scale-specific collision priorities and optional Labels control remain open. Preserve the current visibility of close-view places when adjusting collision rules.
 
 Publish verified source for every numbered build and record the exact commit, QA and open checks. Keep at most seven separate numbered snapshots and preserve Git history.

@@ -11,17 +11,17 @@ export function screenBounds(map,[[west,south],[east,north]]){
 export function setupRotation(map,controls){
   const rose=controls.querySelector('#compass-home');
   const lock=controls.querySelector('#rotation-lock');
-  const directions=controls.querySelector('.rotation-directions');
   const heading=controls.querySelector('#rotation-bearing');
   let locked=true;
 
   function showBearing(){
     const bearing=map.getBearing(),degrees=Math.round((bearing+360)%360)%360;
-    const north=isNorthUp(bearing);
-    const display=north?'N':degrees+'°';
+    const northLocked=locked&&isNorthUp(bearing);
+    const display=`Bearing ${degrees} degrees`;
     if(heading.textContent!==display)heading.textContent=display;
-    rose.style.setProperty('--compass-angle',-bearing+'deg');
-    const action=locked&&north?'Unlock map rotation':'Return to north and lock rotation';
+    controls.style.setProperty('--compass-angle',-bearing+'deg');
+    controls.classList.toggle('rotation-north-locked',northLocked);
+    const action=northLocked?'Unlock map rotation':'Return to north and lock rotation';
     if(rose.title!==action){
       rose.title=action;
       rose.setAttribute('aria-label',action);
@@ -38,16 +38,14 @@ export function setupRotation(map,controls){
       map.dragRotate.enable();
       map.touchZoomRotate.enableRotation();
     }
-    lock.textContent=locked?'Unlock':'Lock';
     lock.setAttribute('aria-pressed',String(locked));
     lock.setAttribute('aria-label',locked?'Unlock map rotation':'Lock map rotation in place');
-    lock.title=lock.getAttribute('aria-label');
+    lock.dataset.hint=locked?'Map rotation is locked. Click to unlock.':'Click to lock rotation here.';
     controls.classList.toggle('rotation-unlocked',!locked);
     showBearing();
   }
 
   function snap(bearing){
-    directions.open=false;
     map.rotateTo(bearing,{duration:280});
   }
 
@@ -64,14 +62,9 @@ export function setupRotation(map,controls){
     }
   });
   lock.addEventListener('click',()=>setLocked(!locked));
-  directions.addEventListener('click',event=>{
+  controls.addEventListener('click',event=>{
     const button=event.target.closest('button[data-bearing]');
-    if(!button)return;
-    snap(Number(button.dataset.bearing));
-    directions.querySelector('summary').focus();
-  });
-  document.addEventListener('click',event=>{
-    if(!controls.contains(event.target))directions.open=false;
+    if(button)snap(Number(button.dataset.bearing));
   });
   document.addEventListener('keydown',event=>{
     if(event.defaultPrevented||event.isComposing||event.altKey||event.ctrlKey||event.metaKey||
