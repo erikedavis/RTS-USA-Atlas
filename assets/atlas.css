@@ -87,11 +87,17 @@ button { color:inherit; cursor:pointer; }
 .selection-icon {font-size:36px;color:#537c9b;margin:5px 0 16px;font-weight:200;}
 .empty-kicker,.section-kicker{font-size:10px;color:#79a3bd;letter-spacing:.16em;}
 .panel-content h1{font-size:23px;line-height:1.2;font-weight:600;letter-spacing:.075em;margin:9px 0 20px;}
-.place-heading {display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;column-gap:12px;margin:9px 0 20px;}
-.panel-content .place-heading h1 {margin:0;min-width:0;overflow-wrap:anywhere;}
-.place-state {display:flex;align-items:baseline;gap:5px;margin-inline-start:auto;white-space:nowrap;}
-.place-state-link {border:0;padding:0;background:none;color:var(--bright);font-size:12px;min-height:24px;text-decoration:underline;text-underline-offset:3px;}
-.place-state-link:is(:hover,:focus-visible) {color:#f1f9ff;}
+.place-heading {display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);align-items:start;gap:14px;margin:0 0 18px;}
+.panel-content .place-heading h1 {margin:5px 0 6px;overflow-wrap:anywhere;}
+.place-identity .population-total {font-size:clamp(21px,6.8vw,30px);}
+.place-identity .population-caption {margin-bottom:0;}
+.place-locations {display:grid;gap:6px;}
+.place-location {display:grid;justify-items:start;min-width:0;gap:1px;}
+.place-location .record-label {text-transform:uppercase;}
+.place-location-link,.place-location-value {font-size:13px;line-height:1.2;text-align:left;overflow-wrap:anywhere;}
+.place-location-link {border:0;padding:0;background:none;color:var(--bright);min-height:24px;max-width:100%;font-weight:650;text-decoration:underline;text-underline-offset:3px;}
+.place-state .place-location-link {font-size:17px;min-height:27px;}
+.place-location-link:is(:hover,:focus-visible) {color:#f1f9ff;}
 .panel-content p{font-size:12px;line-height:1.7;color:#92a5b4;}
 .panel-content .subtle{font-size:11px;color:#5f7285;}
 .empty-line{height:1px;background:linear-gradient(90deg,#426077,transparent);margin:24px 0 24px;}
@@ -173,6 +179,7 @@ button { color:inherit; cursor:pointer; }
 .state-label-text{display:inline-block;line-height:1.2;transition:transform .12s ease,color .12s ease,text-shadow .12s ease;transform-origin:center;}
 .state-label-small .state-label-text{line-height:1.1;}
 .state-label:hover .state-label-text,.state-label:focus-visible .state-label-text{transform:scale(1.15);color:#f1faff;text-shadow:0 0 5px #b7e2ff,0 0 13px #80caff;}
+.state-label[aria-current="true"] {z-index:8;}
 .state-label[aria-current="true"] .state-label-text {transform:scale(1.15);font-weight:800;}
 .state-label[aria-current="true"] .state-label-text,.selected-area-label {
   color:#fff;text-shadow:0 1px 3px #000,0 0 6px #8bc3f1a6;

@@ -1,4 +1,4 @@
-# USAtlas V0.9B preview
+# USAtlas V0.9C preview
 
 Requires Python 3. Clone the repository or extract its source ZIP, then run **Start_Atlas.cmd** from that folder. The launcher opens **http://127.0.0.1:8020/**.
 [Development handoff](HANDOFF.md) covers the current preview, repeatable checks, and open work.
@@ -7,13 +7,13 @@ Requires Python 3. Clone the repository or extract its source ZIP, then run **St
 
 Startup and Home open USA Stats. CONUS frames the lower 48, D.C. and the Puerto Rico inset. ALL adds Alaska and Hawaii. Both show the same national population and land area from [Census QuickFacts](https://www.census.gov/quickfacts/fact/table/US/PST045222).
 
-Tap or click the USA map label for USA Stats. Hold it to open USA Atlas. The label disappears above zoom 3.5. On a phone, swipe up from the USA Stats sheet or its top handle to open USA Atlas.
+Tap or click the USA map label for USA Stats. Hold it to open USA Atlas. The whole label stays on the Canadian side of the border and disappears above zoom 3.5. On a phone, swipe up from the USA Stats sheet or its top handle to open USA Atlas.
 
 ## Desktop controls
 
 - Select a state, city or metro, then choose **Atlas** in the right sidebar. The sidebar widens. State Atlas frames the outline and fades out surrounding states. City Atlas keeps the zoom and highlights its metro when one exists. Metro Atlas frames the metro and includes a list of Census places with points inside its boundary.
 - **Back** restores the previous map position, zoom and bearing. A linked city opened from a state returns to that state's atlas or stats.
-- The state link beside a city's name selects and fits the state the same way its map abbreviation does. It works in compact facts and City Atlas on PC and phone.
+- The city panel shows its state, metro, and county beside the city name. Each link selects and fits that area in compact facts and City Atlas. For cities spanning multiple counties, the county links to the one containing the city's mapped point.
 - The chevron midway down the sidebar hides it. Click the remaining chevron to reopen it, or make a new selection. Home sits at the lower-left edge of the map and Key sits at the lower-right edge. The hammer in the header opens Tools, including View.
 
 ## Phone controls

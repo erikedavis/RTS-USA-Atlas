@@ -9,7 +9,7 @@ async function assertRendered(page, testInfo) {
   const response = await page.goto('/', { waitUntil: 'domcontentloaded' });
   expect(response?.ok(), 'The atlas must respond over HTTP').toBe(true);
   await expect(page.locator('#map-loading'), 'Atlas loading overlay must disappear').toBeHidden({ timeout: 50_000 });
-  await expect(page.locator('meta[name="atlas-version"]')).toHaveAttribute('content', 'ALPHA 0.9B');
+  await expect(page.locator('meta[name="atlas-version"]')).toHaveAttribute('content', 'ALPHA 0.9C');
   await expect(page.locator('canvas.maplibregl-canvas')).toHaveCount(1);
   const renderer = await page.evaluate(() => {
     const canvas = document.querySelector('canvas.maplibregl-canvas');
@@ -198,6 +198,17 @@ test('desktop USA home defaults to CONUS and keeps the chosen extent through Atl
   await expect(panel.locator('.section-kicker')).toHaveText('USA STATS');
   await expect(conus).toHaveAttribute('aria-pressed','true');
   await expect(usa).toBeVisible();
+  const lowestLatitude=()=>usa.evaluate(badge=>{
+    const b=badge.getBoundingClientRect(),map=testMap.getContainer().getBoundingClientRect();
+    return Math.min(...[[b.left,b.top],[b.right,b.top],[b.left,b.bottom],[b.right,b.bottom]]
+      .map(([x,y])=>testMap.unproject([x-map.left,y-map.top]).lat));
+  });
+  const original=await camera(page);
+  for(const [zoom,bearing] of [[2,0],[2,45],[2,90],[3.5,133],[3.5,270]]){
+    await page.evaluate(([zoom,bearing])=>testMap.jumpTo({zoom,bearing}),[zoom,bearing]);
+    await expect.poll(lowestLatitude).toBeGreaterThan(49.4);
+  }
+  await page.evaluate(([lng,lat,zoom,bearing])=>testMap.jumpTo({center:[lng,lat],zoom,bearing}),original);
   await expect.poll(visibleStates).toContain('PR');
   expect(await visibleStates()).not.toContain('AK');
   expect(await visibleStates()).not.toContain('HI');
@@ -300,6 +311,12 @@ test('Idaho selection and county toggle render without losing state selection', 
   await expect(state).toHaveAttribute('aria-current','true');
   await expect(state.locator('span')).toHaveCSS('color','rgb(255, 255, 255)');
   await expect(state.locator('span')).toHaveCSS('font-weight','800');
+  await page.mouse.move(460,290);
+  await page.mouse.down();
+  await page.mouse.move(478,296,{steps:3});
+  await expect(state.locator('span')).toHaveCSS('color','rgb(255, 255, 255)');
+  await expect(state.locator('span')).not.toHaveCSS('text-shadow','none');
+  await page.mouse.up();
   await screenshot(page, testInfo, 'idaho-selected-outline');
   await page.locator('#toggle-counties').click();
   await expect(page.locator('#toggle-counties')).toHaveAttribute('aria-pressed', 'true');
@@ -449,19 +466,26 @@ for (const isPhone of [false, true]) {
       await expect.poll(metros).toEqual([]);
     });
 
-    test('the city state link selects and fits California from San Diego Atlas', async ({ page }, testInfo) => {
+    test('city geography links select and fit the state, metro and county', async ({ page }, testInfo) => {
       await exposeMap(page);
       await assertRendered(page, testInfo);
       await readMap(page);
-      await page.locator('#search').fill('San Diego');
-      const city = page.getByRole('button', {name:/^San Diego, CA\s*PLACE$/});
-      if (isPhone) await city.tap();
-      else await city.click();
       const heading = page.locator('#panel-content h1');
-      await expect(heading).toHaveText('San Diego');
-      await waitForCamera(page);
+      const activate=button=>isPhone?button.tap():button.click();
+      async function openSanDiego(){
+        await page.locator('#search').fill('San Diego');
+        await activate(page.getByRole('button',{name:/^San Diego, CA\s*PLACE$/}));
+        await expect(heading).toHaveText('San Diego');
+        await waitForCamera(page);
+      }
+      await openSanDiego();
       const stateLink = page.getByRole('button', {name:'California',exact:true});
+      const metroLink = page.getByRole('button', {name:/^San Diego-Chula Vista-Carlsbad, CA$/});
+      const countyLink = page.getByRole('button', {name:'San Diego County',exact:true});
       await expect(stateLink).toBeVisible();
+      await expect(stateLink).toHaveCSS('font-size','17px');
+      await expect(metroLink).toBeAttached();
+      await expect(countyLink).toBeAttached();
       const linkOnRight = await stateLink.evaluate(button => {
         const title = button.closest('.place-heading').querySelector('h1');
         return button.getBoundingClientRect().left > title.getBoundingClientRect().right;
@@ -498,6 +522,15 @@ for (const isPhone of [false, true]) {
       expect(fitted[2]).toBeLessThan(initial[2] - 1);
       expect(fitted[3]).toBe(initial[3]);
       await expect.poll(() => page.evaluate(() => testMap.getFilter('state-selected')?.at(-1))).toBe('06');
+      await openSanDiego();
+      await activate(metroLink);
+      await expect(heading).toHaveText('San Diego-Chula Vista-Carlsbad, CA');
+      await expect(page.locator('#toggle-metros')).toHaveAttribute('aria-pressed','true');
+      await openSanDiego();
+      await activate(countyLink);
+      await expect(heading).toHaveText('San Diego');
+      await expect(page.locator('#selection-status')).toHaveText('COUNTY SELECTED');
+      await expect(page.locator('#toggle-counties')).toHaveAttribute('aria-pressed','true');
     });
   });
 }

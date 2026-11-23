@@ -36,6 +36,7 @@ export function createCityLayers(map,cities,{isNational,metroOverview,phoneViewp
  map.addLayer({...structuredClone(names),id:'city-name-0',source:'major-cities',filter:['==',['get','showLabel'],true],
   paint:{...names.paint,'text-color':['case',selectionText,'#fff',names.paint['text-color']],
    'text-halo-color':['case',selectionText,'#8eb9dc',names.paint['text-halo-color']],
+   'text-halo-width':['case',selectionText,2.2,names.paint['text-halo-width']],
    'text-halo-blur':['case',selectionText,1.6,0]}});
  map.addLayer({id:'city-hover-glow',type:'circle',source:'hover-city',paint:{'circle-radius':['+',['get','radius'],6],'circle-color':'#a9dfff','circle-opacity':.5,'circle-blur':.9}});
  map.addLayer({id:'city-hover-symbol',type:'symbol',source:'hover-city',layout:{...iconLayout,'icon-size':['/',['*',['get','radius'],1.15],8]}});

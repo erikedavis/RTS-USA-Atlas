@@ -97,7 +97,7 @@
 .phone-layout .national-area .record-row {display:grid;padding-top:5px;}
 .phone-layout .national-area .record-value {max-width:none;text-align:left;}
 .phone-layout .place-heading {margin:0 0 7px;}
-.phone-layout .place-state-link {min-height:44px;}
+.phone-layout .place-location-link {min-height:27px;}
 .phone-layout .phone-state-overview {display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:10px;align-items:start;}
 .phone-layout .phone-state-overview h1 {margin:4px 0 6px;letter-spacing:.025em;}
 .phone-layout .phone-state-overview .section-kicker {font-size:9px;letter-spacing:.11em;}

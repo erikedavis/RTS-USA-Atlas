@@ -1,4 +1,8 @@
-# USAtlas V0.9B preview
+# USAtlas V0.9C preview
+
+The USA badge uses map bearing and its displayed size to stay entirely north of the border. City panels stack state, metro and county links alongside the city facts, and the selected map label stays illuminated through movement.
+
+## V0.9B preview
 
 The mobile Tools dropdown aligns with the logo button and uses compact rows. City and State Atlas share the COUNTIES and METROS controls. Selected states and cities use bold white labels, while selected counties and metros get a priority map label below ordinary label zooms.
 

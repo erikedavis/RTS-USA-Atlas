@@ -60,6 +60,7 @@ export function createStateLabels(map,labels,states,Marker,onSelect,isNational,p
     const obstacles=[...container.parentElement.parentElement.querySelectorAll('.map-controls:not(.phone-dock .map-controls),#reset-view,#sidebar-toggle,.rotation-tools:not([inert]),.map-key-toggle,.dev-zoom,.inset-label,#usa-label,.selected-area-label,.phone-grip,.phone-dock-row:not([inert]),.phone-home:not([hidden]),.phone-atlas-back:not([hidden]),.phone-history-back:not([hidden])')]
       .filter(node=>node.offsetWidth&&node.offsetHeight)
       .map(node=>{const b=node.getBoundingClientRect();return {x0:b.left-origin.left,y0:b.top-origin.top,x1:b.right-origin.left,y1:b.bottom-origin.top};});
+    const uiObstacles=[...obstacles];
     const markers=wide?[]:protectedMarkerBoxes();
     if(!priority)obstacles.push(...markers);
     const anchors=[],outsideBadges=[],shown=new Set();
@@ -129,6 +130,15 @@ export function createStateLabels(map,labels,states,Marker,onSelect,isNational,p
         if(roomFor(point,size,true)&&!badgeTouchesLand(map,item.neighbors,point,size,rotated)){
           show(item,point,size);break;
         }
+      }
+    }
+    const selection=selectedState&&ordered.find(item=>item.p.geoid===selectedState);
+    if(selection&&!shown.has(selection)&&(!focusedState||selectedState===focusedState)){
+      const projected=wideShapes.get(selection)||projectStateShapes(map,selection.polygons,viewBounds,viewport,rotated);
+      const anchor=map.project(selection.original);
+      for(const size of [defaultSize,9.7,7.8,7]){
+        const point=fitStateLabel(map,projected,anchor,size,viewport,uiObstacles,{compact:true,centerOnly:true,rotated});
+        if(point){show(selection,point,size);break;}
       }
     }
     for(const item of items){
