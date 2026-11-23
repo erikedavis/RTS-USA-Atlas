@@ -1,4 +1,4 @@
-# USAtlas V0.9F preview
+# USAtlas V0.9G preview
 
 Requires Python 3. Clone the repository or extract its source ZIP, then run **Start_Atlas.cmd** from that folder. The launcher opens **http://127.0.0.1:8020/**.
 [Development handoff](HANDOFF.md) covers the current preview, repeatable checks, and open work.
@@ -14,6 +14,7 @@ Tap or click the USA map label for USA Stats. Hold it to open USA Atlas. The who
 - The locked compass hugs the map's upper-right corner and expands inward when unlocked. Hover near the locked rose to reveal **Hide compass**. Hover the remaining left chevron for **Return compass** and click to bring it back. It stays aligned with the stats sidebar.
 - Select a state, city or metro, then choose **Atlas** in the right sidebar. The sidebar widens. State Atlas frames the outline and fades out surrounding states. City Atlas keeps the zoom and highlights its metro when one exists. Metro Atlas frames the metro and includes a list of Census places with points inside its boundary.
 - **Back** restores the previous map position, zoom and bearing. A linked city opened from a state returns to that state's atlas or stats.
+- **×** clears the selection and hides the sidebar at the current map position. The chevron reopens USA Stats.
 - The city panel shows its state, metro, and county beside the city name. Each link selects and fits that area in compact facts and City Atlas. For cities spanning multiple counties, the county links to the one containing the city's mapped point.
 - Metro Stats and Atlas link to their states, counties and largest Census place by population. County Stats link to their state and use the county's existing Census largest-place record.
 - Geographic labels share map space with city names. The layout can move a city name to another position beside its symbol when both names fit.
@@ -38,9 +39,9 @@ Use **COUNTIES** and **METROS** next to the Atlas button on desktop or in the ph
 
 ## Rotation and search
 
-Click or tap the rose or its center to toggle the lock at the current bearing. Hold the center for about 0.6 seconds to return north and lock. You can also choose **N**, then tap the rose to lock. A gold padlock marks the locked state. The shackle opens and the icon fades shortly after unlocking. On PC, drag with the left or right mouse button while unlocked to rotate around the grabbed map location. Hold **Q** or **E** to turn west or east slowly. On a phone, twist with two fingers. The rose and its upright letters follow the map bearing. Choose any direction to snap to that heading. **R** returns north while retaining the current lock setting.
+Click or tap the rose or its center to toggle the lock at the current bearing. Hold the center for about 0.6 seconds to return north and lock. You can also choose **N**, then tap the rose to lock. A gold padlock marks the locked state. The shackle opens and the icon fades shortly after unlocking. On PC, hold **Q** or **E** to turn west or east while unlocked, and use the arrow keys or **WASD** to pan. On a phone, twist with two fingers. The rose and its upright letters follow the map bearing. Choose any direction to snap to that heading. **R** returns north while retaining the current lock setting.
 
-Use one finger to drag around the center from a direction label or the outer half of a compass spoke. A locked circular gesture holds the bearing until release, then unlocks. An unlocked circular gesture turns the map as the rose follows your finger.
+Drag around the center from a direction label or the outer half of a compass spoke. Use either mouse button on PC or one finger on a phone. A locked circular gesture holds the bearing until release, then unlocks. An unlocked circular gesture turns the map as the rose follows the pointer or finger.
 
 Type a state abbreviation such as **MN** in Search. It appears first, and Enter opens its facts and fits the state. The angle is preserved.
 

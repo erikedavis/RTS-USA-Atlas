@@ -1,4 +1,8 @@
-# USAtlas V0.9F preview
+# USAtlas V0.9G preview
+
+On PC, the X in Stats or Atlas clears the selection and folds away the sidebar. Reopening it shows USA Stats. Counties and Metros stay immediately before Atlas in the header. Drag an outer compass spoke or direction label to turn. Arrow keys and WASD pan continuously, and Q and E turn at 34 degrees per second while unlocked.
+
+## V0.9F preview
 
 The CONUS and ALL choices set the national camera framing. Alaska and Hawaii are available by panning or zooming in either view. On PC, Counties and Metros sit beside Atlas in the stats header. The hammer is larger, the Tools menu is tighter, and the return compass preview is twice its previous size. With rotation unlocked, Q and E turn slowly and desktop mouse drag keeps the grabbed map location under the pointer.
 

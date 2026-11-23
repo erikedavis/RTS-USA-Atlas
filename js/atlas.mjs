@@ -7,7 +7,7 @@ import {populateMapKey} from './city-symbols.mjs';
 import {createGeographyLabels} from './geography-labels.mjs?v=09d';
 import {createStateLabels} from './state-labels.mjs?v=09f';
 import {prepareStateShapes,shapeContainsPoint} from './state-label-placement.mjs';
-import {isNorthUp,screenBounds,setupRotation} from './map-rotation.mjs?v=09f';
+import {isNorthUp,screenBounds,setupRotation} from './map-rotation.mjs?v=09g';
 import {setupPhoneUI} from './phone-ui.mjs?v=09f';
 import {COUNTY_LABEL_ZOOM,createCountyLabels} from './county-labels.mjs';
 import {createSelectedAreaLabel} from './selected-area-label.mjs';
@@ -80,7 +80,7 @@ function wideStateLabels(){
 const stateLabelsFirst=()=>!atlasFocus&&(wideStateLabels()||Boolean(phone?.active)||!isNorthUp(map.getBearing()));
 const metroOverview=()=>!atlasFocus&&metroPreference!==false&&isMetroScale(map.getZoom());
 const metroMode=()=>metroPreference===true?'manual':metroOverview()?'auto':'off';
-function emptyPanel() {
+function emptyPanel({reveal=true}={}) {
   placeContext=null;
   const scope=element('div','national-scope');
   scope.setAttribute('role','group');
@@ -104,7 +104,8 @@ function emptyPanel() {
   );
   info.scrollTop=0;
   $('#selection-status').textContent='UNITED STATES';
-  setPanelOpen(true);
+  if(reveal)setPanelOpen(true);
+  else updateDesktopAtlasButtons();
 }
 function element(tag, className, content) {
   const el=document.createElement(tag);
@@ -358,6 +359,7 @@ function updateDesktopAtlasButtons(){
   toggle.textContent=desktopAtlas?'Back':'Atlas';
   toggle.setAttribute('aria-expanded',String(Boolean(desktopAtlas)));
   $('#desktop-state-back').hidden=!desktopStateReturn||Boolean(desktopAtlas);
+  $('#desktop-dismiss').hidden=!selected&&!desktopAtlas;
 }
 
 function boundsOf(geom) {
@@ -637,14 +639,15 @@ function select(f,{zoom=false,duration,preserveStateReturn=false}={}) {
   if(selectedState)loadStateDetail(selectedState);
   scheduleSettledView();
 }
-function deselect() {
+function deselect({hideSidebar=false}={}) {
+  if(hideSidebar)setSidebarHidden(true);
   desktopStateReturn=null;
   leaveDesktopAtlas({restore:false});
   cityLayers?.clearHover();
   selectionRevision++;
   selected=null;selectedState=null;
   selectedAreaLabel.clear();
-  applySelection();emptyPanel();
+  applySelection();emptyPanel({reveal:!hideSidebar});
   updateCountyView();
   updateMetroMode();
   scheduleSettledView();
@@ -1198,6 +1201,10 @@ function setupUI() {
   $('#toggle-metros').addEventListener('click',toggleMetros);
   $('#sidebar-toggle').addEventListener('click',()=>{
     setSidebarHidden(!app.classList.contains('sidebar-hidden'));
+  });
+  $('#desktop-dismiss').addEventListener('click',()=>{
+    deselect({hideSidebar:true});
+    $('#sidebar-toggle').focus({preventScroll:true});
   });
   $('#desktop-atlas-toggle').addEventListener('click',()=>{
     if(desktopAtlas)backFromDesktopAtlas();

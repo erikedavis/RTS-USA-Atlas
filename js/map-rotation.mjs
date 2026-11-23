@@ -1,5 +1,5 @@
 import {HOLD_MS,HOLD_SLOP} from './phone-gestures.mjs?v=09e';
-import {bindDesktopRotation} from './desktop-rotation.mjs?v=09f';
+import {bindDesktopMapKeys} from './desktop-map-keys.mjs?v=09g';
 
 export const isNorthUp=bearing=>Math.abs(((bearing%360+540)%360)-180)<1e-6;
 
@@ -23,7 +23,7 @@ export function setupRotation(map,controls,onChange){
   let locked=true,minimized=false;
   let drag=null,centerHold=null,skipClick=false;
   const isPhone=()=>Boolean(controls.closest('.phone-layout'));
-  const desktop=bindDesktopRotation(map,()=>!locked&&!isPhone(),onChange);
+  const desktop=bindDesktopMapKeys(map,{isDesktop:()=>!isPhone(),canTurn:()=>!locked&&!drag?.started,onChange});
 
   function showBearing(){
     const bearing=map.getBearing(),degrees=Math.round((bearing+360)%360)%360;
@@ -37,7 +37,7 @@ export function setupRotation(map,controls,onChange){
     if(value&&!locked&&map.isRotating())map.stop();
     locked=value;
     if(locked){
-      desktop.stop();
+      desktop.stopTurning();
       map.touchZoomRotate.disableRotation();
     }else{
       map.touchZoomRotate.enableRotation();
@@ -93,7 +93,7 @@ export function setupRotation(map,controls,onChange){
   });
 
   function snap(bearing){
-    desktop.stop();
+    desktop.stopTurning();
     map.rotateTo(bearing,{duration:280});
   }
   function northAndLock(){
@@ -123,9 +123,11 @@ export function setupRotation(map,controls,onChange){
     const radius=Math.hypot(x,y);
     return radius>=tip/2&&radius<=tip+8;
   }
+  const canTurnFrom=(button,event)=>button?.matches('[data-bearing]')||(button===rose&&onOuterSpoke(event));
   const angleAt=(event,{x,y})=>Math.atan2(event.clientY-y,event.clientX-x)*180/Math.PI;
   controls.addEventListener('pointerdown',event=>{
-    if(!event.isPrimary)return;
+    const mouse=event.pointerType==='mouse';
+    if(!event.isPrimary||(event.button!==0&&!(mouse&&!isPhone()&&event.button===2)))return;
     skipClick=false;
     const button=event.target.closest('button');
     if(button===lock&&event.button===0){
@@ -137,8 +139,8 @@ export function setupRotation(map,controls,onChange){
         northAndLock();
       },HOLD_MS)};
     }
-    if(event.pointerType==='mouse')return;
-    const canTurn=button?.matches('[data-bearing]')||(button===rose&&onOuterSpoke(event));
+    if(mouse&&isPhone())return;
+    const canTurn=canTurnFrom(button,event);
     const canHide=locked&&!minimized&&event.pointerType==='touch'&&face.contains(event.target)&&isPhone();
     if(!canTurn&&!canHide)return;
     const bounds=dial.getBoundingClientRect();
@@ -146,6 +148,7 @@ export function setupRotation(map,controls,onChange){
     drag={id:event.pointerId,center,angle:angleAt(event,center),turn:0,canTurn,canHide,maxY:0,
       swipeDistance:Math.max(34,face.offsetWidth*.29),
       startX:event.clientX,startY:event.clientY,bearing:map.getBearing(),started:false};
+    if(mouse)button.setPointerCapture(event.pointerId);
   });
   controls.addEventListener('pointermove',event=>{
     if(event.pointerId===centerHold?.id&&
@@ -161,6 +164,7 @@ export function setupRotation(map,controls,onChange){
     drag.angle=angle;
     if(!drag.started&&Math.abs(drag.turn)>=6&&Math.hypot(event.clientX-drag.startX,event.clientY-drag.startY)>=7){
       drag.started=true;
+      desktop.stopTurning();
       if(!locked)map.stop();
     }
     if(drag.started&&!locked)map.setBearing(drag.bearing-drag.turn);
@@ -189,6 +193,9 @@ export function setupRotation(map,controls,onChange){
       if(turned)onChange();
     });
   }
+  controls.addEventListener('contextmenu',event=>{
+    if(!isPhone()&&event.button===2&&(skipClick||canTurnFrom(event.target.closest('button'),event)))event.preventDefault();
+  });
   controls.addEventListener('click',event=>{
     if(!skipClick||event.detail===0)return;
     skipClick=false;
@@ -196,7 +203,7 @@ export function setupRotation(map,controls,onChange){
     event.preventDefault();
   },true);
 
-  // The Atlas handles Q, E, R and the compass explicitly.
+  // The Atlas handles keyboard rotation and panning explicitly.
   map.keyboard.disableRotation();
   setLocked(true);
   map.on('rotate',showBearing);

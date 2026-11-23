@@ -9,7 +9,7 @@ async function assertRendered(page, testInfo) {
   const response = await page.goto('/', { waitUntil: 'domcontentloaded' });
   expect(response?.ok(), 'The atlas must respond over HTTP').toBe(true);
   await expect(page.locator('#map-loading'), 'Atlas loading overlay must disappear').toBeHidden({ timeout: 50_000 });
-  await expect(page.locator('meta[name="atlas-version"]')).toHaveAttribute('content', 'ALPHA 0.9F');
+  await expect(page.locator('meta[name="atlas-version"]')).toHaveAttribute('content', 'ALPHA 0.9G');
   await expect(page.locator('canvas.maplibregl-canvas')).toHaveCount(1);
   const renderer = await page.evaluate(() => {
     const canvas = document.querySelector('canvas.maplibregl-canvas');
@@ -255,53 +255,114 @@ test('desktop compass tucks into the corner and its return chevron tracks the si
   await expect(lock).toHaveAttribute('aria-pressed','true');
 });
 
-test('desktop drag rotation keeps the grabbed location under the cursor and Q and E turn slowly', async ({ page }, testInfo) => {
+test('desktop compass accepts circular drags and the map canvas pans without rotating', async ({ page }, testInfo) => {
+  await exposeMap(page);
+  await assertRendered(page,testInfo);
+  await readMap(page);
+  const lock=page.locator('#rotation-lock');
+  const north=page.getByRole('button',{name:'North up',exact:true});
+  const dragArc=async(start,degrees,button)=>{
+    await waitForCompassShift(page);
+    const center=await lock.boundingBox();
+    const x=center.x+center.width/2,y=center.y+center.height/2;
+    const {x:startX,y:startY}=start;
+    const radius=Math.hypot(startX-x,startY-y),angle=Math.atan2(startY-y,startX-x);
+    await page.mouse.move(startX,startY);
+    await page.mouse.down({button});
+    for(let step=1;step<=8;step++){
+      const next=angle+degrees*Math.PI/180*step/8;
+      await page.mouse.move(x+radius*Math.cos(next),y+radius*Math.sin(next));
+    }
+    await page.mouse.up({button});
+  };
+  const centerOf=async locator=>{
+    const {x,y,width,height}=await locator.boundingBox();
+    return {x:x+width/2,y:y+height/2};
+  };
+  await dragArc(await centerOf(north),32,'right');
+  await expectBearing(page,0);
+  await expect(lock).toHaveAttribute('aria-pressed','false');
+  await waitForCompassShift(page);
+  const mapCenter=(await camera(page)).slice(0,2);
+  await dragArc(await centerOf(north),63,'left');
+  await expectBearing(page,297);
+  expect((await camera(page)).slice(0,2)).toEqual(mapCenter);
+  await north.click();
+  await expectBearing(page,0);
+
+  const spoke=await page.locator('.compass-rose').evaluate(svg=>{
+    const point=new DOMPoint(50,12).matrixTransform(svg.getScreenCTM());
+    return {x:point.x,y:point.y};
+  });
+  await dragArc(spoke,-43,'right');
+  await expectBearing(page,43);
+  await expect(lock).toHaveAttribute('aria-pressed','false');
+
+  await page.evaluate(()=>testMap.jumpTo({center:[-98,40],zoom:5}));
+  const bounds=await page.locator('canvas.maplibregl-canvas').boundingBox();
+  const start={x:bounds.x+bounds.width*.42,y:bounds.y+bounds.height*.55};
+  for(const button of ['left','right']){
+    const before=await camera(page);
+    await page.mouse.move(start.x,start.y);
+    await page.mouse.down({button});
+    await page.mouse.move(start.x+95,start.y-35,{steps:8});
+    await page.mouse.up({button});
+    await waitForCamera(page);
+    const after=await camera(page);
+    expect(after[3]).toBe(before[3]);
+    if(button==='left')expect(after.slice(0,2)).not.toEqual(before.slice(0,2));
+    else expect(after).toEqual(before);
+  }
+  await expect(page.locator('#panel-content h1')).toHaveText('United States');
+});
+
+test('desktop held arrow and WASD keys pan continuously and Q and E turn faster when unlocked', async ({ page }, testInfo) => {
   await exposeMap(page);
   await assertRendered(page,testInfo);
   await readMap(page);
   const lock=page.locator('#rotation-lock');
   await page.keyboard.press('q');
   await expectBearing(page,0);
+  await page.evaluate(()=>testMap.jumpTo({center:[-98,40],zoom:5}));
+  const movedBy=async(key,axis,sign)=>{
+    let previous=(await camera(page))[axis];
+    await page.keyboard.down(key);
+    try{
+      for(let window=0;window<3;window++){
+        await page.waitForTimeout(95);
+        const now=(await camera(page))[axis];
+        expect((now-previous)*sign).toBeGreaterThan(.15);
+        previous=now;
+      }
+    }finally{await page.keyboard.up(key);}
+  };
+  await movedBy('ArrowRight',0,1);
+  await movedBy('a',0,-1);
+  await movedBy('w',1,1);
+  await movedBy('ArrowDown',1,-1);
+  for(const [key,axis,sign] of [['ArrowLeft',0,-1],['d',0,1],['ArrowUp',1,1],['s',1,-1]]){
+    const before=(await camera(page))[axis];
+    await page.keyboard.press(key);
+    expect(((await camera(page))[axis]-before)*sign).toBeGreaterThan(0);
+  }
+  const stopped=await camera(page);
+  await page.waitForTimeout(140);
+  expect(await camera(page)).toEqual(stopped);
+  const search=page.locator('#search');
+  await search.focus();
+  await search.press('w');
+  await search.press('ArrowLeft');
+  await expect(search).toHaveValue('w');
+  expect(await camera(page)).toEqual(stopped);
   await lock.click();
   await expect(lock).toHaveAttribute('aria-pressed','false');
-  await page.keyboard.down('q');
-  await expect.poll(async()=> (await camera(page))[3]).toBeLessThan(-4);
-  await page.keyboard.up('q');
-  const west=(await camera(page))[3];
-  expect(west).toBeGreaterThan(-20);
-  await page.keyboard.down('e');
-  await expect.poll(async()=> (await camera(page))[3]).toBeGreaterThan(west+4);
-  await page.keyboard.up('e');
-  await page.keyboard.press('r');
-  await expectBearing(page,0);
-  await page.evaluate(()=>testMap.jumpTo({center:[-98,40],zoom:5}));
-  const bounds=await page.locator('#map').boundingBox();
-  const start={x:Math.round(bounds.width*.43),y:Math.round(bounds.height*.47)};
-  const location=await page.evaluate(({x,y})=>testMap.unproject([x,y]).toArray(),start);
-  const assertAnchor=async({x,y})=>{
-    const projected=await page.evaluate(point=>{
-      const {x,y}=testMap.project(point);
-      return [x,y];
-    },location);
-    expect(Math.hypot(projected[0]-x,projected[1]-y)).toBeLessThan(1);
-  };
-  await page.mouse.move(bounds.x+start.x,bounds.y+start.y);
-  await page.mouse.down();
-  for(const [dx,dy] of [[36,19],[93,-18],[126,-64],[87,26]]){
-    const point={x:start.x+dx,y:start.y+dy};
-    await page.mouse.move(bounds.x+point.x,bounds.y+point.y,{steps:5});
-    await assertAnchor(point);
-    expect((await camera(page))[3]).toBeCloseTo(-dx*.32,0);
+  for(const [key,sign] of [['q',-1],['e',1]]){
+    const before=(await camera(page))[3];
+    await page.keyboard.down(key);
+    try{await page.waitForTimeout(500);}
+    finally{await page.keyboard.up(key);}
+    expect(((await camera(page))[3]-before)*sign).toBeGreaterThan(12);
   }
-  await page.mouse.up();
-  await expect(page.locator('#panel-content h1')).toHaveText('United States');
-  await page.evaluate(()=>testMap.jumpTo({center:[-98,40],zoom:5,bearing:0}));
-  const colorado=await page.evaluate(()=>{
-    const {x,y}=testMap.project([-105.45,38.7]);
-    return [x,y];
-  });
-  await page.mouse.click(bounds.x+colorado[0],bounds.y+colorado[1]);
-  await expect(page.locator('#panel-content h1')).toHaveText('Colorado');
   await lock.click();
   const locked=(await camera(page))[3];
   await page.keyboard.press('e');
@@ -316,6 +377,15 @@ test('desktop layer toggles sit by Atlas and Tools opens a compact menu', async 
   await expect(counties).toBeVisible();
   await expect(metros).toBeVisible();
   await expect(atlas).toBeVisible();
+  async function verifyRow(){
+    const [left,middle,right]=await Promise.all([counties.boundingBox(),metros.boundingBox(),atlas.boundingBox()]);
+    for(const [button,next] of [[left,middle],[middle,right]]){
+      expect(next.x-button.x-button.width).toBeGreaterThanOrEqual(0);
+      expect(next.x-button.x-button.width).toBeLessThanOrEqual(6);
+      expect(Math.abs(button.y+button.height/2-next.y-next.height/2)).toBeLessThan(2);
+    }
+  }
+  await verifyRow();
   await expect(tools).toHaveCSS('border-top-color','rgba(0, 0, 0, 0)');
   await expect(tools.locator('.tools-desktop svg')).toHaveCSS('width','22px');
   await tools.hover();
@@ -331,6 +401,7 @@ test('desktop layer toggles sit by Atlas and Tools opens a compact menu', async 
   await expect(page.locator('.app')).toHaveAttribute('data-desktop-atlas','nation');
   await expect(counties).toBeVisible();
   await expect(metros).toBeVisible();
+  await verifyRow();
   await counties.click();
   await expect(counties).toHaveAttribute('aria-pressed','false');
   await expect(page.locator('.app')).toHaveAttribute('data-desktop-atlas','nation');
@@ -457,6 +528,45 @@ test('desktop Atlas expands, restores a rotated camera, and reopens the hidden s
       { layers: ['state-hit'] }
     ).some(feature => feature.properties.geoid === '72');
   })).toBe(true);
+});
+
+test('desktop X clears Stats or Atlas and keeps USA Stats behind the chevron', async ({page},testInfo)=>{
+  await exposeMap(page);
+  await assertRendered(page,testInfo);
+  await readMap(page);
+  const app=page.locator('.app'),heading=page.locator('#panel-content h1');
+  const close=page.getByRole('button',{name:'Clear selection and hide stats'});
+  const reopen=page.getByRole('button',{name:'Show stats'});
+  const atlas=page.locator('#desktop-atlas-toggle');
+  for(const section of ['Stats','Atlas']){
+    await searchFor(page,'Nevada');
+    await expect(heading).toHaveText('Nevada');
+    if(section==='Atlas'){
+      await atlas.click();
+      await expect(app).toHaveAttribute('data-desktop-atlas','state');
+    }
+    await waitForCamera(page);
+    const before=await camera(page);
+    if(section==='Stats')await screenshot(page,testInfo,'desktop-stats-close');
+    await close.click();
+    await expect(reopen).toBeFocused();
+    await expect(page.locator('#info-panel')).toHaveCSS('width','0px');
+    await expect(heading).toBeHidden();
+    await expect(heading).toHaveText('United States');
+    await expect(app).not.toHaveAttribute('data-desktop-atlas');
+    expect(await page.evaluate(()=>testMap.getFilter('state-selected'))).toEqual(['==',['get','geoid'],'__none__']);
+    expect(await camera(page)).toEqual(before);
+    await reopen.click();
+    await expect(heading).toBeVisible();
+    await expect(page.getByText('USA STATS',{exact:true})).toBeVisible();
+    await expect(close).toBeHidden();
+  }
+  await atlas.click();
+  await expect(app).toHaveAttribute('data-desktop-atlas','nation');
+  await close.click();
+  await expect(heading).toBeHidden();
+  await expect(heading).toHaveText('United States');
+  await expect(app).not.toHaveAttribute('data-desktop-atlas');
 });
 
 test('Idaho selection and county toggle render without losing state selection', async ({ page }, testInfo) => {

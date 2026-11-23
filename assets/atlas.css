@@ -71,11 +71,17 @@ button { color:inherit; cursor:pointer; }
 .pulse{display:inline-block;flex-shrink:0;border-radius:50%;background:#79aebc;box-shadow:0 0 8px #7badb988;}
 .hud-divider{color:#34485a}
 .info-panel {width:min(333px,45%);flex-shrink:0;position:relative;display:flex;flex-direction:column;background:linear-gradient(165deg,#0c1520 0%,#070b12 62%,#05080d 100%);border-left:1px solid #26394c;z-index:10;}
-.panel-top {min-height:52px;display:flex;align-items:center;justify-content:space-between;gap:8px;border-bottom:1px solid #182939;padding:6px 19px;}
-.panel-eyebrow{font-size:9px;letter-spacing:.19em;color:#788b9e;}
-.panel-buttons,.panel-layer-controls{display:flex;gap:5px;justify-content:flex-end;}
-.panel-buttons{flex-wrap:wrap;}
-.panel-buttons .panel-action{margin:0;}
+.panel-top {min-height:52px;display:flex;align-items:center;justify-content:flex-end;gap:6px;border-bottom:1px solid #182939;padding:6px 19px;}
+.panel-buttons,.panel-layer-controls{display:flex;align-items:center;gap:5px;}
+.panel-top .panel-action{margin:0;}
+#desktop-state-back {margin-right:auto;}
+#desktop-dismiss {
+  width:28px;height:32px;flex:none;display:grid;place-items:center;padding:0;
+  border:1px solid transparent;border-radius:4px;background:transparent;color:#9db7ca;
+}
+#desktop-dismiss[hidden] {display:none;}
+#desktop-dismiss:is(:hover,:focus-visible) {background:#182d3d;border-color:#38536a;color:var(--bright);}
+#desktop-dismiss svg {width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;}
 .panel-layer-controls button {
   background:#101e2b;color:#bcd8ea;border:1px solid #38536a;
   padding:7px 8px;letter-spacing:.04em;
