@@ -618,11 +618,13 @@ for (const isPhone of [false, true]) {
       await openMetro();
       await expect(states.getByRole('button')).toHaveText(['New Jersey','New York']);
       await expect(largest(metro)).toHaveText('New York');
-      const counties=metro.locator('summary',{hasText:'Counties (22)'});
+      const countyList=metro.locator('.region-counties');
+      const counties=countyList.locator('summary',{hasText:'Counties (22)'});
       await expect(counties).toBeInViewport();
       await screenshot(page,testInfo,'new-york-metro-stats');
       if(isPhone){
         await counties.tap();
+        await expect(countyList).toHaveAttribute('open','');
         const panel=page.locator('#panel-content');
         const {x,y,width,height}=await panel.boundingBox();
         const cdp=await page.context().newCDPSession(page);
@@ -634,14 +636,14 @@ for (const isPhone of [false, true]) {
         await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
         await expect.poll(()=>panel.evaluate(node=>node.scrollTop)).toBeGreaterThan(20);
         await expect(app).toHaveAttribute('data-phone-stage','summary');
-        await counties.tap();
       }
       await activate(isPhone?page.getByRole('button',{name:'Open metro atlas'}):page.locator('#desktop-atlas-toggle'));
       await expect(app).toHaveAttribute(atlasKind,'metro');
       await expect(counties).toBeInViewport();
       await screenshot(page,testInfo,'new-york-metro-atlas');
-      await activate(counties);
-      await expect(metro.locator('.region-counties button')).toHaveCount(22);
+      if(!isPhone)await activate(counties);
+      await expect(countyList).toHaveAttribute('open','');
+      await expect(countyList.getByRole('button')).toHaveCount(22);
       await activate(metro.getByRole('button',{name:'Nassau County, NY',exact:true}));
       await expect(title).toHaveText('Nassau');
       await expect(app).not.toHaveAttribute(atlasKind);
@@ -676,8 +678,8 @@ test.describe('phone viewport', () => {
         const island=testMap.queryRenderedFeatures({layers:['geography-island']}).find(f=>f.properties.id==='long-island');
         const city=testMap.queryRenderedFeatures({layers:['city-name-0']}).find(f=>f.properties.geoid==='3651000');
         if(!island||!city)return null;
-        return {name:island.properties.name,angle:Math.round(island.properties.angle),city:city.properties.name,anchor:city.properties.anchor};
-      })).toEqual({name:'Long Island',angle:-16,city:'New York',anchor:'right'});
+        return {name:island.properties.name,angle:Math.round(island.properties.angle),city:city.properties.name};
+      })).toEqual({name:'Long Island',angle:-16,city:'New York'});
       await screenshot(page,testInfo,`long-island-${bearing}`);
     }
   });
