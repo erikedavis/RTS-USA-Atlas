@@ -10,9 +10,10 @@ export function createCityLayers(map,cities,{isNational,metroOverview,phoneViewp
  let state,focusedState=null,selectedId='',hovered='',timer=0,scheduled=0,reservations=()=>[],previous=new Map(),result={items:[],metrics:{}};
  function pointFeature(item,pl=item.placement,hover=false){
   const capitalSize=capitalMarkSize(map.getZoom());
+  const selected=item.feature.properties.geoid===selectedId;
   return {type:'Feature',geometry:item.feature.geometry,properties:{
    ...item.feature.properties,radius:item.style.radius,labelSize:pl?.size||item.style.labelSize,
-   opacity:item.style.opacity,symbol:cityIconName(item.style.tier),capitalSize,
+   opacity:item.style.opacity,symbol:cityIconName(item.style.tier),capitalSize,selected,
    capitalOffset:[(item.style.radius*(hover?1.15:1)+2.7)/capitalSize,.09],
    iconOpacity:metroOverview()&&!pl&&!hover&&item.feature.properties.geoid!==selectedId?item.style.opacity*.45:item.style.opacity,
    font:[item.style.weight],anchor:pl?.anchor||'left',offset:pl?[pl.dx/pl.size,pl.dy/pl.size]:[1,0],showLabel:!!pl}};
@@ -31,7 +32,11 @@ export function createCityLayers(map,cities,{isNational,metroOverview,phoneViewp
   'circle-radius':['max',5.5,['+',['get','radius'],1.5],['case',['get','is_capital'],['*',['get','radius'],1.85],0]],
   'circle-opacity':.001}});
  const names={type:'symbol',layout:{'text-field':['get','name'],'text-transform':'uppercase','text-font':['case',['==',['at',0,['get','font']],'Noto Sans Bold'],['literal',['Noto Sans Bold']],['literal',['Noto Sans Regular']]],'text-size':['get','labelSize'],'text-anchor':['get','anchor'],'text-offset':['get','offset'],'text-allow-overlap':true,'text-max-width':40,'text-padding':0},paint:{'text-color':'#bbd1e0','text-halo-color':'#0a111a','text-halo-width':1.4}};
- map.addLayer({...structuredClone(names),id:'city-name-0',source:'major-cities',filter:['==',['get','showLabel'],true]});
+ const selectionText=['boolean',['get','selected'],false];
+ map.addLayer({...structuredClone(names),id:'city-name-0',source:'major-cities',filter:['==',['get','showLabel'],true],
+  paint:{...names.paint,'text-color':['case',selectionText,'#fff',names.paint['text-color']],
+   'text-halo-color':['case',selectionText,'#8eb9dc',names.paint['text-halo-color']],
+   'text-halo-blur':['case',selectionText,1.6,0]}});
  map.addLayer({id:'city-hover-glow',type:'circle',source:'hover-city',paint:{'circle-radius':['+',['get','radius'],6],'circle-color':'#a9dfff','circle-opacity':.5,'circle-blur':.9}});
  map.addLayer({id:'city-hover-symbol',type:'symbol',source:'hover-city',layout:{...iconLayout,'icon-size':['/',['*',['get','radius'],1.15],8]}});
  map.addLayer({id:'city-hover-capital-mark',type:'symbol',source:'hover-city',filter:capitalFilter,layout:capitalLayout,paint:{'text-color':'#fff'}});

@@ -57,6 +57,8 @@ button { color:inherit; cursor:pointer; }
 @keyframes spin{to{transform:rotate(360deg)}}
 .map-controls {position:absolute;top:calc(14px + var(--compass-size));right:17px;z-index:8;display:flex; flex-direction:column;gap:3px;}
 .map-controls button{width:36px;height:36px;border:1px solid #2b4257;background:#0a131dbb;backdrop-filter:blur(9px);color:#91b5cf;font-size:19px;font-weight:300;box-shadow:0 2px 5px #0007;}
+.app:not(.phone-layout) .map-controls {align-items:flex-end;}
+.app:not(.phone-layout) .map-controls :is(#toggle-counties,#toggle-metros,#map-layers) {min-width:72px;padding-inline:5px;}
 .map-controls button:hover{background:#142737;color:#d9ebf7;}
 .map-controls :is(#zoom-in,#zoom-out),#reset-view {border:0;background:transparent;box-shadow:none;backdrop-filter:none;color:#a7c4d8;opacity:.65;transition:opacity .15s ease,transform .15s ease;}
 .map-controls :is(#zoom-in,#zoom-out) {font-size:27px;line-height:1;}
@@ -126,12 +128,10 @@ button { color:inherit; cursor:pointer; }
 .city-marker:focus-visible{outline:1px solid #a8d0e8;outline-offset:2px;}
 .panel-action {background:#101e2b;color:#bcd8ea;border:1px solid #38536a;padding:9px 12px;margin-top:14px;font-size:11px;letter-spacing:.08em;}
 .panel-action:hover{background:#182d3d;}
-.map-controls button[aria-pressed="true"],.state-layer-actions button[aria-pressed="true"] {
+.map-controls button[aria-pressed="true"] {
   border-color:var(--active-border);color:var(--active-gold);
 }
 .panel-help {color:#7e96aa;font-size:10px;line-height:1.5;margin-top:8px;}
-.state-layer-actions {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0 0;}
-.state-layer-actions .panel-action {margin:0;min-height:44px;padding:5px 4px;text-transform:uppercase;}
 .app[data-desktop-atlas] .panel-content > :is(.facts-date,.fact-sources,.census-record:not(.metro-atlas-places),.panel-help) {display:none;}
 .map-controls #map-layers {width:auto;min-width:36px;padding-inline:4px;font-size:9px;opacity:.6;cursor:default;}
 .app:not(.phone-layout):not([data-desktop-atlas='state']):not([data-desktop-atlas='place']) #map-layers {display:none;}
@@ -173,6 +173,12 @@ button { color:inherit; cursor:pointer; }
 .state-label-text{display:inline-block;line-height:1.2;transition:transform .12s ease,color .12s ease,text-shadow .12s ease;transform-origin:center;}
 .state-label-small .state-label-text{line-height:1.1;}
 .state-label:hover .state-label-text,.state-label:focus-visible .state-label-text{transform:scale(1.15);color:#f1faff;text-shadow:0 0 5px #b7e2ff,0 0 13px #80caff;}
+.state-label[aria-current="true"] .state-label-text {transform:scale(1.15);font-weight:800;}
+.state-label[aria-current="true"] .state-label-text,.selected-area-label {
+  color:#fff;text-shadow:0 1px 3px #000,0 0 6px #8bc3f1a6;
+}
+.selected-area-label {z-index:8;width:max-content;pointer-events:none;text-align:center;font-size:13px;font-weight:800;line-height:1.25;letter-spacing:.05em;text-transform:uppercase;text-wrap:balance;}
+.selected-area-label[hidden] {display:none;}
 .city-tooltip{pointer-events:auto;z-index:9;}
 .city-hover-name{display:block;border:0;background:transparent;color:#f4fbff;font-weight:600;line-height:1.5;text-align:left;padding:2px 0;text-shadow:0 0 5px #a8dcff,0 0 12px #7bbce3;cursor:pointer;}
 .city-hover-name:hover{text-decoration:underline;text-underline-offset:3px;}

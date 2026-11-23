@@ -1,15 +1,16 @@
 // USA Atlas 0.3A - adaptive city hierarchy and display insets, official Census 2025 geography.
 // Local renderer and geography; no external requests at runtime.
 import * as maplibregl from '../assets/vendor/maplibre-gl.mjs';
-import {createCityLayers} from './city-display.mjs?v=09a';
+import {createCityLayers} from './city-display.mjs?v=09b';
 import {isMetroScale} from './city-layout.mjs';
 import {populateMapKey} from './city-symbols.mjs';
 import {addGeographyLabels} from './geography-labels.mjs';
-import {createStateLabels} from './state-labels.mjs?v=09a';
+import {createStateLabels} from './state-labels.mjs?v=09b';
 import {prepareStateShapes,shapeContainsPoint} from './state-label-placement.mjs';
 import {isNorthUp,screenBounds,setupRotation} from './map-rotation.mjs';
 import {setupPhoneUI} from './phone-ui.mjs?v=09a';
 import {COUNTY_LABEL_ZOOM,createCountyLabels} from './county-labels.mjs';
+import {createSelectedAreaLabel} from './selected-area-label.mjs';
 import {INSETS, NATIONAL_BOUNDS, CONUS_BOUNDS, displayData, displayPoint, geographicPoint, hawaiiTailMarks, insetFrames} from './insets.mjs';
 
 const BASE = './data/';
@@ -34,6 +35,7 @@ let countyNames,countyAnchors=null,countyAnchorLoad=null,countyViewKey='',county
 let renderedCountyScope;
 let countiesById=new Map();
 let metroSet = null;
+let metroLabelPoints=new Map();
 let metroFacts = {};
 let metroLoad = null;
 let metroPreference = null;
@@ -43,7 +45,7 @@ let countySelectionOverride = false;
 let allSearch = null;
 let searchLoading = null;
 let toastTimer;
-let stateLabelsController, cityLayers, mappedCityIds;
+let stateLabelsController, cityLayers, mappedCityIds, selectedAreaLabel;
 let phone,rotation,atlasFocus=null,cityAtlas=null,metroBounds;
 let desktopAtlas=null,desktopStateReturn=null;
 const insetMarkers = [];
@@ -227,18 +229,7 @@ function display(f) {
     const r=element('div','record-row','');r.append(element('span','record-label',label),element('span','record-value',value));record.append(r);
   }
   info.append(record);
-  if(p.kind==='state'){
-    const actions=element('div','state-layer-actions');
-    for(const [layer,label,toggle] of [['counties','Show counties',toggleCountySelection],['metros','Show metros',toggleMetros]]){
-      const button=element('button','panel-action',label);button.type='button';
-      button.dataset.layerToggle=layer;
-      button.addEventListener('click',()=>toggle());
-      actions.append(button);
-    }
-    info.querySelector('.facts-date,.fact-sources,.census-record').before(actions);
-    updateLayerButtons();
-    if(!phone?.active)info.append(element('div','panel-help','Click a state abbreviation to zoom to that state. Select a city above to visit it.'));
-  }
+  if(p.kind==='state'&&!phone?.active)info.append(element('div','panel-help','Click a state abbreviation to zoom to that state. Select a city above to visit it.'));
   $('#selection-status').textContent=(p.kind||'FEATURE').toUpperCase()+' SELECTED';
   info.scrollTop=0;
   setPanelOpen(true);
@@ -523,6 +514,7 @@ function applySelection() {
   if(!map?.getLayer('state-selected'))return;
   map.setFilter('state-selected',['==',['get','geoid'],selectedState||'__none__']);
   map.setPaintProperty('state-selected','line-opacity',selected?.properties?.kind==='state'?1:.28);
+  stateLabelsController?.setSelected(selected?.properties.kind==='state'?selectedState:null);
   cityLayers?.update(selectedState,selected);
   map.setFilter('county-selected',['==',['get','geoid'],selected?.properties?.kind==='county'?selected.properties.geoid:'__none__']);
   map.setFilter('place-selected',['==',['get','geoid'],selected?.properties?.kind==='place'?selected.properties.geoid:'__none__']);
@@ -533,6 +525,7 @@ function select(f,{zoom=false,duration,preserveStateReturn=false}={}) {
   if(!preserveStateReturn)desktopStateReturn=null;
   leaveDesktopAtlas({restore:false});
   selectionRevision++;
+  if(selected!==f)selectedAreaLabel.clear();
   selected=f;
   const p=f.properties||{};
   if(p.kind==='state')selectedState=p.geoid;
@@ -545,6 +538,7 @@ function select(f,{zoom=false,duration,preserveStateReturn=false}={}) {
 
   if(zoom)zoomTo(f,p.kind==='state'?13:p.kind==='metro'?9.5:10.5,duration);
   if(selectedState)loadStateDetail(selectedState);
+  scheduleSettledView();
 }
 function deselect() {
   desktopStateReturn=null;
@@ -552,10 +546,12 @@ function deselect() {
   cityLayers?.clearHover();
   selectionRevision++;
   selected=null;selectedState=null;
+  selectedAreaLabel.clear();
   updateNationalVisibility();
   applySelection();emptyPanel();
   updateCountyView();
   updateMetroMode();
+  scheduleSettledView();
   $('#search').value='';$('#search-results').hidden=true;
 }
 function reset() {
@@ -622,7 +618,8 @@ async function loadStateDetail(fips) {
 }
 function updateCountyNames(){
   if(!countySelectionOverride||map.getZoom()<COUNTY_LABEL_ZOOM||map.isMoving()||!countyAnchors)return;
-  countyNames.layout(countySet.features,countyAnchors,[...mapReservations(),...cityLayers.labelReservations()]);
+  countyNames.layout(countySet.features,countyAnchors,[...mapReservations(),...cityLayers.labelReservations()],
+    selected?.properties.kind==='county'?selected.properties.geoid:null);
 }
 function stateOverlayScope(){
   const kind=selected?.properties.kind;
@@ -703,6 +700,7 @@ function loadMetros(){
       p.state_codes='|'+codes.replaceAll('-','|')+'|';
     }
     metroSet=areas;
+    metroLabelPoints=new Map(names.features.map(feature=>[feature.properties.geoid,feature]));
     metroFacts=records.records;
     map.getSource('metros').setData(areas);
     map.getSource('metro-labels').setData(names);
@@ -713,7 +711,8 @@ function loadMetros(){
 function updateMetroMode(){
   const mode=metroMode(),overview=metroOverview();
   const scope=mode==='off'?null:stateOverlayScope();
-  const modeKey=`${mode}:${overview}:${scope}:${nationalScope}`;
+  const selectedId=selected?.properties.kind==='metro'?selected.properties.geoid:null;
+  const modeKey=`${mode}:${overview}:${scope}:${nationalScope}:${selectedId}`;
   if(modeKey===currentMetroMode)return;
   currentMetroMode=modeKey;
   const visible=mode!=='off';
@@ -727,7 +726,8 @@ function updateMetroMode(){
   const autoFilter=['==',['get','class'],'metro'];
   const filter=mode==='auto'?(inState?['all',autoFilter,inState]:autoFilter):inState;
   for(const id of ['metro-surface','metro-lines','metro-hit','metro-outline-hit'])map.setFilter(id,filter);
-  map.setFilter('metro-names',inState);
+  const unselected=selectedId?['!=',['get','geoid'],selectedId]:null;
+  map.setFilter('metro-names',inState&&unselected?['all',inState,unselected]:inState||unselected);
   map.setPaintProperty('metro-lines','line-opacity',scope ? .87 : .58);
   for(const id of ['place-area-lines','place-area-hit'])map.setLayoutProperty(id,'visibility',overview?'none':'visible');
   if(visible)loadMetros().catch(error=>{console.warn('Metro areas:',error);toast('Could not load metro areas.');});
@@ -752,10 +752,9 @@ function updateLayerButtons(){
     ['counties',countySelectionOverride,countySelectionOverride?'Hide counties and turn off county selection':'Show counties and enable county selection'],
     ['metros',metroVisible,metroVisible?'Hide metro areas':'Show metro areas'],
   ]){
-    for(const button of document.querySelectorAll(`[data-layer-toggle="${layer}"]`)){
-      button.setAttribute('aria-pressed',String(visible));
-      button.title=title;
-    }
+    const button=$(`#toggle-${layer}`);
+    button.setAttribute('aria-pressed',String(visible));
+    button.title=title;
   }
 }
 function toggleCountySelection(force){
@@ -771,13 +770,17 @@ function toggleCountySelection(force){
   }
   scheduleSettledView();
 }
-function mapReservations(){
+function mapControlReservations(includeSelected=false){
   const r=map.getContainer().getBoundingClientRect();
-  const controls=[...document.querySelectorAll('.map-controls:not(.phone-dock .map-controls),#reset-view,#sidebar-toggle,.rotation-tools:not([inert]),.map-hud,.inset-label,#usa-label,.map-key-toggle,.map-key:not([hidden]),.phone-grip,.phone-dock-row:not([inert]),.phone-home:not([hidden]),.phone-atlas-back:not([hidden]),.phone-history-back:not([hidden])')]
-    .filter(n=>n.offsetWidth&&n.offsetHeight).map(n=>{const b=n.getBoundingClientRect();return {x0:b.left-r.left,y0:b.top-r.top,x1:b.right-r.left,y1:b.bottom-r.top};});
+  const controls=[...document.querySelectorAll('.map-controls:not(.phone-dock .map-controls),#reset-view,#sidebar-toggle,.rotation-tools:not([inert]),.map-hud,.inset-label,#usa-label,.map-key-toggle,.map-key:not([hidden]),.phone-grip,.phone-dock-row:not([inert]),.phone-home:not([hidden]),.phone-atlas-back:not([hidden]),.phone-history-back:not([hidden])')];
+  if(includeSelected)controls.push($('.selected-area-label'));
+  return controls.filter(n=>n?.offsetWidth&&n.offsetHeight)
+    .map(n=>{const b=n.getBoundingClientRect();return {x0:b.left-r.left,y0:b.top-r.top,x1:b.right-r.left,y1:b.bottom-r.top};});
+}
+function mapReservations(){
   const pr=INSETS.find(inset=>inset.abbr==='PR');
   const prFrame={...screenBounds(map,pr.box),inset:pr.abbr};
-  return [...stateLabelsController.reservations(),...controls,...(atlasFocus?[]:[prFrame])];
+  return [...stateLabelsController.reservations(),...mapControlReservations(true),...(atlasFocus?[]:[prFrame])];
 }
 function makeLabels() {
   cityLayers=createCityLayers(map,cities,{isNational:isNationalView,metroOverview,phoneViewport:()=>Boolean(phone?.active),stateLabelsFirst,regionVisible});
@@ -787,6 +790,7 @@ function makeLabels() {
   },isNationalView,cityLayers.protectedMarkerBoxes,wideStateLabels,stateLabelsFirst,regionVisible);
   cityLayers.setReservations(mapReservations);
   countyNames=createCountyLabels(map);
+  selectedAreaLabel=createSelectedAreaLabel(map,maplibregl.Marker);
   for(const inset of INSETS){
     const n=element('div','inset-label',inset.name+' / INSET');
     const marker=new maplibregl.Marker({element:n,anchor:inset.abbr==='PR'?'bottom':'top-left',rotationAlignment:'viewport'})
@@ -853,11 +857,20 @@ function scheduleSettledView(){
     updateMetroMode();
     updateInsetTitles();
     updateUSALabel();
+    updateSelectedAreaLabel();
     stateLabelsController.layout();
     cityLayers.layout();
     autoLoadRegion();
     updateCountyView();
   });
+}
+function updateSelectedAreaLabel(){
+  const p=selected?.properties;
+  if(p?.kind!=='county'&&p?.kind!=='metro'){selectedAreaLabel.clear();return;}
+  const metro=metroLabelPoints.get(p.kind==='metro'?p.geoid:null);
+  const countyAnchor=p.kind==='county'?countyAnchors?.[p.geoid]:null;
+  const coordinates=countyAnchor?displayPoint(countyAnchor,p.state_abbr):metro?.geometry.coordinates;
+  selectedAreaLabel.layout(selected,metro?.properties.label||p.official_name||p.name,coordinates,mapControlReservations());
 }
 
 function updateInsetTitles(){
@@ -973,7 +986,7 @@ function mapFeatureAt(point,isTouch,onPhone=false){
   if(!best)return null;
   const layer=best.layer.id;
   const feature=layer==='state-hit'?findStateByGeoid(best.properties.geoid)
-    :layer==='county-names'?countiesById.get(best.properties.geoid)
+    :layer==='county-names'||layer==='county-hit'?(countiesById.get(best.properties.geoid)||best)
     :layer.startsWith('metro-')?metroSet?.features.find(f=>f.properties.geoid===best.properties.geoid):best;
   return {feature,layer};
 }

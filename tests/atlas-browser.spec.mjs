@@ -9,7 +9,7 @@ async function assertRendered(page, testInfo) {
   const response = await page.goto('/', { waitUntil: 'domcontentloaded' });
   expect(response?.ok(), 'The atlas must respond over HTTP').toBe(true);
   await expect(page.locator('#map-loading'), 'Atlas loading overlay must disappear').toBeHidden({ timeout: 50_000 });
-  await expect(page.locator('meta[name="atlas-version"]')).toHaveAttribute('content', 'ALPHA 0.9A');
+  await expect(page.locator('meta[name="atlas-version"]')).toHaveAttribute('content', 'ALPHA 0.9B');
   await expect(page.locator('canvas.maplibregl-canvas')).toHaveCount(1);
   const renderer = await page.evaluate(() => {
     const canvas = document.querySelector('canvas.maplibregl-canvas');
@@ -240,7 +240,7 @@ test('desktop Atlas expands, restores a rotated camera, and reopens the hidden s
   await waitForCamera(page);
   await page.evaluate(() => testMap.jumpTo({ center: [-96, 37.6], zoom: 4.3, bearing: 45 }));
   const stateCamera = await camera(page);
-  await page.getByRole('button', { name: 'Show counties', exact: true }).click();
+  await page.locator('#toggle-counties').click();
   await expect.poll(() => countyStates(page)).toEqual(['20']);
   expect(await camera(page)).toEqual(stateCamera);
   await page.locator('#toggle-counties').click();
@@ -297,21 +297,29 @@ test('Idaho selection and county toggle render without losing state selection', 
   await expect(state).toBeVisible();
   await state.click();
   await expect(page.locator('#panel-content h1')).toContainText('Idaho');
+  await expect(state).toHaveAttribute('aria-current','true');
+  await expect(state.locator('span')).toHaveCSS('color','rgb(255, 255, 255)');
+  await expect(state.locator('span')).toHaveCSS('font-weight','800');
   await screenshot(page, testInfo, 'idaho-selected-outline');
   await page.locator('#toggle-counties').click();
   await expect(page.locator('#toggle-counties')).toHaveAttribute('aria-pressed', 'true');
   await page.locator('#reset-view').click();
   await expect(page.locator('#panel-content .section-kicker')).toHaveText('USA STATS');
+  await expect(state).not.toHaveAttribute('aria-current','true');
 });
 
 test('major city searches work and produce checkable screenshots', async ({ page }, testInfo) => {
+  await exposeMap(page);
   await assertRendered(page, testInfo);
+  await readMap(page);
   for (const name of ['Chicago', 'Denver', 'Phoenix', 'Houston']) {
     await page.locator('#search').fill(name);
     const first = page.locator('#search-results button').first();
     await expect(first).toBeVisible();
     await first.click();
     await expect(page.locator('#panel-content h1')).toContainText(name);
+    await expect.poll(() => page.evaluate(city => testMap.queryRenderedFeatures({layers:['city-name-0']})
+      .some(f=>f.properties.name===city&&f.properties.selected&&String(f.properties.font).includes('Noto Sans Bold')),name)).toBe(true);
     await page.waitForTimeout(1100);
     await screenshot(page, testInfo, `${name.toLowerCase()}-selected`);
   }
@@ -335,6 +343,47 @@ for (const isPhone of [false, true]) {
   test.describe(isPhone ? 'phone Atlas' : 'desktop Atlas', () => {
     if (isPhone) test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
 
+    test('direct county and metro selections get priority labels below ordinary label zooms', async ({ page },testInfo) => {
+      await exposeMap(page);
+      await assertRendered(page,testInfo);
+      await readMap(page);
+      await page.evaluate(()=>testMap.jumpTo({center:[-89.42,35.26],zoom:6.4,bearing:31}));
+      const activate=control=>isPhone?control.tap():control.click();
+      const name=page.locator('.selected-area-label');
+      const heading=page.locator('#panel-content h1');
+      for(const {button,geoid,layer,title,label,ordinary} of [
+        {button:'#toggle-counties',geoid:'47047',layer:'county-hit',title:'Fayette',label:'Fayette County',ordinary:'county-names'},
+        {button:'#toggle-metros',geoid:'32820',layer:'metro-hit',title:'Memphis, TN-MS-AR',label:'MEMPHIS MSA',ordinary:'metro-names'},
+      ]){
+        const control=page.locator(button);
+        await activate(control);
+        const point=await (await page.waitForFunction(({layer,geoid})=>{
+          const {x,y}=testMap.project([-89.41406,35.20229]);
+          const rect=testMap.getContainer().getBoundingClientRect();
+          for(const dx of [0,-5,5,-10,10])for(const dy of [0,-5,5,-10,10]){
+            const px=Math.round(x+dx),py=Math.round(y+dy);
+            if(document.elementFromPoint(rect.left+px,rect.top+py)!==testMap.getCanvas())continue;
+            if(!testMap.queryRenderedFeatures([px,py],{layers:[layer]}).some(f=>f.properties.geoid===geoid))continue;
+            const hits=testMap.queryRenderedFeatures([[px-9,py-9],[px+9,py+9]],{layers:['city-hit','city-name-0','places-hit']});
+            if(!hits.length)return [rect.left+px,rect.top+py];
+          }
+        },{layer,geoid})).jsonValue();
+        if(isPhone)await page.touchscreen.tap(...point);
+        else await page.mouse.click(...point);
+        await expect(heading).toHaveText(title);
+        await expect(name).toBeVisible();
+        await expect(name).toHaveText(label);
+        await expect(name).toHaveCSS('color','rgb(255, 255, 255)');
+        await expect(name).toHaveCSS('font-weight','800');
+        await expect(name).not.toHaveCSS('text-shadow','none');
+        expect((await camera(page))[2]).toBe(6.4);
+        expect(await page.evaluate(id=>testMap.queryRenderedFeatures({layers:[id]}).length,ordinary)).toBe(0);
+        await screenshot(page,testInfo,layer+'-selected-name');
+        await activate(control);
+        await expect(name).toBeHidden();
+      }
+    });
+
     test('metro outlines follow the state selection at a rotated overview zoom', async ({ page }, testInfo) => {
       await exposeMap(page);
       await assertRendered(page, testInfo);
@@ -347,7 +396,7 @@ for (const isPhone of [false, true]) {
       const beforeToggle = await camera(page);
       const msa = page.locator('#toggle-metros');
       if (isPhone) await msa.tap();
-      else await page.getByRole('button', { name: 'Show metros', exact: true }).click();
+      else await msa.click();
       await expect(msa).toHaveAttribute('aria-pressed', 'true');
       await expect(msa).toHaveCSS('color', activeGold);
       expect(await camera(page)).toEqual(beforeToggle);
@@ -361,35 +410,31 @@ for (const isPhone of [false, true]) {
       await activate(isPhone ? page.getByRole('button', { name: 'Open state atlas' }) : page.locator('#desktop-atlas-toggle'));
       await waitForCamera(page);
       const atlasCamera = await camera(page);
-      const atlasCounties = page.getByRole('button', { name: 'Show counties', exact: true });
-      const atlasMetros = page.getByRole('button', { name: 'Show metros', exact: true });
       const cty = page.locator('#toggle-counties');
       await expect(cty).toBeVisible();
       await expect(msa).toBeVisible();
+      await expect(cty).toHaveText('COUNTIES');
+      await expect(msa).toHaveText('METROS');
       await expect(page.locator('#map-layers')).toBeDisabled();
-      await expect(atlasMetros).toHaveAttribute('aria-pressed', 'true');
-      await expect(atlasMetros).toHaveCSS('color', activeGold);
+      await expect(page.locator('#panel-content button', { hasText: /Show counties|Show metros/i })).toHaveCount(0);
+      await expect(msa).toHaveAttribute('aria-pressed', 'true');
       await expect(page.locator('#panel-content .fact-sources')).toBeHidden();
       await expect(page.locator('#panel-content .facts-date')).toBeHidden();
       await expect(page.locator('#panel-content .census-record')).toBeHidden();
 
       await activate(msa);
       await expect(msa).toHaveAttribute('aria-pressed', 'false');
-      await expect(atlasMetros).toHaveAttribute('aria-pressed', 'false');
-      await expect(atlasMetros).not.toHaveCSS('color', activeGold);
+      await expect(msa).not.toHaveCSS('color', activeGold);
       await expect.poll(metros).toEqual([]);
       await activate(cty);
       await expect(cty).toHaveAttribute('aria-pressed', 'true');
-      await expect(atlasCounties).toHaveAttribute('aria-pressed', 'true');
-      await expect(atlasCounties).toHaveCSS('color', activeGold);
       await expect(cty).toHaveCSS('color', activeGold);
       await expect.poll(() => countyStates(page)).toEqual(['47']);
-      await activate(atlasCounties);
+      await activate(cty);
       await expect(cty).toHaveAttribute('aria-pressed', 'false');
-      await expect(atlasCounties).toHaveAttribute('aria-pressed', 'false');
-      await expect(atlasCounties).not.toHaveCSS('color', activeGold);
+      await expect(cty).not.toHaveCSS('color', activeGold);
       await expect.poll(() => countyStates(page)).toEqual([]);
-      await activate(atlasMetros);
+      await activate(msa);
       await expect(msa).toHaveAttribute('aria-pressed', 'true');
       await expect.poll(metros).toContain('Memphis, TN-MS-AR');
       expect(await camera(page)).toEqual(atlasCamera);
@@ -606,6 +651,10 @@ test.describe('phone viewport', () => {
       await expect(search).not.toBeFocused();
       await expect(page.locator('#tools-menu').getByRole('button',{name:'LAYERS',exact:true})).toBeDisabled();
       await expect(page.getByRole('button',{name:'MEASURE',exact:true})).toBeDisabled();
+      const dropdown=await page.locator('.tools-options').boundingBox();
+      expect(Math.abs(dropdown.x-idleTools.x)).toBeLessThan(1);
+      expect(Math.abs(dropdown.width-idleTools.width)).toBeLessThan(1);
+      expect((await view.boundingBox()).height).toBeLessThan(44);
       await view.tap();
       await expect(page.locator('#view-menu [aria-current]')).toHaveText('STATISTICAL');
       await expect(geographic).toBeVisible();

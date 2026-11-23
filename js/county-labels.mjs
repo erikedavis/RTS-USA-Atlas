@@ -18,7 +18,7 @@ export function createCountyLabels(map){
     'text-ignore-placement':true,'text-max-width':40,
   },paint:{'text-color':'#a1b4c6','text-halo-color':'#0a131e','text-halo-width':1.3}});
 
-  function layout(counties,anchors,obstacles){
+  function layout(counties,anchors,obstacles,selectedId){
     const features=[],zoom=map.getZoom(),size=countyLabelSize(zoom);
     const {clientWidth:w,clientHeight:h}=map.getContainer();
     const viewport={x0:5,y0:5,x1:w-5,y1:h-5};
@@ -28,7 +28,7 @@ export function createCountyLabels(map){
     drawings.font=`${size}px Arial`;
     for(const county of counties){
       const p=county.properties,coordinates=anchors[p.geoid];
-      if(!coordinates)continue;
+      if(!coordinates||p.geoid===selectedId)continue;
       if(!shapes.has(county))shapes.set(county,prepareStateShapes(county.geometry));
       const projected=projectStateShapes(map,shapes.get(county),viewBounds,viewport,rotated);
       if(!projected.length)continue;

@@ -1,4 +1,4 @@
-# USAtlas V0.9A preview
+# USAtlas V0.9B preview
 
 Requires Python 3. Clone the repository or extract its source ZIP, then run **Start_Atlas.cmd** from that folder. The launcher opens **http://127.0.0.1:8020/**.
 [Development handoff](HANDOFF.md) covers the current preview, repeatable checks, and open work.
@@ -19,7 +19,7 @@ Tap or click the USA map label for USA Stats. Hold it to open USA Atlas. The lab
 ## Phone controls
 
 - Tap the C14 logo and blue chevron to open Tools. View shows the current Statistical mode. Geographic and Strategic are reserved for later releases.
-- Home, the zoom readout, and the map key sit along the bottom and move with the tools and stats bar. The **CTY**, **MSA**, and **LAYERS** controls stay available in City and State Atlas. **LAYERS** is reserved for a future update.
+- Home, the zoom readout, and the map key sit along the bottom and move with the tools and stats bar. **COUNTIES**, **METROS**, and **LAYERS** stay available in City and State Atlas. **LAYERS** is reserved for a future update.
 - One tap on state land opens compact facts at the current map position. A quick double-tap on the map zooms two levels around the tap. Tap or double-tap a state abbreviation to fit the state and show its compact facts. With a state selected, tap another state's land to switch, or use the **×** by the chevrons to clear it.
 - Hold on a state or its abbreviation for about 0.6 seconds to open State Atlas. Hold a city name to fit the city above its Atlas facts. A city-symbol hold opens City Atlas at the current zoom. Drag the map far enough to move the city out of the center and City Atlas returns to compact stats while the map follows your finger. Tap a city name to read facts in place or tap its symbol to zoom. Tap outside the highlighted metro to clear the city at the current map position.
 - Tap a capital or largest city in state facts to visit the corresponding city view. **BACK** returns to the state facts or atlas you came from. One tap on another state's land switches the selection. In State Atlas, swipe down on the stats or tap open water to return to compact stats at the current camera position. A light pull beyond the state's frame springs back. A deliberate drag away returns to stats and continues panning with your finger.
@@ -29,7 +29,7 @@ Tap or click the USA map label for USA Stats. Hold it to open USA Atlas. The lab
 
 ## Counties and metros
 
-Use **Show counties** or **Show metros** directly beneath the state facts in State Atlas. Each button toggles the same layer as **CTY** or **MSA** in the map controls. The text and border turn gold when the layer is on. The button keeps its standard background. With a state selected, county and metro outlines stay scoped to that state while you zoom, pan, or rotate. A metro spanning several states appears for any state it covers. Clear the state selection for nationwide coverage. County selection is available from zoom 4.5 and names appear from zoom 7 where they fit. Select a metro to see its July 1, 2025 population and total area.
+Use **COUNTIES** and **METROS** in the map controls, including from State Atlas. The text and border turn gold when the layer is on. With a state selected, county and metro outlines stay scoped to that state while you zoom, pan, or rotate. A metro spanning several states appears for any state it covers. Clear the state selection for nationwide coverage. County selection is available from zoom 4.5. An intentionally selected county or metro receives a bold white map label, including at zooms below the ordinary labels. Selected state abbreviations and city names also use bold white lettering.
 
 ## Rotation and search
 

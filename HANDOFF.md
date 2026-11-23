@@ -1,4 +1,8 @@
-# USAtlas V0.9A preview
+# USAtlas V0.9B preview
+
+The mobile Tools dropdown aligns with the logo button and uses compact rows. City and State Atlas share the COUNTIES and METROS controls. Selected states and cities use bold white labels, while selected counties and metros get a priority map label below ordinary label zooms.
+
+## V0.9A preview
 
 City and State Atlas keep the CTY, MSA and LAYERS controls available on both layouts. Their Census footers stay hidden, and current population and area facts are separate sections for future expansion. The city-specific MSA outline continues to show while its wider overlay is off. The C14 header logo opens Tools on mobile and the desktop hammer opens the same menu. USA Stats is the national default and supports USA Atlas, the CONUS / ALL switch, and the USA map badge at zoom 3.5 and below.
 

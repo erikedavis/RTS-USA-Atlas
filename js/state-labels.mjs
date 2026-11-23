@@ -42,21 +42,22 @@ export function createStateLabels(map,labels,states,Marker,onSelect,isNational,p
     return {p,node,marker,original,small,insetLabel,neighbors,polygons:stateShapes.get(p.geoid)||[]};
   });
 
-  let lastKey='',focusedState=null;
+  let lastKey='',focusedState=null,selectedState=null;
   let anchorKey='';
   function layout(){
     const center=map.getCenter(),container=map.getContainer();
     const w=container.clientWidth,h=container.clientHeight,national=isNational(),zoom=map.getZoom();
     const bearing=map.getBearing(),rotated=!isNorthUp(bearing);
     const wide=wideStateLabels(),priority=stateLabelsFirst();
-    const key=[center.lng,center.lat,zoom,bearing,w,h,national,focusedState,wide,priority].join('|');
+    const areaLabel=container.querySelector('.selected-area-label:not([hidden])');
+    const key=[center.lng,center.lat,zoom,bearing,w,h,national,focusedState,wide,priority,areaLabel?.style.transform,areaLabel?.textContent].join('|');
     if(key===lastKey)return;
     lastKey=key;
     container.classList.toggle('state-label-priority',wide);
     const origin=container.getBoundingClientRect(),viewport={x0:5,y0:5,x1:w-5,y1:h-5};
     const bounds=map.getBounds();
     const viewBounds={west:bounds.getWest(),east:bounds.getEast(),south:bounds.getSouth(),north:bounds.getNorth()};
-    const obstacles=[...container.parentElement.parentElement.querySelectorAll('.map-controls:not(.phone-dock .map-controls),#reset-view,#sidebar-toggle,.rotation-tools:not([inert]),.map-key-toggle,.dev-zoom,.inset-label,#usa-label,.phone-grip,.phone-dock-row:not([inert]),.phone-home:not([hidden]),.phone-atlas-back:not([hidden]),.phone-history-back:not([hidden])')]
+    const obstacles=[...container.parentElement.parentElement.querySelectorAll('.map-controls:not(.phone-dock .map-controls),#reset-view,#sidebar-toggle,.rotation-tools:not([inert]),.map-key-toggle,.dev-zoom,.inset-label,#usa-label,.selected-area-label,.phone-grip,.phone-dock-row:not([inert]),.phone-home:not([hidden]),.phone-atlas-back:not([hidden]),.phone-history-back:not([hidden])')]
       .filter(node=>node.offsetWidth&&node.offsetHeight)
       .map(node=>{const b=node.getBoundingClientRect();return {x0:b.left-origin.left,y0:b.top-origin.top,x1:b.right-origin.left,y1:b.bottom-origin.top};});
     const markers=wide?[]:protectedMarkerBoxes();
@@ -94,6 +95,7 @@ export function createStateLabels(map,labels,states,Marker,onSelect,isNational,p
       // lettering out of the way while keeping it within their borders.
       ordered.sort((a,b)=>constraints.get(a)-constraints.get(b));
     }
+    if(selectedState)ordered.sort((a,b)=>Number(b.p.geoid===selectedState)-Number(a.p.geoid===selectedState));
     for(const item of ordered){
       if(focusedState&&item.p.geoid!==focusedState)continue;
       const anchor=map.project(item.original);
@@ -149,6 +151,15 @@ export function createStateLabels(map,labels,states,Marker,onSelect,isNational,p
     focusedState=geoid;
     for(const item of items)item.node.toggleAttribute('data-phone-focused',item.p.geoid===geoid);
   }
+  function setSelected(geoid){
+    if(selectedState===geoid)return;
+    selectedState=geoid;
+    for(const {p,node} of items){
+      if(p.geoid===geoid)node.setAttribute('aria-current','true');
+      else node.removeAttribute('aria-current');
+    }
+    lastKey='';
+  }
   function refresh(){lastKey='';layout();}
-  return {layout,items,reservations,setFocus,refresh};
+  return {layout,items,reservations,setFocus,setSelected,refresh};
 }

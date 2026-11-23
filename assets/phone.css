@@ -5,7 +5,9 @@
   .tools-trigger {min-height:44px;padding:0 3px;border:0;background:none;}
   .tools-mobile {display:flex;gap:8px;}
   .tools-mobile img {height:clamp(24px,7vw,30px);}
-  .tools-options :is(button,.view-active,.view-menu summary) {min-height:44px;}
+  .tools-options {width:100%;min-width:0;}
+  .tools-options :is(button,.view-active,.view-menu summary) {min-height:36px;padding-inline:10px;}
+  .tools-options .view-options :is(button,.view-active) {padding-inline-start:16px;}
   .topbar .search-wrap {max-width:none;}
   .topbar .search-wrap input {text-overflow:ellipsis;}
 }
@@ -113,7 +115,6 @@
 .phone-layout .phone-state-facts .record-row {min-height:0;padding:4px 0 0 5px;gap:4px;justify-content:flex-start;border-top:1px solid #1d3244;border-bottom:0;}
 .phone-layout .phone-state-facts .record-value {font-size:10px;}
 .phone-layout .panel-content:has(.phone-state-overview) > :is(.census-record,.panel-action,.facts-date,.fact-sources) {display:none;}
-.phone-layout:not([data-phone-atlas-kind='state']) .state-layer-actions {display:none;}
 
 .phone-layout:is([data-phone-stage='atlas'],.phone-atlas-panning) .content {margin-top:0;}
 .phone-layout[data-phone-stage='atlas'] :is(.topbar,.rotation-tools) {transform:translateY(-125%);opacity:0;pointer-events:none;}
