@@ -9,7 +9,7 @@ async function assertRendered(page, testInfo) {
   const response = await page.goto('/', { waitUntil: 'domcontentloaded' });
   expect(response?.ok(), 'The atlas must respond over HTTP').toBe(true);
   await expect(page.locator('#map-loading'), 'Atlas loading overlay must disappear').toBeHidden({ timeout: 50_000 });
-  await expect(page.locator('meta[name="atlas-version"]')).toHaveAttribute('content', 'ALPHA 0.8L');
+  await expect(page.locator('meta[name="atlas-version"]')).toHaveAttribute('content', 'ALPHA 0.9A');
   await expect(page.locator('canvas.maplibregl-canvas')).toHaveCount(1);
   const renderer = await page.evaluate(() => {
     const canvas = document.querySelector('canvas.maplibregl-canvas');
@@ -118,13 +118,17 @@ test('desktop national map loads, has working WebGL, and renders', async ({ page
   }
   await expect(page.locator('.topbar #search')).toBeVisible();
   await expect(page.locator('#go-ak, #go-hi, #go-pr, .toolbar, #source-tag, .city-legend')).toHaveCount(0);
+  const tools = page.locator('#tools-menu > summary');
+  await tools.hover();
+  await expect(tools.locator('.tools-label')).toHaveCSS('opacity','1');
+  await tools.click();
   const summary = page.locator('#view-menu summary');
   await summary.click();
   await expect(page.getByRole('button', { name: 'GEOGRAPHIC', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'STRATEGIC', exact: true })).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.locator('#view-menu')).not.toHaveAttribute('open', '');
-  await expect(summary).toHaveText('VIEW: STATISTICAL');
+  await expect(page.locator('#tools-menu')).not.toHaveAttribute('open','');
   const zoomIn = page.getByRole('button', { name: 'Zoom in' });
   await expect(zoomIn).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
   await expect(zoomIn).toHaveCSS('opacity', '0.65');
@@ -180,6 +184,44 @@ test('desktop compass turns with the map and highlights one direction on hover',
   await tapRoseSpoke(page);
   await expect(lock).toHaveAttribute('aria-pressed', 'true');
   await expect(controls).toHaveClass(/rotation-north-locked/);
+});
+
+test('desktop USA home defaults to CONUS and keeps the chosen extent through Atlas', async ({ page }, testInfo) => {
+  await exposeMap(page);
+  await assertRendered(page,testInfo);
+  await readMap(page);
+  const usa=page.getByRole('button',{name:'Select United States',exact:true});
+  const panel=page.locator('#panel-content');
+  const all=page.getByRole('button',{name:'ALL',exact:true});
+  const conus=page.getByRole('button',{name:'CONUS',exact:true});
+  const visibleStates=()=>page.evaluate(()=>[...new Set(testMap.queryRenderedFeatures({layers:['state-hit']}).map(f=>f.properties.abbr))]);
+  await expect(panel.locator('.section-kicker')).toHaveText('USA STATS');
+  await expect(conus).toHaveAttribute('aria-pressed','true');
+  await expect(usa).toBeVisible();
+  await expect.poll(visibleStates).toContain('PR');
+  expect(await visibleStates()).not.toContain('AK');
+  expect(await visibleStates()).not.toContain('HI');
+  await usa.click({delay:660});
+  await expect(panel.locator('.section-kicker')).toHaveText('USA ATLAS');
+  await all.click();
+  await expect(all).toHaveCSS('color',activeGold);
+  await expect.poll(visibleStates).toEqual(expect.arrayContaining(['AK','HI','PR']));
+  await expect(panel.locator('.population-total')).toHaveText('341,784,857');
+  await page.locator('#desktop-atlas-toggle').click();
+  await expect(panel.locator('.section-kicker')).toHaveText('USA STATS');
+  await expect(all).toHaveAttribute('aria-pressed','true');
+  await page.evaluate(()=>testMap.jumpTo({zoom:3.51}));
+  await expect(usa).toBeHidden();
+  await page.evaluate(()=>testMap.jumpTo({zoom:3.5}));
+  await expect(usa).toBeVisible();
+  await conus.click();
+  await searchFor(page,'AK');
+  await expect(panel.locator('h1')).toHaveText('Alaska');
+  await expect.poll(visibleStates).toContain('AK');
+  await page.getByRole('button',{name:'National view',exact:true}).click();
+  await expect(panel.locator('.section-kicker')).toHaveText('USA STATS');
+  await expect(conus).toHaveAttribute('aria-pressed','true');
+  await expect.poll(visibleStates).not.toContain('AK');
 });
 
 test('desktop Atlas expands, restores a rotated camera, and reopens the hidden sidebar on selection', async ({ page }, testInfo) => {
@@ -259,7 +301,7 @@ test('Idaho selection and county toggle render without losing state selection', 
   await page.locator('#toggle-counties').click();
   await expect(page.locator('#toggle-counties')).toHaveAttribute('aria-pressed', 'true');
   await page.locator('#reset-view').click();
-  await expect(page.locator('#selection-status')).toContainText('AWAITING');
+  await expect(page.locator('#panel-content .section-kicker')).toHaveText('USA STATS');
 });
 
 test('major city searches work and produce checkable screenshots', async ({ page }, testInfo) => {
@@ -322,18 +364,21 @@ for (const isPhone of [false, true]) {
       const atlasCounties = page.getByRole('button', { name: 'Show counties', exact: true });
       const atlasMetros = page.getByRole('button', { name: 'Show metros', exact: true });
       const cty = page.locator('#toggle-counties');
+      await expect(cty).toBeVisible();
+      await expect(msa).toBeVisible();
+      await expect(page.locator('#map-layers')).toBeDisabled();
       await expect(atlasMetros).toHaveAttribute('aria-pressed', 'true');
       await expect(atlasMetros).toHaveCSS('color', activeGold);
       await expect(page.locator('#panel-content .fact-sources')).toBeHidden();
       await expect(page.locator('#panel-content .facts-date')).toBeHidden();
       await expect(page.locator('#panel-content .census-record')).toBeHidden();
 
-      await activate(atlasMetros);
+      await activate(msa);
       await expect(msa).toHaveAttribute('aria-pressed', 'false');
       await expect(atlasMetros).toHaveAttribute('aria-pressed', 'false');
       await expect(atlasMetros).not.toHaveCSS('color', activeGold);
       await expect.poll(metros).toEqual([]);
-      await activate(atlasCounties);
+      await activate(cty);
       await expect(cty).toHaveAttribute('aria-pressed', 'true');
       await expect(atlasCounties).toHaveAttribute('aria-pressed', 'true');
       await expect(atlasCounties).toHaveCSS('color', activeGold);
@@ -384,6 +429,18 @@ for (const isPhone of [false, true]) {
       const app = page.locator('.app');
       const atlasKind = isPhone ? 'data-phone-atlas-kind' : 'data-desktop-atlas';
       await expect(app).toHaveAttribute(atlasKind, 'place');
+      await expect(page.locator('#map-layers')).toBeVisible();
+      for (const control of [page.locator('#toggle-counties'),page.locator('#toggle-metros')]) {
+        if (await control.getAttribute('aria-pressed')==='true') await (isPhone ? control.tap() : control.click());
+        await (isPhone ? control.tap() : control.click());
+        await expect(control).toHaveCSS('color',activeGold);
+        await (isPhone ? control.tap() : control.click());
+        await expect(control).toHaveAttribute('aria-pressed','false');
+        await expect(app).toHaveAttribute(atlasKind,'place');
+      }
+      for (const selector of ['.facts-date','.fact-sources','.census-record']) {
+        await expect(page.locator('#panel-content '+selector)).toBeHidden();
+      }
       await waitForCamera(page);
       await screenshot(page, testInfo, 'san-diego-state-link');
       const initial = await camera(page);
@@ -446,6 +503,74 @@ test.describe('phone viewport', () => {
     await expect(page.locator('.rotation-tools')).toHaveAttribute('inert', '');
   });
 
+  test('phone compass circular drag unlocks on lift and then follows a finger across north', async ({ page }, testInfo) => {
+    await exposeMap(page);
+    await assertRendered(page,testInfo);
+    await readMap(page);
+    const cdp=await page.context().newCDPSession(page);
+    const lock=page.locator('#rotation-lock');
+    const north=page.getByRole('button',{name:'North up',exact:true});
+    const touch=(type,point)=>cdp.send('Input.dispatchTouchEvent',{type,touchPoints:point?[point]:[]});
+    async function arc(start,degrees){
+      const {x,y,width,height}=await lock.boundingBox();
+      const cx=x+width/2,cy=y+height/2,dx=start.x-cx,dy=start.y-cy;
+      await touch('touchStart',start);
+      for(let i=1;i<=9;i++){
+        const angle=degrees*i/9*Math.PI/180;
+        await touch('touchMove',{x:cx+dx*Math.cos(angle)-dy*Math.sin(angle),y:cy+dx*Math.sin(angle)+dy*Math.cos(angle)});
+      }
+    }
+    const label=await north.boundingBox();
+    await arc({x:label.x+label.width/2,y:label.y+label.height/2},35);
+    await expectBearing(page,0);
+    await expect(lock).toHaveAttribute('aria-pressed','true');
+    await touch('touchEnd');
+    await expect(lock).toHaveAttribute('aria-pressed','false');
+    await expectBearing(page,0);
+    await page.evaluate(()=>testMap.jumpTo({bearing:350}));
+    const spoke=await page.locator('.compass-rose').evaluate(svg=>{
+      const point=new DOMPoint(50,12).matrixTransform(svg.getScreenCTM());
+      return {x:point.x,y:point.y};
+    });
+    await arc(spoke,-33);
+    await expectBearing(page,23);
+    await touch('touchEnd');
+    await expect(lock).toHaveAttribute('aria-pressed','false');
+    await expectBearing(page,23);
+    await page.getByRole('button',{name:'West up',exact:true}).tap();
+    await expectBearing(page,270);
+  });
+
+  test('phone USA Stats opens Atlas by long press or by swiping up inside the facts', async ({ page }, testInfo) => {
+    await exposeMap(page);
+    await assertRendered(page,testInfo);
+    await readMap(page);
+    const label=page.getByRole('button',{name:'Select United States',exact:true});
+    const panel=page.locator('#panel-content');
+    const mode=panel.locator('.section-kicker');
+    const leave=page.locator('#phone-atlas-back');
+    const cdp=await page.context().newCDPSession(page);
+    const touch=(type,point)=>cdp.send('Input.dispatchTouchEvent',{type,touchPoints:point?[point]:[]});
+    await expect(mode).toHaveText('USA STATS');
+    await expect(label).toBeVisible();
+    const badge=await label.boundingBox();
+    await touch('touchStart',{x:badge.x+badge.width/2,y:badge.y+badge.height/2});
+    await expect(mode).toHaveText('USA ATLAS');
+    await touch('touchEnd');
+    await page.getByRole('button',{name:'ALL',exact:true}).tap();
+    await leave.tap();
+    await expect(mode).toHaveText('USA STATS');
+    await expect(page.getByRole('button',{name:'ALL',exact:true})).toHaveAttribute('aria-pressed','true');
+    const stats=await panel.boundingBox();
+    const x=stats.x+45,y=stats.y+95;
+    await touch('touchStart',{x,y});
+    for(let i=1;i<=5;i++)await touch('touchMove',{x,y:y-i*11});
+    await touch('touchEnd');
+    await expect(mode).toHaveText('USA ATLAS');
+    await expect(panel.locator('.population-total')).toHaveText('341,784,857');
+    await expect(page.getByRole('button',{name:'ALL',exact:true})).toHaveAttribute('aria-pressed','true');
+  });
+
   test('phone startup hides the desktop sidebar while the map loads', async ({ page }) => {
     await page.route('**/js/atlas.mjs?*', route => route.abort());
     await page.goto('/');
@@ -457,41 +582,43 @@ test.describe('phone viewport', () => {
     expect(map.width).toBe(390);
   });
 
-  test('phone View shares the header with Search in portrait and landscape', async ({ page }, testInfo) => {
+  test('phone logo Tools menu contains View and leaves room for Search', async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 320, height: 680 });
     await assertRendered(page, testInfo);
     const search = page.getByRole('textbox', { name: 'Find a state, county or city' });
+    const tools = page.locator('#tools-menu > summary');
     const view = page.locator('#view-menu summary');
     const results = page.locator('#search-results');
     const geographic = page.getByRole('button', { name: 'GEOGRAPHIC', exact: true });
     for (const viewport of [{ width: 320, height: 680 }, { width: 744, height: 390 }]) {
       await page.setViewportSize(viewport);
       const idleSearch = await search.boundingBox();
-      const idleView = await view.boundingBox();
-      expect(idleSearch.x + idleSearch.width).toBeLessThan(idleView.x);
-      expect(idleView.width).toBeGreaterThanOrEqual(44);
+      const idleTools = await tools.boundingBox();
+      expect(idleTools.x + idleTools.width).toBeLessThan(idleSearch.x);
+      expect(idleTools.height).toBeGreaterThanOrEqual(44);
+      await expect(view).toBeHidden();
 
       await search.tap();
       await search.fill('MN');
       await expect(results).toBeVisible();
-      expect((await search.boundingBox()).width).toBeGreaterThan(idleSearch.width);
-      expect((await view.boundingBox()).width).toBeLessThan(idleView.width);
-
-      await view.tap();
+      await tools.tap();
       await expect(results).toBeHidden();
       await expect(search).not.toBeFocused();
+      await expect(page.locator('#tools-menu').getByRole('button',{name:'LAYERS',exact:true})).toBeDisabled();
+      await expect(page.getByRole('button',{name:'MEASURE',exact:true})).toBeDisabled();
+      await view.tap();
       await expect(page.locator('#view-menu [aria-current]')).toHaveText('STATISTICAL');
       await expect(geographic).toBeVisible();
       await expect(page.getByRole('button', { name: 'STRATEGIC', exact: true })).toBeVisible();
       const menu = await page.locator('.view-options').boundingBox();
       expect(menu.x + menu.width).toBeLessThanOrEqual(viewport.width);
-      expect(menu.y).toBeGreaterThan(idleView.y + idleView.height);
+      expect(menu.y).toBeGreaterThan(idleTools.y + idleTools.height);
       await screenshot(page, testInfo, `phone-view-${viewport.width}`);
 
       await geographic.tap();
       await expect(geographic).toBeHidden();
       await expect(page.locator('#toast')).toContainText('GEOGRAPHIC view is reserved');
-      await view.tap();
+      await tools.tap();
       await search.tap();
       await expect(geographic).toBeHidden();
       await search.fill('CO');
@@ -515,18 +642,19 @@ test.describe('phone viewport', () => {
       }
       expect(hud.zoomOffset).toBeLessThan(2);
     };
-    await checkDock('closed');
+    await checkDock('summary');
     await key.tap();
     await expect(page.locator('#map-key')).toBeVisible();
     await expect(key).toHaveCSS('color', activeGold);
     await key.tap();
     await expect(page.locator('#map-key')).toBeHidden();
-    await page.getByRole('button', { name: 'Show map tools' }).tap();
+    await page.getByRole('button', { name: 'Collapse selection details' }).tap();
     await checkDock('tools');
     await searchFor(page, 'Minnesota');
     await checkDock('summary');
     await home.tap();
-    await checkDock('closed');
+    await checkDock('summary');
+    await expect(page.locator('#panel-content h1')).toHaveText('United States');
   });
 
   for (const { state, center, bearing } of [
@@ -539,7 +667,7 @@ test.describe('phone viewport', () => {
       await assertRendered(page, testInfo);
       await readMap(page);
       await page.evaluate(({ center, bearing }) => testMap.jumpTo({ center, zoom: 5.4, bearing }), { center, bearing });
-      if (bearing) await page.getByRole('button', { name: 'Show map tools' }).tap();
+      if (bearing) await page.getByRole('button', { name: 'Collapse selection details' }).tap();
       const label = page.getByRole('button', { name: `Select ${state}`, exact: true });
       await expect(label).toBeVisible();
       const { x, y, width, height } = await label.boundingBox();
@@ -579,12 +707,11 @@ test.describe('phone viewport', () => {
     await expect(page.getByRole('button', { name: 'Select California', exact: true })).toBeVisible();
     await screenshot(page, testInfo, 'national-mobile-390x844');
 
-    await page.getByRole('button', { name: 'Show map tools' }).tap();
     await expect(page.locator('#toggle-counties')).toBeVisible();
     await page.getByRole('button', { name: 'Select Minnesota', exact: true }).tap();
     await expect(page.locator('#panel-content h1')).toHaveText('Minnesota');
     await page.getByRole('button', { name: 'Clear state selection' }).tap();
-    await expect(page.locator('#selection-status')).toContainText('AWAITING');
+    await expect(page.locator('#panel-content h1')).toHaveText('United States');
     await page.locator('#search').fill('IN');
     await page.locator('#search').press('Enter');
     await expect(page.locator('#panel-content h1')).toHaveText('Indiana');
@@ -620,7 +747,7 @@ test.describe('phone viewport', () => {
       let point = await statePoint();
       let before = await camera(page);
       await touch('touchStart', point);
-      await expect(app).toHaveAttribute('data-phone-stage', 'closed');
+      await expect(heading).toHaveText('United States');
       await touch('touchEnd');
       await expect(heading).toHaveText('Colorado', { timeout: 950 });
       await expect(app).toHaveAttribute('data-phone-stage', 'summary');
@@ -638,7 +765,7 @@ test.describe('phone viewport', () => {
       await touch('touchEnd');
       await expect.poll(async () => (await camera(page))[0]).not.toBe(before[0]);
       await page.waitForTimeout(550);
-      await expect(app).toHaveAttribute('data-phone-stage', 'closed');
+      await expect(heading).toHaveText('United States');
 
       point = await statePoint();
       before = await camera(page);
@@ -650,13 +777,13 @@ test.describe('phone viewport', () => {
       await touch('touchEnd');
       await expect.poll(async () => (await camera(page))[2]).toBeGreaterThan(before[2] + .3);
       await page.waitForTimeout(550);
-      await expect(app).toHaveAttribute('data-phone-stage', 'closed');
+      await expect(heading).toHaveText('United States');
 
       point = await statePoint();
       await touch('touchStart', point);
       await touch('touchCancel');
       await page.waitForTimeout(650);
-      await expect(app).toHaveAttribute('data-phone-stage', 'closed');
+      await expect(heading).toHaveText('United States');
 
       point = await statePoint();
       before = await camera(page);
@@ -664,7 +791,7 @@ test.describe('phone viewport', () => {
       await page.touchscreen.tap(point.x, point.y);
       await expect.poll(async () => (await camera(page))[2]).toBeCloseTo(before[2] + 2, 3);
       await page.waitForTimeout(550);
-      await expect(app).toHaveAttribute('data-phone-stage', 'closed');
+      await expect(heading).toHaveText('United States');
     });
   }
 

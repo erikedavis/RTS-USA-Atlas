@@ -20,7 +20,7 @@ const SMALL_STATES=new Map([
 const collection=features=>({type:'FeatureCollection',features});
 const pointFeature=(item,coordinates)=>({type:'Feature',properties:{geoid:item.p.geoid},geometry:{type:'Point',coordinates}});
 
-export function createStateLabels(map,labels,states,Marker,onSelect,isNational,protectedMarkerBoxes,wideStateLabels,stateLabelsFirst){
+export function createStateLabels(map,labels,states,Marker,onSelect,isNational,protectedMarkerBoxes,wideStateLabels,stateLabelsFirst,regionVisible){
   map.addSource('state-label-anchors',{type:'geojson',data:collection([])});
   map.addImage('state-label-space',{width:29,height:21,data:new Uint8Array(29*21*4)});
   map.addLayer({id:'state-label-obstacles',type:'symbol',source:'state-label-anchors',layout:{'icon-image':'state-label-space','icon-allow-overlap':true}});
@@ -56,7 +56,7 @@ export function createStateLabels(map,labels,states,Marker,onSelect,isNational,p
     const origin=container.getBoundingClientRect(),viewport={x0:5,y0:5,x1:w-5,y1:h-5};
     const bounds=map.getBounds();
     const viewBounds={west:bounds.getWest(),east:bounds.getEast(),south:bounds.getSouth(),north:bounds.getNorth()};
-    const obstacles=[...container.parentElement.parentElement.querySelectorAll('.map-controls:not(.phone-dock .map-controls),#reset-view,#sidebar-toggle,.rotation-tools:not([inert]),.map-key-toggle,.dev-zoom,.inset-label,.phone-grip,.phone-dock-row:not([inert]),.phone-home:not([hidden]),.phone-atlas-back:not([hidden]),.phone-history-back:not([hidden])')]
+    const obstacles=[...container.parentElement.parentElement.querySelectorAll('.map-controls:not(.phone-dock .map-controls),#reset-view,#sidebar-toggle,.rotation-tools:not([inert]),.map-key-toggle,.dev-zoom,.inset-label,#usa-label,.phone-grip,.phone-dock-row:not([inert]),.phone-home:not([hidden]),.phone-atlas-back:not([hidden]),.phone-history-back:not([hidden])')]
       .filter(node=>node.offsetWidth&&node.offsetHeight)
       .map(node=>{const b=node.getBoundingClientRect();return {x0:b.left-origin.left,y0:b.top-origin.top,x1:b.right-origin.left,y1:b.bottom-origin.top};});
     const markers=wide?[]:protectedMarkerBoxes();
@@ -82,17 +82,17 @@ export function createStateLabels(map,labels,states,Marker,onSelect,isNational,p
       obstacles.push((wide||item.p.abbr==='PR')&&!item.small?compactBadgeBox(point,size):badgeBox(point,size,Boolean(item.small)));
     }
     const wideShapes=new Map();
-    let ordered=items;
+    const ordered=items.filter(item=>regionVisible(item.p.geoid));
     if(wide){
       const constraints=new Map();
-      for(const item of items){
+      for(const item of ordered){
         const projected=projectStateShapes(map,item.polygons,viewBounds,viewport,rotated);
         wideShapes.set(item,projected);
         constraints.set(item,projected.reduce((max,{rect})=>Math.max(max,Math.min(rect.x1-rect.x0,rect.y1-rect.y0)),0));
       }
       // Place states with little room first. Roomier states can move their
       // lettering out of the way while keeping it within their borders.
-      ordered=[...items].sort((a,b)=>constraints.get(a)-constraints.get(b));
+      ordered.sort((a,b)=>constraints.get(a)-constraints.get(b));
     }
     for(const item of ordered){
       if(focusedState&&item.p.geoid!==focusedState)continue;

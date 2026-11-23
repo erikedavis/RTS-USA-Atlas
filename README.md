@@ -1,19 +1,25 @@
-# USAtlas V0.8L preview
+# USAtlas V0.9A preview
 
 Requires Python 3. Clone the repository or extract its source ZIP, then run **Start_Atlas.cmd** from that folder. The launcher opens **http://127.0.0.1:8020/**.
 [Development handoff](HANDOFF.md) covers the current preview, repeatable checks, and open work.
+
+## USA overview
+
+Startup and Home open USA Stats. CONUS frames the lower 48, D.C. and the Puerto Rico inset. ALL adds Alaska and Hawaii. Both show the same national population and land area from [Census QuickFacts](https://www.census.gov/quickfacts/fact/table/US/PST045222).
+
+Tap or click the USA map label for USA Stats. Hold it to open USA Atlas. The label disappears above zoom 3.5. On a phone, swipe up from the USA Stats sheet or its top handle to open USA Atlas.
 
 ## Desktop controls
 
 - Select a state, city or metro, then choose **Atlas** in the right sidebar. The sidebar widens. State Atlas frames the outline and fades out surrounding states. City Atlas keeps the zoom and highlights its metro when one exists. Metro Atlas frames the metro and includes a list of Census places with points inside its boundary.
 - **Back** restores the previous map position, zoom and bearing. A linked city opened from a state returns to that state's atlas or stats.
 - The state link beside a city's name selects and fits the state the same way its map abbreviation does. It works in compact facts and City Atlas on PC and phone.
-- The chevron midway down the sidebar hides it. Click the remaining chevron to reopen it, or make a new selection. Home sits at the lower-left edge of the map and Key sits at the lower-right edge. The header contains **VIEW: STATISTICAL** and Search.
+- The chevron midway down the sidebar hides it. Click the remaining chevron to reopen it, or make a new selection. Home sits at the lower-left edge of the map and Key sits at the lower-right edge. The hammer in the header opens Tools, including View.
 
 ## Phone controls
 
-- **View** is to the right of Search and shows the current mode, Statistical. Geographic and Strategic are reserved for later releases. Search expands while you're using it.
-- Map view starts with a compact header and a chevron in the center. Home, the zoom readout, and the map key sit along the bottom and move with the tools and stats bar. Swipe the chevron up to reveal **CTY**, **MSA**, and **LAYERS**. The chevrons can also be tapped. **LAYERS** is reserved for a future update.
+- Tap the C14 logo and blue chevron to open Tools. View shows the current Statistical mode. Geographic and Strategic are reserved for later releases.
+- Home, the zoom readout, and the map key sit along the bottom and move with the tools and stats bar. The **CTY**, **MSA**, and **LAYERS** controls stay available in City and State Atlas. **LAYERS** is reserved for a future update.
 - One tap on state land opens compact facts at the current map position. A quick double-tap on the map zooms two levels around the tap. Tap or double-tap a state abbreviation to fit the state and show its compact facts. With a state selected, tap another state's land to switch, or use the **×** by the chevrons to clear it.
 - Hold on a state or its abbreviation for about 0.6 seconds to open State Atlas. Hold a city name to fit the city above its Atlas facts. A city-symbol hold opens City Atlas at the current zoom. Drag the map far enough to move the city out of the center and City Atlas returns to compact stats while the map follows your finger. Tap a city name to read facts in place or tap its symbol to zoom. Tap outside the highlighted metro to clear the city at the current map position.
 - Tap a capital or largest city in state facts to visit the corresponding city view. **BACK** returns to the state facts or atlas you came from. One tap on another state's land switches the selection. In State Atlas, swipe down on the stats or tap open water to return to compact stats at the current camera position. A light pull beyond the state's frame springs back. A deliberate drag away returns to stats and continues panning with your finger.
@@ -28,6 +34,8 @@ Use **Show counties** or **Show metros** directly beneath the state facts in Sta
 ## Rotation and search
 
 Click or tap the compass center to unlock rotation or lock the current angle. A gold padlock marks the locked state. The shackle opens and the icon fades shortly after unlocking. Right-drag on a PC or twist with two fingers on a phone. The rose and the positions of its letters follow the map bearing, with each letter upright. Click or tap any direction to snap to that heading. Click or tap a spoke outside the center to return to north and lock rotation. **R** returns north while retaining the current lock setting.
+
+Use one finger to drag around the center from a direction label or the outer half of a compass spoke. A locked circular gesture holds the bearing until release, then unlocks. An unlocked circular gesture turns the map as the rose follows your finger.
 
 Type a state abbreviation such as **MN** in Search. It appears first, and Enter opens its facts and fits the state. The angle is preserved.
 

@@ -1,13 +1,11 @@
 @media (max-width: 670px) and (pointer: coarse), (max-width: 950px) and (pointer: coarse) and (orientation: landscape) {
   /* Match the phone header before the map has initialized its layout. */
   .app:not(.phone-layout) .info-panel {display:none;}
-  .topbar .view-menu {order:1;flex:0 0 92px;}
-  .topbar:has(.search-wrap:focus-within, .search-results:not([hidden])) .view-menu:not([open]) {flex-basis:64px;}
-  .view-menu summary {min-height:44px;justify-content:center;gap:6px;padding:0 6px;}
-  .view-current {display:none;}
-  .view-options {left:auto;right:0;min-width:156px;}
-  .view-options :is(.view-active,button) {display:flex;align-items:center;min-height:44px;padding:0 12px;}
-  .view-options .view-active {color:var(--active-gold);border-bottom:1px solid #233548;}
+  .topbar .brand,.tools-desktop {display:none;}
+  .tools-trigger {min-height:44px;padding:0 3px;border:0;background:none;}
+  .tools-mobile {display:flex;gap:8px;}
+  .tools-mobile img {height:clamp(24px,7vw,30px);}
+  .tools-options :is(button,.view-active,.view-menu summary) {min-height:44px;}
   .topbar .search-wrap {max-width:none;}
   .topbar .search-wrap input {text-overflow:ellipsis;}
 }
@@ -28,8 +26,6 @@
   height:var(--phone-header);min-height:var(--phone-header);padding:0 9px;gap:9px;
   transition:transform .24s ease,opacity .2s ease;
 }
-.phone-layout .brand {gap:5px;flex:none;cursor:default;}
-.phone-layout .brand-title {letter-spacing:.10em;}
 .phone-layout :is(#reset-view,#sidebar-toggle,.panel-top,.panel-footer) {display:none;}
 .phone-layout .search-wrap {flex:1;min-width:0;max-width:none;}
 .phone-layout .search-wrap input {height:35px;border-radius:5px;}
@@ -83,12 +79,21 @@
   height:var(--phone-tray);padding:3px 7px;gap:5px;background:#070d15;border-top:1px solid #233345;
 }
 .phone-layout .phone-tray .map-controls button {height:100%;width:100%;font-size:11px;font-weight:600;letter-spacing:.055em;}
-.phone-layout .phone-tray .map-controls button:not(:is(#toggle-counties,#toggle-metros,#phone-layers)) {display:none;}
-.phone-layout .phone-tray .map-controls #phone-layers[disabled] {opacity:.6;cursor:default;}
+.phone-layout .phone-tray .map-controls button:not(:is(#toggle-counties,#toggle-metros,#map-layers)) {display:none;}
+.phone-layout .phone-tray .map-controls #map-layers {width:100%;font-size:11px;}
 .phone-layout .info-panel {
   width:100%;height:var(--phone-summary);min-height:0;border:0;border-top:1px solid #30485d;
 }
 .phone-layout .panel-content {min-height:0;padding:10px 12px 15px;overscroll-behavior:contain;overflow-y:auto;}
+.phone-layout .state-label.usa-label {min-width:44px;min-height:44px;font-size:21.5px;}
+.phone-layout .panel-content:has(.national-scope) {display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;column-gap:8px;}
+.phone-layout .panel-content:has(.national-scope) > .section-kicker {grid-area:1/1;}
+.phone-layout .panel-content:has(.national-scope) > h1 {grid-area:2/1;margin:3px 0 6px;}
+.phone-layout .national-scope {grid-area:1/2/span 2;margin-bottom:0;}
+.phone-layout .national-scope-button {min-height:40px;}
+.phone-layout .national-facts {grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:10px;align-items:center;}
+.phone-layout .national-area .record-row {display:grid;padding-top:5px;}
+.phone-layout .national-area .record-value {max-width:none;text-align:left;}
 .phone-layout .place-heading {margin:0 0 7px;}
 .phone-layout .place-state-link {min-height:44px;}
 .phone-layout .phone-state-overview {display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:10px;align-items:start;}
@@ -112,7 +117,8 @@
 
 .phone-layout:is([data-phone-stage='atlas'],.phone-atlas-panning) .content {margin-top:0;}
 .phone-layout[data-phone-stage='atlas'] :is(.topbar,.rotation-tools) {transform:translateY(-125%);opacity:0;pointer-events:none;}
-.phone-layout[data-phone-stage='atlas'] :is(.dev-zoom,.map-key-toggle,.map-key,.phone-home,.phone-grip,.inset-label) {display:none;}
+.phone-layout[data-phone-stage='atlas'] :is(.dev-zoom,.map-key-toggle,.map-key,.phone-home,.phone-grip) {display:none;}
+.phone-layout[data-phone-stage='atlas']:not([data-phone-atlas-kind='nation']) .inset-label {display:none;}
 .phone-layout .state-label {transition:opacity .18s ease;}
 .phone-layout[data-phone-atlas-kind='state'] .state-label:not([data-phone-focused]) {opacity:0;pointer-events:none;}
 .phone-layout[data-phone-stage='atlas'] .phone-atlas-back {
@@ -122,6 +128,7 @@
 .phone-layout[data-phone-stage='atlas'] .phone-sheet > div {background:#0b131e;border-top:1px solid #30485d;}
 .phone-layout[data-phone-stage='atlas'] .info-panel {height:var(--phone-atlas-facts-height,var(--phone-atlas-sheet));border-top:0;}
 .phone-layout[data-phone-stage='atlas'] .panel-content {padding-top:4px;}
+.phone-layout[data-phone-stage='atlas'] .panel-content > :is(.facts-date,.fact-sources,.census-record,.panel-help) {display:none;}
 .phone-layout.phone-atlas-fast :is(.phone-dock-row,.topbar,.rotation-tools) {transition:none;}
 
 @media (orientation: landscape) {
@@ -131,7 +138,7 @@
   }
   .phone-layout .phone-state-overview {grid-template-columns:minmax(0,1fr) minmax(0,1.5fr);}
   .phone-layout .phone-state-facts {grid-template-columns:repeat(2,minmax(0,1fr));}
-  .phone-layout .phone-state-facts .record-row {grid-column:1/-1;}
+  .phone-layout .phone-state-facts .area-facts {grid-column:1/-1;}
 }
 @media (prefers-reduced-motion: reduce) {
   .phone-layout :is(.phone-dock-row,.topbar,.rotation-tools) {transition:none;}

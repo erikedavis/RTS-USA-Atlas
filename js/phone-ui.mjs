@@ -4,16 +4,16 @@ const phoneMedia='(max-width: 670px) and (pointer: coarse), (max-width: 950px) a
 const STAGES=['closed','tools','summary','atlas'];
 const atlasKind=feature=>{
   const kind=feature?.properties.kind;
-  return kind==='state'||kind==='place'?kind:null;
+  return kind==='state'||kind==='place'||kind==='nation'?kind:null;
 };
+const atlasName=feature=>({state:'state',place:'city',nation:'USA'})[atlasKind(feature)];
 
 export function setupPhoneUI(map,{getSelected,hit,stateAt,insideState,insideMetro,preview,select,deselect,reset,
-  renderSelection,setFocus,fitFeature,stateCorners,cityBounds,fitCity,refreshLabels,closeKey,beforeModeChange}){
+  renderSelection,setFocus,fitFeature,stateCorners,cityBounds,fitCity,refreshLabels,closeKey,beforeModeChange,nationalPanelMode}){
   const $=selector=>document.querySelector(selector);
   const media=matchMedia(phoneMedia), reducedMotion=matchMedia('(prefers-reduced-motion: reduce)');
   const app=$('.app'),content=$('.content'),shell=$('.map-shell'),header=$('.topbar');
-  const brand=$('#home'),rotation=$('.rotation-tools');
-  const searchWrap=$('.search-wrap'),viewMenu=$('#view-menu');
+  const rotation=$('.rotation-tools'),toolsMenu=$('#tools-menu');
   const panel=$('#info-panel'),info=$('#panel-content'),controls=$('.map-controls');
   const dock=$('#phone-dock'),tray=$('#phone-tray'),sheet=$('.phone-sheet');
   const dockBody=$('#phone-dock-body'),mapHud=[$('#zoom-text'),$('#map-key-toggle'),$('#map-key')];
@@ -21,16 +21,14 @@ export function setupPhoneUI(map,{getSelected,hit,stateAt,insideState,insideMetr
   const clear=$('#phone-clear');
   const atlasBack=$('#phone-atlas-back'),factsGrip=$('#phone-facts-grip'),home=$('#phone-home');
   const historyBack=$('#phone-history-back');
-  const layers=document.createElement('button');
-  layers.type='button';layers.id='phone-layers';layers.textContent='LAYERS';layers.disabled=true;layers.hidden=true;
-  controls.append(layers);shell.append(dock,atlasBack);
+  shell.append(dock,atlasBack);
   let active=false,stage='closed',savedCamera=null,stateReturn=null,labelTimer=0,resizeFrame=0,fastFrame=0;
   let cityView=null;
   let badgeGesture=false;
   const duration=()=>reducedMotion.matches?0:360;
   const camera=()=>({center:map.getCenter(),zoom:map.getZoom(),bearing:map.getBearing()});
   // The sheet's grid row can still be opening when the camera fit starts.
-  const atlasSheetHeight=()=>panel.offsetHeight+factsGrip.offsetHeight+sheet.firstElementChild.clientTop;
+  const atlasSheetHeight=()=>controls.offsetHeight+panel.offsetHeight+factsGrip.offsetHeight+sheet.firstElementChild.clientTop;
   function visibleAtlasArea(){
     const rect=map.getContainer().getBoundingClientRect();
     const top=atlasBack.offsetHeight;
@@ -54,14 +52,14 @@ export function setupPhoneUI(map,{getSelected,hit,stateAt,insideState,insideMetr
     const full=stage==='atlas';
     app.dataset.phoneStage=stage;
     grip.hidden=full;
-    tray.inert=stage==='closed'||full;
+    tray.inert=stage==='closed';
     sheet.inert=stage==='closed'||stage==='tools';
     const feature=getSelected();
     up.hidden=full||stage==='summary'&&!atlasKind(feature)||stage==='tools'&&!feature;
     down.hidden=full||stage==='closed';
     clear.hidden=full||feature?.properties.kind!=='state';
     up.setAttribute('aria-label',{
-      closed:'Show map tools',tools:'Show selection details',summary:`Open ${atlasKind(feature)==='place'?'city':'state'} atlas`,
+      closed:'Show map tools',tools:'Show selection details',summary:`Open ${atlasName(feature)||'state'} atlas`,
     }[stage]||'Open atlas');
     down.setAttribute('aria-label',stage==='summary'?'Collapse selection details':'Hide map tools');
     atlasBack.hidden=factsGrip.hidden=!full;
@@ -80,11 +78,12 @@ export function setupPhoneUI(map,{getSelected,hit,stateAt,insideState,insideMetr
     savedCamera=kind==='place'?camera():null;
     cityView=kind==='place'?{frameCity,bounds:undefined,anchor:null,panning:false,adjusted:false}:null;
     closeKey();
+    toolsMenu.open=false;
     document.activeElement?.blur();
-    const atlasName=kind==='place'?'city':'state';
     app.dataset.phoneAtlasKind=kind;
-    for(const handle of [atlasBack,factsGrip])handle.setAttribute('aria-label',`Leave ${atlasName} atlas`);
+    for(const handle of [atlasBack,factsGrip])handle.setAttribute('aria-label',`Leave ${atlasName(feature)} atlas`);
     show('atlas');
+    if(kind==='nation')nationalPanelMode(true);
     info.scrollTop=0;
     setFocus(feature);
     if(kind==='state')constrainPan(stateCorners(feature));
@@ -128,6 +127,7 @@ export function setupPhoneUI(map,{getSelected,hit,stateAt,insideState,insideMetr
     if(fast)skipTransition();
     delete app.dataset.phoneAtlasKind;
     show(getSelected()?'summary':'tools');
+    nationalPanelMode(false);
     setFocus(null,{fast});
     if(!keepPanning)map.resize();
     if(restore&&target){
@@ -219,6 +219,7 @@ export function setupPhoneUI(map,{getSelected,hit,stateAt,insideState,insideMetr
     immediate(result,at,target){
       if(stage!=='atlas')return false;
       const feature=getSelected();
+      if(atlasKind(feature)==='nation')return false;
       if(atlasKind(feature)==='state'){
         if(insideState(at,target,feature.properties.geoid))return false;
         leaveAtlas({fast:true});
@@ -234,6 +235,11 @@ export function setupPhoneUI(map,{getSelected,hit,stateAt,insideState,insideMetr
       if(stage==='atlas'){
         const current=getSelected();
         const next=result?.feature;
+        if(current.properties.kind==='nation'){
+          if(next)select(next,{zoom:layer==='city-hit'||layer==='places-hit'});
+          else deselect();
+          return;
+        }
         if(current.properties.kind==='place'&&next?.properties.kind==='place'&&current.properties.geoid!==next.properties.geoid){
           leaveAtlas({restore:false,fast:true});
           select(next,{zoom:layer==='city-hit'||layer==='places-hit'});
@@ -300,7 +306,7 @@ export function setupPhoneUI(map,{getSelected,hit,stateAt,insideState,insideMetr
   up.addEventListener('click',()=>step(1));
   down.addEventListener('click',()=>step(-1));
   clear.addEventListener('click',()=>{mapTouches.cancel();deselect();});
-  home.addEventListener('click',()=>{mapTouches.cancel();reset();show('closed');});
+  home.addEventListener('click',()=>{mapTouches.cancel();reset();});
   historyBack.addEventListener('click',backToState);
   document.addEventListener('pointerdown',event=>{
     if(active&&!map.getContainer().contains(event.target))mapTouches.cancel();
@@ -312,7 +318,8 @@ export function setupPhoneUI(map,{getSelected,hit,stateAt,insideState,insideMetr
   info.addEventListener('touchstart',event=>{
     const touch=event.touches[0];
     const direction=stage==='atlas'?1:stage==='summary'&&atlasKind(getSelected())?-1:0;
-    scrollStart=direction&&event.touches.length===1&&info.scrollTop<2?
+    const usaStats=stage==='summary'&&atlasKind(getSelected())==='nation';
+    scrollStart=direction&&event.touches.length===1&&(usaStats||info.scrollTop<2)?
       {x:touch.clientX,y:touch.clientY,direction}:null;
   },{passive:true});
   info.addEventListener('touchmove',event=>{
@@ -340,16 +347,13 @@ export function setupPhoneUI(map,{getSelected,hit,stateAt,insideState,insideMetr
     beforeModeChange();
     active=media.matches;
     app.classList.toggle('phone-layout',active);
-    dock.hidden=layers.hidden=!active;
-    brand.inert=active;
+    dock.hidden=!active;
     if(active){
-      searchWrap.after(viewMenu);
       dockBody.append(...mapHud);
       $('#phone-tray-inner').append(controls);
       $('#phone-sheet-inner').append(panel);
       show(getSelected()?'summary':'closed');
     }else{
-      searchWrap.before(viewMenu);
       shell.append(...mapHud);
       shell.insertBefore(controls,rotation);content.append(panel);
       delete app.dataset.phoneStage;
@@ -365,5 +369,6 @@ export function setupPhoneUI(map,{getSelected,hit,stateAt,insideState,insideMetr
     resizeFrame=requestAnimationFrame(()=>{if(stage==='atlas')fitAtlas(getSelected(),0);});
   });
   updateMode();
-  return {get active(){return active;},get focused(){return stage==='atlas'&&active;},selectionChanged,leaveAtlas,openCityFromState,selectAndFitState};
+  return {get active(){return active;},get focused(){return stage==='atlas'&&active;},selectionChanged,leaveAtlas,openCityFromState,selectAndFitState,
+    refitAtlas(){if(stage==='atlas')fitAtlas(getSelected(),duration());}};
 }

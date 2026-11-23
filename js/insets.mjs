@@ -15,6 +15,7 @@ export const INSETS = [
     box:[[-93,23],[-84,28]]}
 ];
 export const NATIONAL_BOUNDS = [[-152,20],[-66,51]];
+export const CONUS_BOUNDS = [[-125.4,22.5],[-66.7,49.4]];
 function region([lng,lat]) {
   if(lat>50 && (lng < -129 || lng>170))return INSETS[0];
   if(lat>18 && lat<30 && lng<-154)return INSETS[1];

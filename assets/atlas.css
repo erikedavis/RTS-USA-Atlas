@@ -11,18 +11,30 @@ button { color:inherit; cursor:pointer; }
 .sr-only { position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0; }
 .app { display:flex; flex-direction:column; height:100vh; height:100dvh; min-height:360px; overflow:hidden; }
 .topbar { height:53px; min-height:53px; background:#04070c; border-bottom:1px solid #1a2633; padding:0 19px; display:flex; align-items:center; gap:18px; position:relative; z-index:12; }
-.brand { display:flex;align-items:center;gap:9px;user-select:none;cursor:pointer; }
-.brand-mark { font-size:24px; color:var(--cold); text-shadow:0 0 18px #8cb4cf55;line-height:1; }
-.brand-title { font-size:16px; letter-spacing:.19em; font-weight:800;color:#d3e0ec;white-space:nowrap; }
-.brand-title span { color:#779ab7; }
-.view-menu {position:relative;font-size:11px;letter-spacing:.06em;white-space:nowrap;}
-.view-menu summary {display:flex;align-items:center;gap:10px;min-height:32px;padding:0 9px;border:1px solid #233548;color:#bbcddd;background:#0b131d;cursor:pointer;list-style:none;}
-.view-menu summary::-webkit-details-marker {display:none;}
-.view-menu summary::after {content:"";width:5px;height:5px;border:solid currentColor;border-width:0 1px 1px 0;transform:translateY(-2px) rotate(45deg);}
-.view-options {position:absolute;top:calc(100% + 4px);left:0;min-width:100%;background:#0b1420;border:1px solid #34485e;box-shadow:0 8px 22px #000a;}
-.view-active {display:none;}
-.view-options button {display:block;width:100%;padding:10px 9px;border:0;background:transparent;text-align:left;letter-spacing:inherit;}
-.view-options button:is(:hover,:focus-visible),.view-menu summary:hover {background:#1a2d3f;}
+.brand {display:flex;align-items:center;padding:0;border:0;background:none;}
+.brand img,.tools-mobile img {height:32px;width:auto;display:block;}
+.tools-menu {position:relative;flex:none;font-size:11px;letter-spacing:.06em;white-space:nowrap;}
+.tools-menu summary {list-style:none;cursor:pointer;}
+.tools-menu summary::-webkit-details-marker {display:none;}
+.tools-trigger {display:flex;align-items:center;min-height:34px;padding:0 8px;border:1px solid #233548;color:#bbcddd;background:#0b131d;}
+.tools-desktop,.tools-mobile {display:flex;align-items:center;}
+.tools-desktop svg {width:20px;height:20px;fill:currentColor;}
+.tools-mobile {display:none;}
+.tools-label {max-width:0;overflow:hidden;opacity:0;transition:max-width .15s,opacity .15s;}
+.tools-menu[open] .tools-label,.tools-trigger:focus-visible .tools-label {max-width:49px;padding-left:6px;opacity:1;}
+@media (hover:hover) and (pointer:fine) {
+  .tools-trigger:hover .tools-label {max-width:49px;padding-left:6px;opacity:1;}
+}
+.tools-chevron {flex:none;width:7px;height:7px;border:solid #83aee4;border-width:0 1.5px 1.5px 0;transform:translateY(-2px) rotate(45deg);}
+.tools-options {position:absolute;top:calc(100% + 4px);left:0;min-width:162px;background:#0b1420;border:1px solid #34485e;box-shadow:0 8px 22px #000a;}
+.tools-options :is(button,.view-active,.view-menu summary) {display:flex;align-items:center;width:100%;min-height:36px;padding:0 12px;border:0;background:transparent;text-align:left;letter-spacing:inherit;}
+.tools-options button:disabled {opacity:.55;cursor:default;}
+.view-menu summary {justify-content:space-between;}
+.view-menu[open] summary .tools-chevron {transform:translateY(2px) rotate(225deg);}
+.view-options {border-block:1px solid #233548;background:#09111b;}
+.view-options :is(.view-active,button) {padding-inline-start:20px;}
+.view-active {color:var(--active-gold);}
+.tools-options :is(button:not(:disabled),summary):is(:hover,:focus-visible),.tools-trigger:hover {background:#1a2d3f;}
 .search-wrap {position:relative;width:min(250px,30vw);margin-left:auto;}
 .search-wrap input { color:#d1dfea;background:#0b131d;border:1px solid #233548;outline:none;width:100%;height:32px;padding:0 12px;font-size:12px; }
 .search-wrap input::placeholder{color:#617588}
@@ -104,6 +116,13 @@ button { color:inherit; cursor:pointer; }
 .maplibregl-marker.state-label {position:absolute !important;}
 .state-label {background:transparent;border:0;padding:0;pointer-events:auto;cursor:pointer;min-width:22px;min-height:22px;display:flex;align-items:center;justify-content:center;}
 .state-label:hover,.state-label:focus-visible{color:#e7f5ff;text-shadow:0 0 9px #d4f2ff88;}
+.state-label.usa-label {min-height:36px;min-width:44px;padding:0 2px;color:#a7c4d8;font-size:26px;letter-spacing:.075em;}
+.usa-label .state-label-text {opacity:.64;}
+.state-label.usa-label[hidden],.inset-label[hidden] {display:none;}
+.usa-label:is(:hover,:focus-visible) .state-label-text {opacity:1;}
+.national-scope {display:flex;gap:4px;margin-bottom:13px;}
+.national-scope-button {border:1px solid #38536a;background:#101e2b;color:#bcd8ea;min-height:32px;padding:0 10px;font-size:10px;letter-spacing:.08em;}
+.national-scope-button[aria-pressed="true"] {border-color:var(--active-border);color:var(--active-gold);}
 .city-marker:focus-visible{outline:1px solid #a8d0e8;outline-offset:2px;}
 .panel-action {background:#101e2b;color:#bcd8ea;border:1px solid #38536a;padding:9px 12px;margin-top:14px;font-size:11px;letter-spacing:.08em;}
 .panel-action:hover{background:#182d3d;}
@@ -113,7 +132,9 @@ button { color:inherit; cursor:pointer; }
 .panel-help {color:#7e96aa;font-size:10px;line-height:1.5;margin-top:8px;}
 .state-layer-actions {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0 0;}
 .state-layer-actions .panel-action {margin:0;min-height:44px;padding:5px 4px;text-transform:uppercase;}
-.app[data-desktop-atlas='state'] .panel-content > :is(.facts-date,.fact-sources,.census-record,.panel-help) {display:none;}
+.app[data-desktop-atlas] .panel-content > :is(.facts-date,.fact-sources,.census-record:not(.metro-atlas-places),.panel-help) {display:none;}
+.map-controls #map-layers {width:auto;min-width:36px;padding-inline:4px;font-size:9px;opacity:.6;cursor:default;}
+.app:not(.phone-layout):not([data-desktop-atlas='state']):not([data-desktop-atlas='place']) #map-layers {display:none;}
 
 /* v0.2c: map-anchored city overlay. All draw positions use MapLibre map.project()
    in CSS pixels. No HTML city markers, relative offsets, or accumulated transforms. */
@@ -194,6 +215,7 @@ button { color:inherit; cursor:pointer; }
   pointer-events:auto;touch-action:manipulation;
 }
 .rotation-tools button:focus-visible {outline:1px solid #d4a85f;outline-offset:1px;}
+.rotation-tools :is(#compass-home,.compass-direction) {touch-action:none;user-select:none;-webkit-touch-callout:none;}
 .compass-dial {
   position:relative;width:var(--compass-size);aspect-ratio:1;
   transform:rotate(var(--compass-angle));
@@ -263,8 +285,6 @@ button { color:inherit; cursor:pointer; }
       env(safe-area-inset-bottom) env(safe-area-inset-left);
   }
   .topbar {height:44px;min-height:44px;padding:0 10px;gap:8px;}
-  .brand-title {font-size:14px;letter-spacing:.14em;}
-  .brand-mark {font-size:19px;}
   .search-wrap {flex:1;min-width:0;max-width:250px;}
   .search-wrap input {font-size:16px;}
   .search-results {top:46px;max-height:min(46dvh,280px);}
