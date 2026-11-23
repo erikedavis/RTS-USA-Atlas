@@ -317,6 +317,10 @@ export function setupPhoneUI(map,{getSelected,hit,stateAt,insideState,insideMetr
   // of the atlas to close it. Scrolling within the full facts stays native.
   let scrollStart=null;
   info.addEventListener('touchstart',event=>{
+    if(stage==='summary'&&info.querySelector('.region-counties[open]')){
+      scrollStart=null;
+      return;
+    }
     const touch=event.touches[0];
     const direction=stage==='atlas'?1:stage==='summary'&&atlasKind(getSelected())?-1:0;
     const usaStats=stage==='summary'&&atlasKind(getSelected())==='nation';

@@ -552,6 +552,21 @@ for (const isPhone of [false, true]) {
       const counties=metro.locator('summary',{hasText:'Counties (22)'});
       await expect(counties).toBeInViewport();
       await screenshot(page,testInfo,'new-york-metro-stats');
+      if(isPhone){
+        await counties.tap();
+        const panel=page.locator('#panel-content');
+        const {x,y,width,height}=await panel.boundingBox();
+        const cdp=await page.context().newCDPSession(page);
+        const point={x:Math.round(x+width*.76),y:Math.round(y+height-12)};
+        await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[point]});
+        for(let distance=12;distance<=96;distance+=12){
+          await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{...point,y:point.y-distance}]});
+        }
+        await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+        await expect.poll(()=>panel.evaluate(node=>node.scrollTop)).toBeGreaterThan(20);
+        await expect(app).toHaveAttribute('data-phone-stage','summary');
+        await counties.tap();
+      }
       await activate(isPhone?page.getByRole('button',{name:'Open metro atlas'}):page.locator('#desktop-atlas-toggle'));
       await expect(app).toHaveAttribute(atlasKind,'metro');
       await expect(counties).toBeInViewport();
