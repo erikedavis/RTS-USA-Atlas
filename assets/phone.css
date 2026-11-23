@@ -35,10 +35,16 @@
 .phone-layout .content {margin-top:var(--phone-header);flex-direction:column;}
 .phone-layout #map,.phone-layout .gridlines,.phone-layout .map-vignette,.phone-layout .map-loading {bottom:0;}
 .phone-layout .rotation-tools {--compass-size:166px;transition:transform .24s ease,opacity .2s ease;}
-.phone-layout .rotation-tools:not(.rotation-unlocked,.compass-minimized) .compass-face {
+.phone-layout .rotation-tools:not(.compass-minimized) .compass-face {
   pointer-events:auto;touch-action:none;user-select:none;-webkit-touch-callout:none;
 }
+.phone-layout .compass-minimized .compass-face button {pointer-events:none;}
+.phone-layout #compass-toggle {transition:none;}
 .phone-layout .rotation-tools:not(.compass-minimized) #compass-toggle {pointer-events:none;}
+.phone-layout .compass-minimized #compass-toggle {
+  left:auto;right:0;width:56px;height:56px;padding-left:12px;
+  touch-action:none;user-select:none;-webkit-touch-callout:none;
+}
 .phone-layout .phone-dock-body {position:relative;}
 .phone-layout .map-key-toggle {bottom:100%;pointer-events:auto;}
 .phone-layout .dev-zoom {bottom:calc(100% + 4px);}

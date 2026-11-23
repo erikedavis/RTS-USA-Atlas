@@ -1,4 +1,8 @@
-# USAtlas V0.9G preview
+# USAtlas V0.9H preview
+
+On a phone, swipe right across the compass to reset north, lock rotation and hide the rose. Tap the edge chevron or swipe left from its hit area to restore the compass locked at north.
+
+## V0.9G preview
 
 On PC, the X in Stats or Atlas clears the selection and folds away the sidebar. Reopening it shows USA Stats. Counties and Metros stay immediately before Atlas in the header. Drag an outer compass spoke or direction label to turn. Arrow keys and WASD pan continuously, and Q and E turn at 34 degrees per second while unlocked.
 

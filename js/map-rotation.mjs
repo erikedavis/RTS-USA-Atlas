@@ -21,7 +21,7 @@ export function setupRotation(map,controls,onChange){
   const lock=controls.querySelector('#rotation-lock');
   const heading=controls.querySelector('#rotation-bearing');
   let locked=true,minimized=false;
-  let drag=null,centerHold=null,skipClick=false;
+  let drag=null,centerHold=null,returnTouch=null,skipClick=false;
   const isPhone=()=>Boolean(controls.closest('.phone-layout'));
   const desktop=bindDesktopMapKeys(map,{isDesktop:()=>!isPhone(),canTurn:()=>!locked&&!drag?.started,onChange});
 
@@ -34,6 +34,7 @@ export function setupRotation(map,controls,onChange){
   }
 
   function setLocked(value){
+    if(minimized&&!value)return;
     if(value&&!locked&&map.isRotating())map.stop();
     locked=value;
     if(locked){
@@ -56,7 +57,9 @@ export function setupRotation(map,controls,onChange){
   }
 
   function setMinimized(value){
-    if(!locked||minimized===value)return;
+    if(minimized===value)return;
+    if(isPhone())northAndLock(0);
+    else if(!locked)return;
     minimized=value;
     face.inert=minimized;
     controls.classList.toggle('compass-minimized',minimized);
@@ -80,25 +83,18 @@ export function setupRotation(map,controls,onChange){
   face.addEventListener('transitionend',event=>{
     if(event.target===face&&event.propertyName==='transform')onChange();
   });
-  toggle.addEventListener('pointerup',event=>{
-    if(!minimized||!isPhone()||!event.isPrimary||event.pointerType!=='touch')return;
-    const {left,right,top,bottom}=toggle.getBoundingClientRect();
-    const {clientX:x,clientY:y}=event;
-    // A touch immediately after the hide swipe may not synthesize a click.
-    if(x>=left&&x<=right&&y>=top&&y<=bottom)setMinimized(false);
-  });
   toggle.addEventListener('click',event=>{
     if(!minimized&&isPhone()&&event.detail>0)return;
     setMinimized(!minimized);
   });
 
-  function snap(bearing){
+  function snap(bearing,duration=280){
     desktop.stopTurning();
-    map.rotateTo(bearing,{duration:280});
+    map.rotateTo(bearing,{duration});
   }
-  function northAndLock(){
+  function northAndLock(duration){
     setLocked(true);
-    snap(0);
+    snap(0,duration);
   }
 
   function cancelCenterHold(){
@@ -125,11 +121,20 @@ export function setupRotation(map,controls,onChange){
   }
   const canTurnFrom=(button,event)=>button?.matches('[data-bearing]')||(button===rose&&onOuterSpoke(event));
   const angleAt=(event,{x,y})=>Math.atan2(event.clientY-y,event.clientX-x)*180/Math.PI;
+  const staysHorizontal=(distance,maxY)=>maxY<=Math.max(10,distance*.23);
+  const reachedTurn=(gesture,dx,dy)=>gesture.canTurn&&Math.abs(gesture.turn)>=6&&Math.hypot(dx,dy)>=7;
   controls.addEventListener('pointerdown',event=>{
     const mouse=event.pointerType==='mouse';
     if(!event.isPrimary||(event.button!==0&&!(mouse&&!isPhone()&&event.button===2)))return;
     skipClick=false;
     const button=event.target.closest('button');
+    const phoneTouch=isPhone()&&event.pointerType==='touch';
+    if(minimized){
+      if(phoneTouch&&button===toggle){
+        returnTouch={id:event.pointerId,x:event.clientX,y:event.clientY,maxY:0,maxDistance:0};
+      }
+      return;
+    }
     if(button===lock&&event.button===0){
       const {pointerId:id,clientX:x,clientY:y}=event;
       centerHold={id,x,y,timer:setTimeout(()=>{
@@ -141,7 +146,7 @@ export function setupRotation(map,controls,onChange){
     }
     if(mouse&&isPhone())return;
     const canTurn=canTurnFrom(button,event);
-    const canHide=locked&&!minimized&&event.pointerType==='touch'&&face.contains(event.target)&&isPhone();
+    const canHide=phoneTouch&&face.contains(event.target);
     if(!canTurn&&!canHide)return;
     const bounds=dial.getBoundingClientRect();
     const center={x:bounds.left+bounds.width/2,y:bounds.top+bounds.height/2};
@@ -151,6 +156,12 @@ export function setupRotation(map,controls,onChange){
     if(mouse)button.setPointerCapture(event.pointerId);
   });
   controls.addEventListener('pointermove',event=>{
+    if(event.pointerId===returnTouch?.id){
+      const dx=event.clientX-returnTouch.x,dy=event.clientY-returnTouch.y;
+      returnTouch.maxY=Math.max(returnTouch.maxY,Math.abs(dy));
+      returnTouch.maxDistance=Math.max(returnTouch.maxDistance,Math.hypot(dx,dy));
+      return;
+    }
     if(event.pointerId===centerHold?.id&&
       Math.hypot(event.clientX-centerHold.x,event.clientY-centerHold.y)>HOLD_SLOP){
       cancelCenterHold();
@@ -162,7 +173,10 @@ export function setupRotation(map,controls,onChange){
     const angle=angleAt(event,drag.center);
     drag.turn+=((angle-drag.angle+540)%360)-180;
     drag.angle=angle;
-    if(!drag.started&&Math.abs(drag.turn)>=6&&Math.hypot(event.clientX-drag.startX,event.clientY-drag.startY)>=7){
+    const dx=event.clientX-drag.startX;
+    // A straight rightward swipe owns the gesture even when it starts on a direction.
+    if(!drag.started&&drag.canHide&&dx>=-HOLD_SLOP&&staysHorizontal(dx,drag.maxY))return;
+    if(!drag.started&&reachedTurn(drag,dx,event.clientY-drag.startY)){
       drag.started=true;
       desktop.stopTurning();
       if(!locked)map.stop();
@@ -170,22 +184,33 @@ export function setupRotation(map,controls,onChange){
     if(drag.started&&!locked)map.setBearing(drag.bearing-drag.turn);
   });
   controls.addEventListener('pointerup',event=>{
+    if(event.pointerId===returnTouch?.id){
+      const dx=returnTouch.x-event.clientX,dy=event.clientY-returnTouch.y;
+      const tap=Math.max(returnTouch.maxDistance,Math.hypot(dx,dy))<=HOLD_SLOP;
+      const swipe=dx>=28&&staysHorizontal(dx,Math.max(returnTouch.maxY,Math.abs(dy)));
+      returnTouch=null;
+      skipClick=true;
+      if(tap||swipe)setMinimized(false);
+      return;
+    }
     if(event.pointerId===centerHold?.id)cancelCenterHold();
     if(event.pointerId!==drag?.id)return;
     const dx=event.clientX-drag.startX,dy=event.clientY-drag.startY;
-    // Only a deliberate, nearly horizontal pass can hide the locked rose.
-    // Circular strokes on the ring still use the rotation gesture on lift.
-    const hide=locked&&drag.canHide&&dx>=drag.swipeDistance&&
-      Math.max(drag.maxY,Math.abs(dy))<=Math.max(10,dx*.23);
-    const turned=drag.started;
+    const hide=drag.canHide&&dx>=drag.swipeDistance&&staysHorizontal(dx,Math.max(drag.maxY,Math.abs(dy)));
+    const gesture=drag;
+    const turned=gesture.started||(!hide&&reachedTurn(gesture,dx,dy));
     skipClick=skipClick||turned||Math.hypot(dx,dy)>=10;
     drag=null;
     if(hide)setMinimized(true);
     else if(turned&&locked)setLocked(false);
-    else if(turned)onChange();
+    else if(turned){
+      if(!gesture.started)map.setBearing(gesture.bearing-gesture.turn);
+      onChange();
+    }
   });
   for(const type of ['pointercancel','lostpointercapture']){
     controls.addEventListener(type,event=>{
+      if(event.pointerId===returnTouch?.id)returnTouch=null;
       if(event.pointerId===centerHold?.id)cancelCenterHold();
       if(event.pointerId!==drag?.id)return;
       const turned=drag.started;
@@ -211,7 +236,7 @@ export function setupRotation(map,controls,onChange){
   for(const button of [rose,lock])button.addEventListener('click',()=>setLocked(!locked));
   controls.addEventListener('click',event=>{
     const button=event.target.closest('button[data-bearing]');
-    if(button)snap(Number(button.dataset.bearing));
+    if(button&&!minimized)snap(Number(button.dataset.bearing));
   });
   document.addEventListener('keydown',event=>{
     if(event.defaultPrevented||event.isComposing||event.altKey||event.ctrlKey||event.metaKey||
