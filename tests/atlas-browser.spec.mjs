@@ -7,7 +7,7 @@ async function assertRendered(page, testInfo) {
   const response = await page.goto('/', { waitUntil: 'domcontentloaded' });
   expect(response?.ok(), 'The atlas must respond over HTTP').toBe(true);
   await expect(page.locator('#map-loading'), 'Atlas loading overlay must disappear').toBeHidden({ timeout: 50_000 });
-  await expect(page.locator('meta[name="atlas-version"]')).toHaveAttribute('content', 'ALPHA 0.8I');
+  await expect(page.locator('meta[name="atlas-version"]')).toHaveAttribute('content', 'ALPHA 0.8J');
   await expect(page.locator('canvas.maplibregl-canvas')).toHaveCount(1);
   const renderer = await page.evaluate(() => {
     const canvas = document.querySelector('canvas.maplibregl-canvas');
@@ -75,6 +75,32 @@ async function expectBearing(page, expected) {
   })).toBe(expected);
 }
 
+async function tapRoseSpoke(page, isPhone = false) {
+  const { x, y, width, height } = await page.locator('#compass-home').boundingBox();
+  const point = [x + width / 2 + 31, y + height / 2];
+  if (isPhone) await page.touchscreen.tap(...point);
+  else await page.mouse.click(...point);
+}
+
+async function bottomHudGeometry(page, isPhone = false) {
+  return page.evaluate(isPhone => {
+    const rect = selector => document.querySelector(selector).getBoundingClientRect();
+    const glyph = selector => {
+      const svg = document.querySelector(`${selector} svg`);
+      const box = svg.getBBox(), matrix = svg.getScreenCTM();
+      return { top: new DOMPoint(0, box.y).matrixTransform(matrix).y,
+        bottom: new DOMPoint(0, box.y + box.height).matrixTransform(matrix).y };
+    };
+    const home = isPhone ? '#phone-home' : '#reset-view';
+    const tray = rect('#phone-tray');
+    const edge = isPhone && tray.height > 0 ? tray.top : rect('#map').bottom;
+    const key = glyph('#map-key-toggle'), zoom = rect('#zoom-text');
+    return { homeGap: edge - glyph(home).bottom, keyGap: edge - key.bottom,
+      hitOffset: Math.max(Math.abs(rect(home).bottom - edge), Math.abs(rect('#map-key-toggle').bottom - edge)),
+      zoomOffset: Math.abs((zoom.top + zoom.bottom - key.top - key.bottom) / 2) };
+  }, isPhone);
+}
+
 async function countyStates(page) {
   return page.evaluate(() => [...new Set(testMap.queryRenderedFeatures({ layers: ['county-lines'] })
     .map(feature => feature.properties.state_fips))].sort());
@@ -82,6 +108,12 @@ async function countyStates(page) {
 
 test('desktop national map loads, has working WebGL, and renders', async ({ page }, testInfo) => {
   await assertRendered(page, testInfo);
+  const hud = await bottomHudGeometry(page);
+  expect(hud.hitOffset).toBeLessThan(1);
+  for (const gap of [hud.homeGap, hud.keyGap]) {
+    expect(gap).toBeGreaterThanOrEqual(0);
+    expect(gap).toBeLessThanOrEqual(6);
+  }
   await expect(page.locator('.topbar #search')).toBeVisible();
   await expect(page.locator('#go-ak, #go-hi, #go-pr, .toolbar, #source-tag, .city-legend')).toHaveCount(0);
   const summary = page.locator('#view-menu summary');
@@ -142,7 +174,7 @@ test('desktop compass turns with the map and highlights one direction on hover',
   await page.keyboard.press('r');
   await expectBearing(page, 0);
   await expect(lock).toHaveAttribute('aria-pressed', 'false');
-  await rose.click();
+  await tapRoseSpoke(page);
   await expect(lock).toHaveAttribute('aria-pressed', 'true');
   await expect(controls).toHaveClass(/rotation-north-locked/);
 });
@@ -256,7 +288,7 @@ for (const isPhone of [false, true]) {
       const beforeToggle = await camera(page);
       const msa = page.locator('#toggle-metros');
       if (isPhone) await msa.tap();
-      else await page.getByRole('button', { name: 'SHOW / SELECT METROS' }).click();
+      else await page.getByRole('button', { name: 'Show metros', exact: true }).click();
       await expect(msa).toHaveAttribute('aria-pressed', 'true');
       expect(await camera(page)).toEqual(beforeToggle);
 
@@ -264,6 +296,37 @@ for (const isPhone of [false, true]) {
         .map(feature => feature.properties.name))]);
       await expect.poll(metros).toContain('Memphis, TN-MS-AR');
       expect((await metros()).every(name => name.split(', ').at(-1).split('-').includes('TN'))).toBe(true);
+
+      const activate = button => isPhone ? button.tap() : button.click();
+      await activate(isPhone ? page.getByRole('button', { name: 'Open state atlas' }) : page.locator('#desktop-atlas-toggle'));
+      await waitForCamera(page);
+      const atlasCamera = await camera(page);
+      const atlasCounties = page.getByRole('button', { name: 'Show counties', exact: true });
+      const atlasMetros = page.getByRole('button', { name: 'Show metros', exact: true });
+      const cty = page.locator('#toggle-counties');
+      await expect(atlasMetros).toHaveAttribute('aria-pressed', 'true');
+      await expect(page.locator('#panel-content .fact-sources')).toBeHidden();
+      await expect(page.locator('#panel-content .facts-date')).toBeHidden();
+      await expect(page.locator('#panel-content .census-record')).toBeHidden();
+
+      await activate(atlasMetros);
+      await expect(msa).toHaveAttribute('aria-pressed', 'false');
+      await expect(atlasMetros).toHaveAttribute('aria-pressed', 'false');
+      await expect.poll(metros).toEqual([]);
+      await activate(atlasCounties);
+      await expect(cty).toHaveAttribute('aria-pressed', 'true');
+      await expect(atlasCounties).toHaveAttribute('aria-pressed', 'true');
+      await expect.poll(() => countyStates(page)).toEqual(['47']);
+      await activate(atlasCounties);
+      await expect(cty).toHaveAttribute('aria-pressed', 'false');
+      await expect(atlasCounties).toHaveAttribute('aria-pressed', 'false');
+      await expect.poll(() => countyStates(page)).toEqual([]);
+      await activate(atlasMetros);
+      await expect(msa).toHaveAttribute('aria-pressed', 'true');
+      await expect.poll(metros).toContain('Memphis, TN-MS-AR');
+      expect(await camera(page)).toEqual(atlasCamera);
+      await activate(isPhone ? page.locator('#phone-atlas-back') : page.locator('#desktop-atlas-toggle'));
+      await waitForCamera(page);
 
       if (isPhone) await page.getByRole('button', { name: 'Clear state selection' }).tap();
       else await page.keyboard.press('Escape');
@@ -284,17 +347,25 @@ test.describe('phone viewport', () => {
     await readMap(page);
     const controls = page.getByRole('group', { name: 'Map rotation' });
     const lock = page.locator('#rotation-lock');
-    const rose = page.locator('#compass-home');
+    const lockGlyph = lock.locator('svg');
     await expect(controls.locator('[data-bearing]')).toHaveCount(8);
+    const aligned = await lock.evaluate(el => {
+      const lock = el.getBoundingClientRect(), rose = document.querySelector('.compass-rose').getBoundingClientRect();
+      return Math.max(Math.abs((lock.left + lock.right - rose.left - rose.right) / 2),
+        Math.abs((lock.top + lock.bottom - rose.top - rose.bottom) / 2));
+    });
+    expect(aligned).toBeLessThan(1);
     await screenshot(page, testInfo, 'compass-locked-phone');
 
     await lock.tap();
     await expect(lock).toHaveAttribute('aria-pressed', 'false');
-    await expect(lock).toHaveCSS('opacity', '0.45');
+    await expect(lockGlyph).toHaveCSS('animation-name', 'compass-lock-release');
+    await expect(lockGlyph).toHaveCSS('opacity', '0');
     await controls.getByRole('button', { name: 'Southeast up', exact: true }).tap();
     await expectBearing(page, 135);
     await lock.tap();
     await expect(lock).toHaveAttribute('aria-pressed', 'true');
+    await expect(lockGlyph).toHaveCSS('opacity', '1');
     await expectBearing(page, 135);
     await expect(controls).not.toHaveClass(/rotation-north-locked/);
     await screenshot(page, testInfo, 'compass-locked-angle-phone');
@@ -305,7 +376,7 @@ test.describe('phone viewport', () => {
     await expectBearing(page, 135);
     await lock.tap();
     await expect(lock).toHaveAttribute('aria-pressed', 'false');
-    await rose.tap();
+    await tapRoseSpoke(page, true);
     await expectBearing(page, 0);
     await expect(controls).toHaveClass(/rotation-north-locked/);
     await page.getByRole('button', { name: 'Open state atlas' }).tap();
@@ -373,15 +444,13 @@ test.describe('phone viewport', () => {
     const home = page.getByRole('button', { name: 'National view', exact: true });
     const checkDock = async stage => {
       await expect(app).toHaveAttribute('data-phone-stage', stage);
-      await expect.poll(() => page.evaluate(() => {
-        const rect = selector => document.querySelector(selector).getBoundingClientRect();
-        const tray = rect('#phone-tray');
-        const edge = tray.height > 0 ? tray.top : rect('#map').bottom;
-        const zoom = rect('#zoom-text');
-        const key = rect('#map-key-toggle');
-        return Math.max(Math.abs(rect('#phone-home').bottom - edge), Math.abs(key.bottom - edge),
-          Math.abs((zoom.top + zoom.bottom - key.top - key.bottom) / 2));
-      })).toBeLessThan(1);
+      await expect.poll(async () => (await bottomHudGeometry(page, true)).hitOffset).toBeLessThan(1);
+      const hud = await bottomHudGeometry(page, true);
+      for (const gap of [hud.homeGap, hud.keyGap]) {
+        expect(gap).toBeGreaterThanOrEqual(0);
+        expect(gap).toBeLessThanOrEqual(6);
+      }
+      expect(hud.zoomOffset).toBeLessThan(2);
     };
     await checkDock('closed');
     await key.tap();

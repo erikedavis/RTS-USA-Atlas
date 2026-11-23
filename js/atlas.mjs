@@ -185,11 +185,15 @@ function display(f) {
   }
   info.append(record);
   if(p.kind==='state'){
-    for(const [label,enable] of [['SHOW / SELECT COUNTIES',toggleCountySelection],['SHOW / SELECT METROS',toggleMetros]]){
+    const actions=element('div','state-layer-actions');
+    for(const [layer,label,toggle] of [['counties','Show counties',toggleCountySelection],['metros','Show metros',toggleMetros]]){
       const button=element('button','panel-action',label);button.type='button';
-      button.addEventListener('click',()=>enable(true));
-      info.append(button);
+      button.dataset.layerToggle=layer;
+      button.addEventListener('click',()=>toggle());
+      actions.append(button);
     }
+    info.querySelector('.facts-date,.fact-sources,.census-record').before(actions);
+    updateLayerButtons();
     if(!phone?.active)info.append(element('div','panel-help','Click a state abbreviation to zoom to that state. Select a city above to visit it.'));
   }
   $('#selection-status').textContent=(p.kind||'FEATURE').toUpperCase()+' SELECTED';
@@ -617,10 +621,8 @@ function updateMetroMode(){
   const modeKey=`${mode}:${overview}:${scope}`;
   if(modeKey===currentMetroMode)return;
   currentMetroMode=modeKey;
-  const visible=mode!=='off',btn=$('#toggle-metros');
-  btn.classList.toggle('active',visible);
-  btn.setAttribute('aria-pressed',String(visible));
-  btn.title=visible?'Hide metro areas':'Show metro areas';
+  const visible=mode!=='off';
+  updateLayerButtons();
   for(const id of ['metro-surface','metro-lines','metro-hit','metro-outline-hit','metro-selected','metro-names']){
     map.setLayoutProperty(id,'visibility',visible?'visible':'none');
   }
@@ -644,15 +646,22 @@ function findStateByGeoid(geoid){
   return states.features.find(feature=>feature.properties.geoid===geoid);
 }
 function countySelectable(){return countySelectionOverride;}
-function updateCountyButton(){
-  const button=$('#toggle-counties');
-  button.classList.toggle('active',countySelectionOverride);
-  button.setAttribute('aria-pressed',String(countySelectionOverride));
-  button.title=countySelectionOverride?'Hide counties and turn off county selection':'Show counties and enable county selection (off by default)';
+function updateLayerButtons(){
+  const metroVisible=metroMode()!=='off';
+  for(const [layer,visible,title] of [
+    ['counties',countySelectionOverride,countySelectionOverride?'Hide counties and turn off county selection':'Show counties and enable county selection'],
+    ['metros',metroVisible,metroVisible?'Hide metro areas':'Show metro areas'],
+  ]){
+    for(const button of document.querySelectorAll(`[data-layer-toggle="${layer}"]`)){
+      button.classList.toggle('active',visible);
+      button.setAttribute('aria-pressed',String(visible));
+      button.title=title;
+    }
+  }
 }
 function toggleCountySelection(force){
   countySelectionOverride=typeof force==='boolean'?force:!countySelectionOverride;
-  updateCountyButton();
+  updateLayerButtons();
   for(const id of ['county-hit','county-lines','county-selected','county-names'])map.setLayoutProperty(id,'visibility',countySelectionOverride?'visible':'none');
   if(!countySelectionOverride && selected?.properties?.kind==='county')deselect();
   if(countySelectionOverride){

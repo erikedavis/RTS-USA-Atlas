@@ -1,4 +1,4 @@
-# USAtlas V0.8I preview
+# USAtlas V0.8J preview
 
 Requires Python 3. Clone the repository or extract its source ZIP, then run **Start_Atlas.cmd** from that folder. The launcher opens **http://127.0.0.1:8020/**.
 [Development handoff](HANDOFF.md) covers the current preview, repeatable checks, and open work.
@@ -7,7 +7,7 @@ Requires Python 3. Clone the repository or extract its source ZIP, then run **St
 
 - Select a state, city or metro, then choose **Atlas** in the right sidebar. The sidebar widens. State Atlas frames the outline and fades out surrounding states. City Atlas keeps the zoom and highlights its metro when one exists. Metro Atlas frames the metro and includes a list of Census places with points inside its boundary.
 - **Back** restores the previous map position, zoom and bearing. A linked city opened from a state returns to that state's atlas or stats.
-- The chevron midway down the sidebar hides it. Click the remaining chevron to reopen it, or make a new selection. Home sits in the upper-left corner of the map. The header contains **VIEW: STATISTICAL** and Search.
+- The chevron midway down the sidebar hides it. Click the remaining chevron to reopen it, or make a new selection. Home sits at the lower-left edge of the map and Key sits at the lower-right edge. The header contains **VIEW: STATISTICAL** and Search.
 
 ## Phone controls
 
@@ -22,11 +22,11 @@ Requires Python 3. Clone the repository or extract its source ZIP, then run **St
 
 ## Counties and metros
 
-Enable **CTY** or **MSA** from a state's details or the map controls. With a state selected, county and metro outlines stay scoped to that state while you zoom, pan, or rotate. A metro spanning several states appears for any state it covers. Clear the state selection for nationwide coverage. County selection is available from zoom 4.5 and names appear from zoom 7 where they fit. Select a metro to see its July 1, 2025 population and total area.
+Use **Show counties** or **Show metros** directly beneath the state facts in State Atlas. Each button toggles the same layer as **CTY** or **MSA** in the map controls. With a state selected, county and metro outlines stay scoped to that state while you zoom, pan, or rotate. A metro spanning several states appears for any state it covers. Clear the state selection for nationwide coverage. County selection is available from zoom 4.5 and names appear from zoom 7 where they fit. Select a metro to see its July 1, 2025 population and total area.
 
 ## Rotation and search
 
-Use the padlock under the top-right compass to enable rotation or lock the current angle. Right-drag on a PC or twist with two fingers on a phone. The rose and the positions of its letters follow the map bearing, with each letter upright. Click or tap any direction to snap to that heading. The rose center unlocks a north-up map, or returns to north and locks from other states. **R** returns north while retaining the current lock setting. The open padlock stays faintly visible on the phone so it can be tapped again.
+Click or tap the compass center to unlock rotation or lock the current angle. The shackle opens and the icon fades shortly after unlocking. Right-drag on a PC or twist with two fingers on a phone. The rose and the positions of its letters follow the map bearing, with each letter upright. Click or tap any direction to snap to that heading. Click or tap a spoke outside the center to return to north and lock rotation. **R** returns north while retaining the current lock setting.
 
 Type a state abbreviation such as **MN** in Search. It appears first, and Enter opens its facts and fits the state. The angle is preserved.
 

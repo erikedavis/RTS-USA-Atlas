@@ -1,4 +1,8 @@
-# USAtlas V0.8I preview
+# USAtlas V0.8J preview
+
+The compass padlock is centered over the rose. Its open icon holds for about three-quarters of a second and fades. The center remains the lock control and the spokes reset north and lock. State Atlas has a synchronized Show counties and Show metros row directly under the facts. Home and Key sit close to the map or dock edge on PC and phone.
+
+## V0.8I preview
 
 The standalone compass has eight directly selectable directions, an animated padlock below, and a subdued blue-gray state when locked at north. Direction letters move with their points and stay upright. On desktop, hovering or focusing a direction enlarges and brightens it. The faint open padlock is always reachable by touch. The existing lock, heading snaps, and north reset use the same map rotation controller.
 
