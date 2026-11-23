@@ -9,7 +9,7 @@ async function assertRendered(page, testInfo) {
   const response = await page.goto('/', { waitUntil: 'domcontentloaded' });
   expect(response?.ok(), 'The atlas must respond over HTTP').toBe(true);
   await expect(page.locator('#map-loading'), 'Atlas loading overlay must disappear').toBeHidden({ timeout: 50_000 });
-  await expect(page.locator('meta[name="atlas-version"]')).toHaveAttribute('content', 'ALPHA 0.9C');
+  await expect(page.locator('meta[name="atlas-version"]')).toHaveAttribute('content', 'ALPHA 0.9D');
   await expect(page.locator('canvas.maplibregl-canvas')).toHaveCount(1);
   const renderer = await page.evaluate(() => {
     const canvas = document.querySelector('canvas.maplibregl-canvas');
@@ -532,11 +532,71 @@ for (const isPhone of [false, true]) {
       await expect(page.locator('#selection-status')).toHaveText('COUNTY SELECTED');
       await expect(page.locator('#toggle-counties')).toHaveAttribute('aria-pressed','true');
     });
+
+    test('metro and county geography links work in stats and Metro Atlas', async ({ page }, testInfo) => {
+      await assertRendered(page,testInfo);
+      const activate=button=>isPhone?button.tap():button.click();
+      const title=page.locator('#panel-content h1');
+      const app=page.locator('.app'),atlasKind=isPhone?'data-phone-atlas-kind':'data-desktop-atlas';
+      const metro=page.getByLabel('Metro geography'),county=page.getByLabel('County geography');
+      const states=metro.locator('.place-state');
+      const largest=group=>group.locator('.place-location',{hasText:'Largest city'}).getByRole('button');
+      const openMetro=async()=>{
+        await page.locator('#search').fill('New York-Newark-Jersey City');
+        await activate(page.locator('#search-results').getByRole('button',{name:/New York-Newark-Jersey City.*METRO/i}));
+        await expect(title).toHaveText('New York-Newark-Jersey City, NY-NJ');
+      };
+      await openMetro();
+      await expect(states.getByRole('button')).toHaveText(['New Jersey','New York']);
+      await expect(largest(metro)).toHaveText('New York');
+      const counties=metro.locator('summary',{hasText:'Counties (22)'});
+      await expect(counties).toBeInViewport();
+      await screenshot(page,testInfo,'new-york-metro-stats');
+      await activate(isPhone?page.getByRole('button',{name:'Open metro atlas'}):page.locator('#desktop-atlas-toggle'));
+      await expect(app).toHaveAttribute(atlasKind,'metro');
+      await expect(counties).toBeInViewport();
+      await screenshot(page,testInfo,'new-york-metro-atlas');
+      await activate(counties);
+      await expect(metro.locator('.region-counties button')).toHaveCount(22);
+      await activate(metro.getByRole('button',{name:'Nassau County, NY',exact:true}));
+      await expect(title).toHaveText('Nassau');
+      await expect(app).not.toHaveAttribute(atlasKind);
+      await expect(county.getByRole('button',{name:'New York',exact:true})).toBeVisible();
+      await screenshot(page,testInfo,'nassau-county-stats');
+      const countyCity=await largest(county).innerText();
+      await activate(largest(county));
+      await expect(title).toHaveText(countyCity);
+      await expect(page.getByLabel('City geography')).toBeVisible();
+      await openMetro();
+      await activate(largest(metro));
+      await expect(title).toHaveText('New York');
+      await expect(page.getByLabel('City geography')).toBeVisible();
+      await openMetro();
+      await activate(states.getByRole('button',{name:'New Jersey',exact:true}));
+      await expect(title).toHaveText('New Jersey');
+    });
   });
 }
 
 test.describe('phone viewport', () => {
   test.use({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
+
+  test('Long Island and New York City both fit at regional zoom', async ({ page }, testInfo) => {
+    await page.setViewportSize({width:390,height:694});
+    await exposeMap(page);
+    await assertRendered(page,testInfo);
+    await readMap(page);
+    for(const bearing of [0,32]){
+      await page.evaluate(bearing=>testMap.jumpTo({center:[-72.94,40.39],zoom:5.35,bearing}),bearing);
+      await expect.poll(()=>page.evaluate(()=>{
+        const island=testMap.queryRenderedFeatures({layers:['geography-island']}).find(f=>f.properties.id==='long-island');
+        const city=testMap.queryRenderedFeatures({layers:['city-name-0']}).find(f=>f.properties.geoid==='3651000');
+        if(!island||!city)return null;
+        return {name:island.properties.name,angle:Math.round(island.properties.angle),city:city.properties.name,anchor:city.properties.anchor};
+      })).toEqual({name:'Long Island',angle:-16,city:'New York',anchor:'right'});
+      await screenshot(page,testInfo,`long-island-${bearing}`);
+    }
+  });
 
   test('phone compass keeps all eight directions and the lock tappable', async ({ page }, testInfo) => {
     await exposeMap(page);

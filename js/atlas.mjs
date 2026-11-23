@@ -1,14 +1,14 @@
 // USA Atlas 0.3A - adaptive city hierarchy and display insets, official Census 2025 geography.
 // Local renderer and geography; no external requests at runtime.
 import * as maplibregl from '../assets/vendor/maplibre-gl.mjs';
-import {createCityLayers} from './city-display.mjs?v=09c';
+import {createCityLayers} from './city-display.mjs?v=09d';
 import {isMetroScale} from './city-layout.mjs';
 import {populateMapKey} from './city-symbols.mjs';
-import {addGeographyLabels} from './geography-labels.mjs';
+import {createGeographyLabels} from './geography-labels.mjs?v=09d';
 import {createStateLabels} from './state-labels.mjs?v=09c';
 import {prepareStateShapes,shapeContainsPoint} from './state-label-placement.mjs';
 import {isNorthUp,screenBounds,setupRotation} from './map-rotation.mjs';
-import {setupPhoneUI} from './phone-ui.mjs?v=09a';
+import {setupPhoneUI} from './phone-ui.mjs?v=09d';
 import {COUNTY_LABEL_ZOOM,createCountyLabels} from './county-labels.mjs';
 import {createSelectedAreaLabel} from './selected-area-label.mjs';
 import {INSETS, NATIONAL_BOUNDS, CONUS_BOUNDS, displayData, displayPoint, geographicPoint, hawaiiTailMarks, insetFrames} from './insets.mjs';
@@ -45,7 +45,7 @@ let countySelectionOverride = false;
 let allSearch = null;
 let searchLoading = null;
 let toastTimer;
-let stateLabelsController, cityLayers, mappedCityIds, selectedAreaLabel;
+let stateLabelsController, cityLayers, citiesById, selectedAreaLabel, geographyLabels;
 let phone,rotation,atlasFocus=null,cityAtlas=null,metroBounds,placeContext;
 let desktopAtlas=null,desktopStateReturn=null;
 const insetMarkers = [];
@@ -157,7 +157,7 @@ function basicFacts(f,overview) {
   if(!record)return false;
   (overview?.identity||info).append(populationFacts(record));
   const factList=overview?.facts||info;
-  if(p.kind==='state'||p.kind==='county'){
+  if(p.kind==='state'){
     function cityRecord(label,id){
       const city=facts.places[id];if(!city)return;
       const button=element('button','fact-city','');button.type='button';
@@ -165,21 +165,19 @@ function basicFacts(f,overview) {
         element('span','fact-city-pop',city.population===undefined?'Population unavailable':
           number(city.population)+(overview?' residents':' residents / '+populationDate(city.population_date))));
       button.addEventListener('click',()=>{
-        const feature=cities.features.find(f=>f.properties.geoid===id);
+        const feature=citiesById.get(id);
         if(!feature)return;
-        if(p.kind!=='state')select(feature,{zoom:true});
-        else if(phone?.active)phone.openCityFromState(feature);
+        if(phone?.active)phone.openCityFromState(feature);
         else openDesktopCityFromState(feature);
       });
       factList.append(button);
     }
-    if(p.kind==='county'){
-      cityRecord('LARGEST CITY / PLACE',record.largest_city);
-      if(record.largest_city_population_in_county!==undefined)row('CITY RESIDENTS IN COUNTY',number(record.largest_city_population_in_county));
-      info.append(element('div','facts-date',record.largest_city_method||'No Census place is recorded within this county.'));
-    }
-    else if(record.capital && record.capital===record.largest_city)cityRecord('CAPITAL / LARGEST CITY',record.capital);
+    if(record.capital && record.capital===record.largest_city)cityRecord('CAPITAL / LARGEST CITY',record.capital);
     else {cityRecord('STATE CAPITAL',record.capital);cityRecord('LARGEST CITY',record.largest_city);}
+  }
+  if(p.kind==='county'){
+    if(record.largest_city_population_in_county!==undefined)row('CITY RESIDENTS IN COUNTY',number(record.largest_city_population_in_county));
+    if(record.largest_city_method)info.append(element('div','facts-date',record.largest_city_method));
   }
   areaFacts(record,factList);
   if(record.land_sq_mi!==undefined)info.append(element('div','facts-date','AREA / CENSUS '+record.area_year+' / TOTAL INCLUDES WATER'));
@@ -205,11 +203,12 @@ function display(f) {
     'GEOGRAPHIC RECORD / '+(p.kind||'FEATURE').toUpperCase()),element('h1','',title||'UNNAMED')];
   let overview;
   placeContext=null;
-  if(p.kind==='place'){
-    const grid=element('div','place-heading'),identity=element('div','place-identity');
+  if(['place','county','metro'].includes(p.kind)){
+    const grid=element('div',p.kind==='metro'?'place-heading metro-heading':'place-heading');
+    const identity=element('div','place-identity');
     identity.append(...heading);
-    placeContext=placeLinks(f);
-    grid.append(identity,placeContext.links);
+    if(p.kind==='place')placeContext=placeLinks(f);
+    grid.append(identity,placeContext?.links||areaLinks(f));
     info.replaceChildren(grid);
     overview={identity};
   }else if(phone?.active&&p.kind==='state'){
@@ -235,7 +234,21 @@ function display(f) {
 }
 
 const placePoint=feature=>feature.geometry?.type==='Point'?feature.geometry.coordinates:
-  cities.features.find(city=>city.properties.geoid===feature.properties.geoid)?.geometry.coordinates;
+  citiesById.get(feature.properties.geoid)?.geometry.coordinates;
+
+function locationButton(name,activate){
+  const button=element('button','place-location-link',name);
+  button.type='button';
+  button.addEventListener('click',activate);
+  return button;
+}
+
+function locationRow(links,label,state=false){
+  const row=element('div',state?'place-location place-state':'place-location');
+  row.append(element('span','record-label',label));
+  links.append(row);
+  return row;
+}
 
 function placeLinks(feature){
   const links=element('div','place-locations');
@@ -247,18 +260,14 @@ function placeLinks(feature){
   const county=point&&fips?countyAtPlace(fips,point):Promise.resolve(null);
 
   function addLocation(label,result,activate,empty,stateRow=false){
-    const row=element('div',stateRow?'place-location place-state':'place-location');
+    const row=locationRow(links,label,stateRow);
     const text=element('span','place-location-value','Loading…');
-    row.append(element('span','record-label',label),text);
-    links.append(row);
+    row.append(text);
     function apply(area){
       if(!area){text.textContent=empty;return;}
       const properties=area.properties;
       const name=properties.kind==='county'?(properties.official_name||properties.name):properties.name;
-      const button=element('button','place-location-link',name);
-      button.type='button';
-      button.addEventListener('click',()=>activate(area));
-      text.replaceWith(button);
+      text.replaceWith(locationButton(name,()=>activate(area)));
     }
     if(result instanceof Promise)result.then(apply).catch(()=>{text.textContent='Unavailable';});
     else apply(result);
@@ -268,6 +277,39 @@ function placeLinks(feature){
   addLocation('Metro',metro.then(match=>match?.area),selectMetro,'Outside an MSA');
   addLocation('County',county,selectCounty,'Unavailable');
   return {links,point,metro};
+}
+
+function areaLinks(feature){
+  const p=feature.properties,isMetro=p.kind==='metro';
+  const links=element('div','place-locations');
+  links.setAttribute('aria-label',isMetro?'Metro geography':'County geography');
+  const members=Object.entries(isMetro?metroFacts[p.geoid]?.counties||{}:{})
+    .sort(([idA,nameA],[idB,nameB])=>idA.slice(0,2).localeCompare(idB.slice(0,2))||nameA.localeCompare(nameB));
+  const stateIds=isMetro?[...new Set(members.map(([id])=>id.slice(0,2)))]:[p.state_fips];
+  const states=stateIds.map(findStateByGeoid).filter(Boolean);
+  const stateRow=locationRow(links,states.length>1?'States':'State',true);
+  for(const state of states)stateRow.append(locationButton(state.properties.name,()=>selectAndFitState(state)));
+  const city=isMetro?placesInMetro(feature).find(f=>f.properties.population_known):
+    citiesById.get(facts.counties[p.geoid]?.largest_city);
+  const cityRow=locationRow(links,city?.properties.official_name?.endsWith(' CDP')?'Largest place':'Largest city');
+  if(city)cityRow.append(locationButton(city.properties.name,()=>select(city,{zoom:true})));
+  else cityRow.append(element('span','place-location-value','Unavailable'));
+  if(members.length===1){
+    const [[id,name]]=members;
+    locationRow(links,'County').append(locationButton(name,()=>selectSearchItem({k:'county',id,f:id.slice(0,2)})));
+  }else if(members.length>1){
+    const counties=element('details','region-counties');
+    counties.append(element('summary','record-label',`Counties (${members.length})`));
+    const list=element('div','place-location');
+    for(const [id,name] of members){
+      const fips=id.slice(0,2),state=states.find(f=>f.properties.geoid===fips);
+      const title=states.length>1&&state?`${name}, ${state.properties.abbr}`:name;
+      list.append(locationButton(title,()=>selectSearchItem({k:'county',id,f:fips})));
+    }
+    counties.append(list);
+    links.append(counties);
+  }
+  return links;
 }
 
 async function metroAtPlace(point){
@@ -403,6 +445,10 @@ function fitPhoneAtlas(feature,headerHeight,sheetHeight,duration){
     fitAtCurrentBearing(nationalBounds(),{padding:{top:headerHeight+29,bottom:sheetHeight+12,left:12,right:12},maxZoom:3.5,duration});
     return;
   }
+  if(feature.properties.kind==='metro'){
+    fitAtCurrentBearing(boundsOf(feature.geometry),{padding:{top:headerHeight+12,bottom:sheetHeight+12,left:15,right:15},maxZoom:13,duration});
+    return;
+  }
   const bottom=Math.min(sheetHeight,map.getContainer().clientHeight*.52);
   map.easeTo({center:cityAtlas?.point||map.getCenter(),offset:[0,(headerHeight-bottom)/2],duration});
 }
@@ -507,18 +553,27 @@ function backFromDesktopAtlas(){
   if(!toggle.hidden)toggle.focus();
 }
 
-function showMetroPlaces(metro){
-  const details=element('details','census-record metro-atlas-places');
-  details.append(element('summary','','Cities and places'));
-  info.querySelector('.census-record').before(details);
-  details.addEventListener('toggle',()=>{
-    if(!details.open||details.children.length>1)return;
+const metroPlaces=new WeakMap();
+function placesInMetro(metro){
+  if(!metroPlaces.has(metro)){
     const shape=prepareStateShapes(metro.geometry);
     const [[west,south],[east,north]]=boundsOf(metro.geometry);
     const places=cities.features.filter(city=>{
       const [lng,lat]=city.geometry.coordinates;
       return lng>=west&&lng<=east&&lat>=south&&lat<=north&&shapeContainsPoint(shape,[lng,lat]);
     }).sort((a,b)=>b.properties.population-a.properties.population||a.properties.name.localeCompare(b.properties.name));
+    metroPlaces.set(metro,places);
+  }
+  return metroPlaces.get(metro);
+}
+
+function showMetroPlaces(metro){
+  const details=element('details','census-record metro-atlas-places');
+  details.append(element('summary','','Cities and places'));
+  info.querySelector('.census-record').before(details);
+  details.addEventListener('toggle',()=>{
+    if(!details.open||details.children.length>1)return;
+    const places=placesInMetro(metro);
     if(!places.length){details.append(element('p','','No bundled Census places have a mapped point within this area.'));return;}
     details.append(element('p','','Census places with a mapped point inside the metro boundary.'));
     const list=element('ul','metro-place-list');
@@ -657,7 +712,7 @@ async function loadStateDetail(fips) {
   detailPlaceState=fips;
   try {
     const data=await cacheFetch(pointCache,fips,`${BASE}places/${fips}_points.geojson`);
-    if(detailPlaceState===fips)map.getSource('local-places').setData({...data,features:data.features.filter(f=>!mappedCityIds.has(f.properties.geoid))});
+    if(detailPlaceState===fips)map.getSource('local-places').setData({...data,features:data.features.filter(f=>!citiesById.has(f.properties.geoid))});
   }catch(error){console.warn('Place points:',error);}
   if(detailPlaceState===fips&&map.getZoom()>=8.3)loadPlacePolygons(fips);
 }
@@ -828,7 +883,7 @@ function mapReservations(){
   return [...stateLabelsController.reservations(),...mapControlReservations(true),...(atlasFocus?[]:[prFrame])];
 }
 function makeLabels() {
-  cityLayers=createCityLayers(map,cities,{isNational:isNationalView,metroOverview,phoneViewport:()=>Boolean(phone?.active),stateLabelsFirst,regionVisible});
+  cityLayers=createCityLayers(map,cities,{isNational:isNationalView,metroOverview,phoneViewport:()=>Boolean(phone?.active),stateLabelsFirst,regionVisible,geographyLabels});
   stateLabelsController=createStateLabels(map,stateLabels,states,maplibregl.Marker,(geoid,event)=>{
     const state=findStateByGeoid(geoid);
     if(state&&(!phone?.active||event.detail===0))selectAndFitState(state);
@@ -986,7 +1041,7 @@ function addSourcesAndLayers() {
   map.addLayer({id:'county-selected',type:'line',layout:{visibility:'none','line-join':'bevel','line-cap':'butt'},source:'counties',filter:['==',['get','geoid'],'__none__'],paint:{'line-color':'#c2e0f5','line-width':2.6,'line-opacity':1}});
   map.addLayer({id:'place-selected',type:'line',layout:{'line-join':'bevel','line-cap':'butt'},source:'place-areas',filter:['==',['get','geoid'],'__none__'],paint:{'line-color':'#a2d7fc','line-width':2.2,'line-opacity':1}});
   map.addLayer({id:'metro-selected',type:'line',source:'metros',filter:['==',['get','geoid'],'__none__'],layout:{visibility:'none','line-join':'bevel','line-cap':'butt'},paint:{'line-color':'#c6daed','line-width':2.3}});
-  addGeographyLabels(map);
+  geographyLabels=createGeographyLabels(map);
   map.addLayer({id:'metro-names',type:'symbol',source:'metro-labels',minzoom:7.55,layout:{visibility:'none',
     'text-field':['get','label'],'text-font':['Noto Sans Bold'],'text-size':12,'text-letter-spacing':.055,
     'text-max-width':12,'text-padding':9,'text-variable-anchor':['center','top','bottom','left','right'],'text-radial-offset':.5},
@@ -1259,7 +1314,7 @@ async function initialize() {
       loadJSON(BASE+'manifest.json'), loadJSON(BASE+'states.geojson'),
       loadJSON(BASE+'state_labels.json'),loadJSON(BASE+'cities.geojson'),loadJSON(BASE+'basic_facts.json'),loadJSON(BASE+'usa_facts.json')
     ]);
-    mappedCityIds=new Set(cities.features.map(f=>f.properties.geoid));
+    citiesById=new Map(cities.features.map(f=>[f.properties.geoid,f]));
     for(const state of states.features)stateNames.set(state.properties.geoid,state.properties.name);
     map=new maplibregl.Map({
       container:'map',center:[-98.4,38.5],zoom:3.3,minZoom:1.1,maxZoom:16,

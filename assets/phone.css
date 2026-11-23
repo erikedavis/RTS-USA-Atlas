@@ -98,6 +98,11 @@
 .phone-layout .national-area .record-value {max-width:none;text-align:left;}
 .phone-layout .place-heading {margin:0 0 7px;}
 .phone-layout .place-location-link {min-height:27px;}
+.phone-layout .panel-content .metro-heading h1 {font-size:17px;letter-spacing:.015em;}
+.phone-layout .region-counties summary {min-height:27px;}
+@media (orientation: portrait) {
+  .app.phone-layout:has(.metro-heading) {--phone-summary:min(184px,42dvh);}
+}
 .phone-layout .phone-state-overview {display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:10px;align-items:start;}
 .phone-layout .phone-state-overview h1 {margin:4px 0 6px;letter-spacing:.025em;}
 .phone-layout .phone-state-overview .section-kicker {font-size:9px;letter-spacing:.11em;}

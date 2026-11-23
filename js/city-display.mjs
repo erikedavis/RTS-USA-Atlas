@@ -1,7 +1,7 @@
-import {layoutCities,placeLabel,appearance,requiredCityLabel,cityMarkerBox,HOVER_GRACE_MS} from './city-layout.mjs';
+import {layoutCities,placeLabel,appearance,requiredCityLabel,cityMarkerBox,HOVER_GRACE_MS} from './city-layout.mjs?v=09d';
 import {capitalMarkSize,cityIconName,registerCitySymbols} from './city-symbols.mjs';
 const fc=features=>({type:'FeatureCollection',features});
-export function createCityLayers(map,cities,{isNational,metroOverview,phoneViewport,stateLabelsFirst,regionVisible}){
+export function createCityLayers(map,cities,{isNational,metroOverview,phoneViewport,stateLabelsFirst,regionVisible,geographyLabels}){
  const byId=new Map(cities.features.map(f=>[f.properties.geoid,f]));
  const priorityFeatures=cities.features.filter(f=>requiredCityLabel(f.properties,{national:true,zoom:6})||
   requiredCityLabel(f.properties,{national:false,zoom:6}));
@@ -54,7 +54,10 @@ export function createCityLayers(map,cities,{isNational,metroOverview,phoneViewp
   const p=map.project(feature.geometry.coordinates),base=result.items.find(i=>i.feature.properties.geoid===hovered);
   const item={feature,x:p.x,y:p.y,style:{...(base?.style||appearance(feature.properties,map.getZoom())),weight:'Noto Sans Bold',opacity:1}};
   const obstacles=reservations().filter(r=>!r.inset||r.inset!==feature.properties.state_abbr);
-  const pl=placeLabel(item,{width:map.getContainer().clientWidth,height:map.getContainer().clientHeight,reserved:obstacles,measure,force:true,scale:1.15,previous:base?.placement});
+  const viewport={width:map.getContainer().clientWidth,height:map.getContainer().clientHeight,measure};
+  const options={...viewport,force:true,scale:1.15,previous:base?.placement};
+  const pl=placeLabel(item,{...options,reserved:[...obstacles,...geographyLabels.reservations()]})||
+    base?.placement||placeLabel(item,{...options,reserved:obstacles});
   map.getSource('hover-city').setData(fc([pointFeature(item,pl,true)]));hideBaseHover();
  }
  function clearHover(){clearTimeout(timer);timer=0;if(!hovered)return;hovered='';drawHover();}
@@ -74,7 +77,10 @@ export function createCityLayers(map,cities,{isNational,metroOverview,phoneViewp
    const p=map.project(feature.geometry.coordinates),sin=Math.sin(lat*Math.PI/180);
    projected.push({feature,x:p.x,y:p.y,worldX:(lng+180)/360*world,worldY:(.5-Math.log((1+sin)/(1-sin))/(4*Math.PI))*world});
   }
-  result=layoutCities(projected,{width,height,zoom,state,selectedId,national:isNational(),metroOverview:metroOverview(),phoneViewport:phoneViewport(),stateLabelsFirst:stateLabelsFirst(),reserved:reservations(),previous,measure});previous=result.placements;
+  const viewport={width,height,measure},reserved=reservations();
+  result=layoutCities(projected,{...viewport,zoom,state,selectedId,national:isNational(),metroOverview:metroOverview(),phoneViewport:phoneViewport(),stateLabelsFirst:stateLabelsFirst(),reserved,previous});
+  geographyLabels.layout(result,viewport,reserved);
+  previous=result.placements;
   map.getSource('major-cities').setData(fc(result.items.map(i=>pointFeature(i))));
   if(hovered)drawHover();
  }
@@ -89,7 +95,8 @@ export function createCityLayers(map,cities,{isNational,metroOverview,phoneViewp
  }
  function schedule(){if(!scheduled&&!map.isMoving())scheduled=requestAnimationFrame(layout);}
  function labelReservations(){
-  return result.items.flatMap(item=>item.placement?[cityMarkerBox(item),item.placement.box]:[cityMarkerBox(item)]);
+  return [...geographyLabels.reservations(),
+    ...result.items.flatMap(item=>item.placement?[cityMarkerBox(item),item.placement.box]:[cityMarkerBox(item)])];
  }
  function labelNear({x,y}){
   let best=null,bestGap=7,bestCenter=Infinity;

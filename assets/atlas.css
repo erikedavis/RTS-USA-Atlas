@@ -98,6 +98,9 @@ button { color:inherit; cursor:pointer; }
 .place-location-link {border:0;padding:0;background:none;color:var(--bright);min-height:24px;max-width:100%;font-weight:650;text-decoration:underline;text-underline-offset:3px;}
 .place-state .place-location-link {font-size:17px;min-height:27px;}
 .place-location-link:is(:hover,:focus-visible) {color:#f1f9ff;}
+.region-counties {min-width:0;}
+.region-counties summary {cursor:pointer;text-transform:uppercase;padding:6px 0;}
+.region-counties .place-location {padding-left:8px;}
 .panel-content p{font-size:12px;line-height:1.7;color:#92a5b4;}
 .panel-content .subtle{font-size:11px;color:#5f7285;}
 .empty-line{height:1px;background:linear-gradient(90deg,#426077,transparent);margin:24px 0 24px;}

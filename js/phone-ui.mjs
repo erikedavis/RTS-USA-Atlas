@@ -4,9 +4,9 @@ const phoneMedia='(max-width: 670px) and (pointer: coarse), (max-width: 950px) a
 const STAGES=['closed','tools','summary','atlas'];
 const atlasKind=feature=>{
   const kind=feature?.properties.kind;
-  return kind==='state'||kind==='place'||kind==='nation'?kind:null;
+  return kind==='state'||kind==='place'||kind==='nation'||kind==='metro'?kind:null;
 };
-const atlasName=feature=>({state:'state',place:'city',nation:'USA'})[atlasKind(feature)];
+const atlasName=feature=>({state:'state',place:'city',nation:'USA',metro:'metro'})[atlasKind(feature)];
 
 export function setupPhoneUI(map,{getSelected,hit,stateAt,insideState,insideMetro,preview,select,deselect,reset,
   renderSelection,setFocus,fitFeature,stateCorners,cityBounds,fitCity,refreshLabels,closeKey,beforeModeChange,nationalPanelMode}){
@@ -75,7 +75,7 @@ export function setupPhoneUI(map,{getSelected,hit,stateAt,insideState,insideMetr
     const kind=atlasKind(feature);
     if(stage==='atlas'||!kind)return false;
     map.stop();
-    savedCamera=kind==='place'?camera():null;
+    savedCamera=kind==='place'||kind==='metro'?camera():null;
     cityView=kind==='place'?{frameCity,bounds:undefined,anchor:null,panning:false,adjusted:false}:null;
     closeKey();
     toolsMenu.open=false;
@@ -219,7 +219,7 @@ export function setupPhoneUI(map,{getSelected,hit,stateAt,insideState,insideMetr
     immediate(result,at,target){
       if(stage!=='atlas')return false;
       const feature=getSelected();
-      if(atlasKind(feature)==='nation')return false;
+      if(atlasKind(feature)==='nation'||atlasKind(feature)==='metro')return false;
       if(atlasKind(feature)==='state'){
         if(insideState(at,target,feature.properties.geoid))return false;
         leaveAtlas({fast:true});
@@ -240,7 +240,8 @@ export function setupPhoneUI(map,{getSelected,hit,stateAt,insideState,insideMetr
           else deselect();
           return;
         }
-        if(current.properties.kind==='place'&&next?.properties.kind==='place'&&current.properties.geoid!==next.properties.geoid){
+        if((current.properties.kind==='place'||current.properties.kind==='metro')&&
+          next?.properties.kind==='place'&&current.properties.geoid!==next.properties.geoid){
           leaveAtlas({restore:false,fast:true});
           select(next,{zoom:layer==='city-hit'||layer==='places-hit'});
         }

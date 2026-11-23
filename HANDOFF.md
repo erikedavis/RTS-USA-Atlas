@@ -1,4 +1,8 @@
-# USAtlas V0.9C preview
+# USAtlas V0.9D preview
+
+Metro Stats and Atlas show linked states, counties and largest place. County Stats show linked state and largest place. Metro membership comes from Vintage 2025 Census population estimates and their July 2023 OMB delineations. Long Island is labeled along its axis at regional zoom when space allows. Shared geography placement can move nearby city names while preserving their visibility and size.
+
+## V0.9C preview
 
 The USA badge uses map bearing and its displayed size to stay entirely north of the border. City panels stack state, metro and county links alongside the city facts, and the selected map label stays illuminated through movement.
 

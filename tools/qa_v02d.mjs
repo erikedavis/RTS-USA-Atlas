@@ -29,8 +29,21 @@ const count=(folder,suffix)=>fs.readdirSync(fileURLToPath(new URL(folder,root)))
 assert.equal(count('data/counties/','.geojson'),3235);
 assert.equal(count('data/places/','_points.geojson'),32629);
 assert.equal(read('data/metros.geojson').features.length,935);
+const metroFacts=read('data/metro_facts.json').records;
+const countyFacts=read('data/basic_facts.json').counties;
+const memberships=Object.values(metroFacts).flatMap(metro=>{
+  const ids=Object.keys(metro.counties);
+  assert(ids.length>0,'Every metro and micro area has at least one county');
+  return ids;
+});
+assert.equal(Object.keys(metroFacts).length,935);
+assert.equal(memberships.length,1915);
+assert.equal(new Set(memberships).size,memberships.length);
+assert(memberships.every(id=>countyFacts[id]));
+assert.equal(metroFacts['35620'].counties['36059'],'Nassau County');
 for(const city of read('data/major_cities.geojson').features){
   assert(read('data/places/'+city.properties.state_fips+'_points.geojson').features.some(f=>f.properties.geoid===city.properties.geoid));
 }
 console.log('PASS all inset boundaries fit containers; display transforms invert correctly; other territories unchanged.');
 console.log('PASS 56 states/equivalents, 3235 counties, 32629 places, 935 metros; all 43 major-city Census IDs resolve.');
+console.log('PASS 1915 official county memberships across all 935 metro and micro areas.');

@@ -5,6 +5,7 @@ import csv
 import hashlib
 import json
 import struct
+from collections import defaultdict
 from pathlib import Path
 from zipfile import ZipFile
 
@@ -29,11 +30,15 @@ def cbsa_area(archive):
         yield geoid, int(row[fields['ALAND']]), int(row[fields['AWATER']])
 
 
-def metro_population(path, encoding):
+def metro_estimates(path, encoding, totals, counties):
     with path.open(encoding=encoding, newline='') as source:
         for row in csv.DictReader(source):
+            geoid = row['CBSA'].zfill(5)
             if row['LSAD'] in ('Metropolitan Statistical Area', 'Micropolitan Statistical Area'):
-                yield row['CBSA'].zfill(5), int(row['POPESTIMATE2025'])
+                totals[geoid] = int(row['POPESTIMATE2025'])
+            elif row['LSAD'] == 'County or equivalent':
+                name, state = row['NAME'].rsplit(', ', 1)
+                counties[geoid][row['STCOU'].zfill(5)] = (name, state)
 
 
 def write_json(path, data):
@@ -57,11 +62,15 @@ def main():
     boundary = fingerprint(args.cbsa_archive, geometry_source['url'])
     if boundary['sha256'] != geometry_source['sha256']:
         raise ValueError('CBSA areas must come from the archive used for the Atlas boundaries.')
-    totals = dict(metro_population(args.us_population, 'cp1252'))
-    totals.update(metro_population(args.pr_population, 'utf-8-sig'))
+    totals, counties = {}, defaultdict(dict)
+    metro_estimates(args.us_population, 'cp1252', totals, counties)
+    metro_estimates(args.pr_population, 'utf-8-sig', totals, counties)
     areas = {geoid: (land, water) for geoid, land, water in cbsa_area(args.cbsa_archive)}
     geometry = json.loads((data / 'metros.geojson').read_text(encoding='utf-8'))
     geoids = sorted(feature['properties']['geoid'] for feature in geometry['features'])
+    county_facts = json.loads((data / 'basic_facts.json').read_text(encoding='utf-8'))['counties']
+    if set(geoids) != counties.keys() or {county for members in counties.values() for county in members} - county_facts.keys():
+        raise ValueError('County membership must match the bundled CBSAs and county records.')
     square_meters_per_square_mile = 1609.344 ** 2
     records = {key: {
         'population': totals[key],
@@ -69,6 +78,8 @@ def main():
         'land_sq_mi': round(areas[key][0] / square_meters_per_square_mile, 6),
         'water_sq_mi': round(areas[key][1] / square_meters_per_square_mile, 6),
         'area_year': 2025,
+        'counties': {county: name for county, (name, state) in
+                     sorted(counties[key].items(), key=lambda item: (item[1][1], item[1][0]))},
     } for key in geoids}
     population_base = 'https://www2.census.gov/programs-surveys/popest/datasets/2020-2025/metro/totals/'
     write_json(data / 'metro_facts.json', {
