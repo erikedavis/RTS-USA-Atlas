@@ -686,7 +686,7 @@ test.describe('phone viewport', () => {
         const points = coordinates.flat(type === 'MultiPolygon' ? 2 : 1).map(point => testMap.project(point));
         const rect = testMap.getContainer().getBoundingClientRect();
         const top = document.querySelector('#phone-atlas-back').getBoundingClientRect().bottom - rect.top;
-        const bottom = document.querySelector('.phone-sheet').getBoundingClientRect().top - rect.top;
+        const bottom = document.querySelector('#phone-tray').getBoundingClientRect().top - rect.top;
         return points.every(({ x, y }) => x >= 0 && x <= rect.width && y >= top && y <= bottom);
       }, state);
       expect(framed).toBe(true);
@@ -731,6 +731,8 @@ test.describe('phone viewport', () => {
       const heading = page.locator('#panel-content h1');
       const cdp = await page.context().newCDPSession(page);
       const touch = (type, ...touchPoints) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints });
+      const collapseStats = page.getByRole('button', { name: 'Collapse selection details' });
+      await collapseStats.tap();
       const statePoint = async () => {
         await page.evaluate(bearing => testMap.jumpTo({ center: [-107.5, 39.9], zoom: 5.4, bearing }), bearing);
         return (await page.waitForFunction(() => {
@@ -754,6 +756,7 @@ test.describe('phone viewport', () => {
       expect(await camera(page)).toEqual(before);
       await page.getByRole('button', { name: 'National view', exact: true }).tap();
       await waitForCamera(page);
+      await collapseStats.tap();
 
       point = await statePoint();
       before = await camera(page);
@@ -928,7 +931,7 @@ test.describe('phone viewport', () => {
       const framed = await page.evaluate(async ({ marker, fallback }) => {
         const map = testMap, rect = map.getContainer().getBoundingClientRect();
         const top = document.querySelector('#phone-atlas-back').getBoundingClientRect().bottom - rect.top;
-        const bottom = document.querySelector('.phone-sheet').getBoundingClientRect().top - rect.top;
+        const bottom = document.querySelector('#phone-tray').getBoundingClientRect().top - rect.top;
         let corners = [marker];
         if (!fallback) {
           const data = await fetch('/data/places/27_shapes.geojson').then(response => response.json());
