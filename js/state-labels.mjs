@@ -20,7 +20,7 @@ const SMALL_STATES=new Map([
 const collection=features=>({type:'FeatureCollection',features});
 const pointFeature=(item,coordinates)=>({type:'Feature',properties:{geoid:item.p.geoid},geometry:{type:'Point',coordinates}});
 
-export function createStateLabels(map,labels,states,Marker,onSelect,isNational,protectedMarkerBoxes,wideStateLabels,stateLabelsFirst,regionVisible){
+export function createStateLabels(map,labels,states,Marker,onSelect,isNational,protectedMarkerBoxes,wideStateLabels,stateLabelsFirst){
   map.addSource('state-label-anchors',{type:'geojson',data:collection([])});
   map.addImage('state-label-space',{width:29,height:21,data:new Uint8Array(29*21*4)});
   map.addLayer({id:'state-label-obstacles',type:'symbol',source:'state-label-anchors',layout:{'icon-image':'state-label-space','icon-allow-overlap':true}});
@@ -84,7 +84,7 @@ export function createStateLabels(map,labels,states,Marker,onSelect,isNational,p
       obstacles.push((wide||item.p.abbr==='PR')&&!item.small?compactBadgeBox(point,size):badgeBox(point,size,Boolean(item.small)));
     }
     const wideShapes=new Map();
-    const ordered=items.filter(item=>regionVisible(item.p.geoid));
+    const ordered=items.slice();
     if(wide){
       const constraints=new Map();
       for(const item of ordered){

@@ -1,7 +1,7 @@
 import {layoutCities,placeLabel,appearance,requiredCityLabel,cityMarkerBox,HOVER_GRACE_MS} from './city-layout.mjs?v=09d';
 import {capitalMarkSize,cityIconName,registerCitySymbols} from './city-symbols.mjs';
 const fc=features=>({type:'FeatureCollection',features});
-export function createCityLayers(map,cities,{isNational,metroOverview,phoneViewport,stateLabelsFirst,regionVisible,geographyLabels}){
+export function createCityLayers(map,cities,{isNational,metroOverview,phoneViewport,stateLabelsFirst,geographyLabels}){
  const byId=new Map(cities.features.map(f=>[f.properties.geoid,f]));
  const priorityFeatures=cities.features.filter(f=>requiredCityLabel(f.properties,{national:true,zoom:6})||
   requiredCityLabel(f.properties,{national:false,zoom:6}));
@@ -71,7 +71,6 @@ export function createCityLayers(map,cities,{isNational,metroOverview,phoneViewp
   const width=map.getContainer().clientWidth,height=map.getContainer().clientHeight,zoom=map.getZoom();
   const b=map.getBounds(),px=(b.getEast()-b.getWest())*.15,py=(b.getNorth()-b.getSouth())*.15,world=512*2**zoom,projected=[];
   for(const feature of cities.features){const [lng,lat]=feature.geometry.coordinates;
-   if(!regionVisible(feature.properties.state_fips))continue;
    if(focusedState&&feature.properties.state_fips!==focusedState)continue;
    if(lng<b.getWest()-px||lng>b.getEast()+px||lat<b.getSouth()-py||lat>b.getNorth()+py)continue;
    const p=map.project(feature.geometry.coordinates),sin=Math.sin(lat*Math.PI/180);
@@ -88,7 +87,7 @@ export function createCityLayers(map,cities,{isNational,metroOverview,phoneViewp
   const zoom=map.getZoom(),priority={zoom,national:isNational(),selectedId};
   const selected=byId.get(selectedId);
   const features=selected&&!priorityFeatures.includes(selected)?[...priorityFeatures,selected]:priorityFeatures;
-  return features.filter(f=>regionVisible(f.properties.state_fips)&&(!focusedState||f.properties.state_fips===focusedState)&&requiredCityLabel(f.properties,priority)).map(feature=>{
+  return features.filter(f=>(!focusedState||f.properties.state_fips===focusedState)&&requiredCityLabel(f.properties,priority)).map(feature=>{
     const {x,y}=map.project(feature.geometry.coordinates);
     return cityMarkerBox({x,y,feature,style:appearance(feature.properties,zoom)});
   });

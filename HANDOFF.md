@@ -1,4 +1,8 @@
-# USAtlas V0.9E preview
+# USAtlas V0.9F preview
+
+The CONUS and ALL choices set the national camera framing. Alaska and Hawaii are available by panning or zooming in either view. On PC, Counties and Metros sit beside Atlas in the stats header. The hammer is larger, the Tools menu is tighter, and the return compass preview is twice its previous size. With rotation unlocked, Q and E turn slowly and desktop mouse drag keeps the grabbed map location under the pointer.
+
+## V0.9E preview
 
 The locked compass sits against the upper-right map edge and expands inward on unlock. Desktop hover shows Hide compass or Return compass. A straight rightward swipe hides the locked compass on phones, and the edge chevron brings it back. A center hold uses the State Atlas timing to return north and lock. A quick rose tap toggles the lock at the current bearing.
 

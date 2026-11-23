@@ -1,14 +1,14 @@
 // USA Atlas 0.3A - adaptive city hierarchy and display insets, official Census 2025 geography.
 // Local renderer and geography; no external requests at runtime.
 import * as maplibregl from '../assets/vendor/maplibre-gl.mjs';
-import {createCityLayers} from './city-display.mjs?v=09d';
+import {createCityLayers} from './city-display.mjs?v=09f';
 import {isMetroScale} from './city-layout.mjs';
 import {populateMapKey} from './city-symbols.mjs';
 import {createGeographyLabels} from './geography-labels.mjs?v=09d';
-import {createStateLabels} from './state-labels.mjs?v=09c';
+import {createStateLabels} from './state-labels.mjs?v=09f';
 import {prepareStateShapes,shapeContainsPoint} from './state-label-placement.mjs';
-import {isNorthUp,screenBounds,setupRotation} from './map-rotation.mjs?v=09e';
-import {setupPhoneUI} from './phone-ui.mjs?v=09e';
+import {isNorthUp,screenBounds,setupRotation} from './map-rotation.mjs?v=09f';
+import {setupPhoneUI} from './phone-ui.mjs?v=09f';
 import {COUNTY_LABEL_ZOOM,createCountyLabels} from './county-labels.mjs';
 import {createSelectedAreaLabel} from './selected-area-label.mjs';
 import {INSETS, NATIONAL_BOUNDS, CONUS_BOUNDS, displayData, displayPoint, geographicPoint, hawaiiTailMarks, insetFrames} from './insets.mjs';
@@ -22,7 +22,6 @@ const emptyFC = {type:'FeatureCollection',features:[]};
 const stateNames = new Map();
 let map, manifest, states, stateLabels, cities, facts, usaFacts, usaBadge, usaMarker;
 const USA={type:'Feature',properties:{kind:'nation',name:'United States',geoid:'US'},geometry:null};
-const optionalInsets=[['02','AK'],['15','HI']];
 let nationalScope='conus';
 let selected = null;
 let selectedState = null;
@@ -63,9 +62,6 @@ const nationalPadding = () => compactLayout.matches
   ? {top:46,bottom:phone?.active?phoneDockHeight():40,left:10,right:10}
   : {top:55,bottom:35,left:25,right:85};
 const nationalBounds=()=>nationalScope==='all'?NATIONAL_BOUNDS:CONUS_BOUNDS;
-const hiddenInsets=()=>nationalScope==='all'?[]:optionalInsets.filter(([fips])=>fips!==selectedState);
-const regionVisible=fips=>nationalScope==='all'||fips===selectedState||(fips!=='02'&&fips!=='15');
-const filterInsets=(property,codes)=>codes.length?['!',['in',['get',property],['literal',codes]]]:null;
 let homeSize='',homeZoom=3.3;
 let settledFrame=0,nextHudUpdate=0;
 function isNationalView(){
@@ -603,7 +599,7 @@ function focusStateAtlas(fips,fast){
     map.setLayoutProperty(id,'visibility',fips?'none':'visible');
   }
   for(const id of ['hawaii-tail-islands','hawaii-tail-label']){
-    if(map.getLayer(id))map.setLayoutProperty(id,'visibility',regionVisible('15')&&(!fips||fips==='15')?'visible':'none');
+    if(map.getLayer(id))map.setLayoutProperty(id,'visibility',!fips||fips==='15'?'visible':'none');
   }
   updatePlaceVisibility();
   stateLabelsController.setFocus(fips);
@@ -633,7 +629,6 @@ function select(f,{zoom=false,duration,preserveStateReturn=false}={}) {
   if(p.kind==='state')selectedState=p.geoid;
   else if(p.state_fips)selectedState=p.state_fips;
   else selectedState=null;
-  updateNationalVisibility();
   applySelection();display(f);
   updateCountyView();
   updateMetroMode();
@@ -649,7 +644,6 @@ function deselect() {
   selectionRevision++;
   selected=null;selectedState=null;
   selectedAreaLabel.clear();
-  updateNationalVisibility();
   applySelection();emptyPanel();
   updateCountyView();
   updateMetroMode();
@@ -668,24 +662,8 @@ function nationalPanelMode(open){
   if(heading)heading.textContent=open?'USA ATLAS':'USA STATS';
 }
 function updatePlaceVisibility(){
-  const filter=atlasFocus?['==',['get','state_fips'],atlasFocus]:filterInsets('state_fips',hiddenInsets().map(([fips])=>fips));
+  const filter=atlasFocus?['==',['get','state_fips'],atlasFocus]:null;
   for(const id of ['places-hit','place-area-hit','place-area-lines'])map.setFilter(id,filter);
-}
-let appliedInsets;
-function updateNationalVisibility(){
-  const hidden=hiddenInsets(),key=hidden.map(([fips])=>fips).join(',');
-  if(key===appliedInsets)return;
-  appliedInsets=key;
-  for(const id of ['state-surface','state-lines','state-hit'])map.setFilter(id,filterInsets('geoid',hidden.map(([fips])=>fips)));
-  for(const id of ['inset-lines','inset-surface'])map.setFilter(id,filterInsets('abbr',hidden.map(([,abbr])=>abbr)));
-  for(const id of ['hawaii-tail-islands','hawaii-tail-label']){
-    if(map.getLayer(id))map.setLayoutProperty(id,'visibility',regionVisible('15')&&(!atlasFocus||atlasFocus==='15')?'visible':'none');
-  }
-  for(const {node,inset} of insetMarkers)node.hidden=hidden.some(([,abbr])=>abbr===inset.abbr);
-  updatePlaceVisibility();
-  stateLabelsController.refresh();
-  cityLayers.clearHover();
-  scheduleSettledView();
 }
 function changeNationalScope(value){
   if(value===nationalScope)return;
@@ -693,7 +671,6 @@ function changeNationalScope(value){
   for(const button of info.querySelectorAll('[data-national-scope]')){
     button.setAttribute('aria-pressed',String(button.dataset.nationalScope===value));
   }
-  updateNationalVisibility();
   if(desktopAtlas?.kind==='nation')desktopAtlas.returnCamera=null;
   if(phone?.focused)phone.refitAtlas();
   else fitNation(atlasDuration());
@@ -744,7 +721,7 @@ function updateCountyView(){
     const bounds=map.getBounds();
     const west=bounds.getWest(),east=bounds.getEast(),south=bounds.getSouth(),north=bounds.getNorth();
     for(const {p,polygons} of stateLabelsController.items){
-      if(regionVisible(p.geoid)&&polygons.some(({bounds:[w,s,e,n]})=>w<=east&&e>=west&&s<=north&&n>=south))loadFips.add(p.geoid);
+      if(polygons.some(({bounds:[w,s,e,n]})=>w<=east&&e>=west&&s<=north&&n>=south))loadFips.add(p.geoid);
     }
   }
   const statesInView=[...loadFips].sort(),key=`${showNames}:${statesInView.join(',')}`;
@@ -814,7 +791,7 @@ function updateMetroMode(){
   const mode=metroMode(),overview=metroOverview();
   const scope=mode==='off'?null:stateOverlayScope();
   const selectedId=selected?.properties.kind==='metro'?selected.properties.geoid:null;
-  const modeKey=`${mode}:${overview}:${scope}:${nationalScope}:${selectedId}`;
+  const modeKey=`${mode}:${overview}:${scope}:${selectedId}`;
   if(modeKey===currentMetroMode)return;
   currentMetroMode=modeKey;
   const visible=mode!=='off';
@@ -823,8 +800,7 @@ function updateMetroMode(){
     map.setLayoutProperty(id,'visibility',visible?'visible':'none');
   }
   const abbr=scope&&findStateByGeoid(scope)?.properties.abbr;
-  const inState=abbr?['in','|'+abbr+'|',['get','state_codes']]:
-    nationalScope==='conus'?['all',...optionalInsets.map(([,code])=>['!',['in','|'+code+'|',['get','state_codes']]])]:null;
+  const inState=abbr?['in','|'+abbr+'|',['get','state_codes']]:null;
   const autoFilter=['==',['get','class'],'metro'];
   const filter=mode==='auto'?(inState?['all',autoFilter,inState]:autoFilter):inState;
   for(const id of ['metro-surface','metro-lines','metro-hit','metro-outline-hit'])map.setFilter(id,filter);
@@ -885,11 +861,11 @@ function mapReservations(){
   return [...stateLabelsController.reservations(),...mapControlReservations(true),...(atlasFocus?[]:[prFrame])];
 }
 function makeLabels() {
-  cityLayers=createCityLayers(map,cities,{isNational:isNationalView,metroOverview,phoneViewport:()=>Boolean(phone?.active),stateLabelsFirst,regionVisible,geographyLabels});
+  cityLayers=createCityLayers(map,cities,{isNational:isNationalView,metroOverview,phoneViewport:()=>Boolean(phone?.active),stateLabelsFirst,geographyLabels});
   stateLabelsController=createStateLabels(map,stateLabels,states,maplibregl.Marker,(geoid,event)=>{
     const state=findStateByGeoid(geoid);
     if(state&&(!phone?.active||event.detail===0))selectAndFitState(state);
-  },isNationalView,cityLayers.protectedMarkerBoxes,wideStateLabels,stateLabelsFirst,regionVisible);
+  },isNationalView,cityLayers.protectedMarkerBoxes,wideStateLabels,stateLabelsFirst);
   cityLayers.setReservations(mapReservations);
   countyNames=createCountyLabels(map);
   selectedAreaLabel=createSelectedAreaLabel(map,maplibregl.Marker);
@@ -1326,7 +1302,7 @@ async function initialize() {
     });
     map.touchZoomRotate.disableRotation();
     map.on('load',()=>{
-      addSourcesAndLayers();makeLabels();updateNationalVisibility();setupUI();
+      addSourcesAndLayers();makeLabels();setupUI();
       map.on('move',updateHudWhileMoving);
       map.on('moveend',scheduleSettledView);
       map.on('resize',scheduleSettledView);

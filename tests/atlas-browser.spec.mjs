@@ -9,7 +9,7 @@ async function assertRendered(page, testInfo) {
   const response = await page.goto('/', { waitUntil: 'domcontentloaded' });
   expect(response?.ok(), 'The atlas must respond over HTTP').toBe(true);
   await expect(page.locator('#map-loading'), 'Atlas loading overlay must disappear').toBeHidden({ timeout: 50_000 });
-  await expect(page.locator('meta[name="atlas-version"]')).toHaveAttribute('content', 'ALPHA 0.9E');
+  await expect(page.locator('meta[name="atlas-version"]')).toHaveAttribute('content', 'ALPHA 0.9F');
   await expect(page.locator('canvas.maplibregl-canvas')).toHaveCount(1);
   const renderer = await page.evaluate(() => {
     const canvas = document.querySelector('canvas.maplibregl-canvas');
@@ -255,6 +255,88 @@ test('desktop compass tucks into the corner and its return chevron tracks the si
   await expect(lock).toHaveAttribute('aria-pressed','true');
 });
 
+test('desktop drag rotation keeps the grabbed location under the cursor and Q and E turn slowly', async ({ page }, testInfo) => {
+  await exposeMap(page);
+  await assertRendered(page,testInfo);
+  await readMap(page);
+  const lock=page.locator('#rotation-lock');
+  await page.keyboard.press('q');
+  await expectBearing(page,0);
+  await lock.click();
+  await expect(lock).toHaveAttribute('aria-pressed','false');
+  await page.keyboard.down('q');
+  await expect.poll(async()=> (await camera(page))[3]).toBeLessThan(-4);
+  await page.keyboard.up('q');
+  const west=(await camera(page))[3];
+  expect(west).toBeGreaterThan(-20);
+  await page.keyboard.down('e');
+  await expect.poll(async()=> (await camera(page))[3]).toBeGreaterThan(west+4);
+  await page.keyboard.up('e');
+  await page.keyboard.press('r');
+  await expectBearing(page,0);
+  await page.evaluate(()=>testMap.jumpTo({center:[-98,40],zoom:5}));
+  const bounds=await page.locator('#map').boundingBox();
+  const start={x:Math.round(bounds.width*.43),y:Math.round(bounds.height*.47)};
+  const location=await page.evaluate(({x,y})=>testMap.unproject([x,y]).toArray(),start);
+  const assertAnchor=async({x,y})=>{
+    const projected=await page.evaluate(point=>{
+      const {x,y}=testMap.project(point);
+      return [x,y];
+    },location);
+    expect(Math.hypot(projected[0]-x,projected[1]-y)).toBeLessThan(1);
+  };
+  await page.mouse.move(bounds.x+start.x,bounds.y+start.y);
+  await page.mouse.down();
+  for(const [dx,dy] of [[36,19],[93,-18],[126,-64],[87,26]]){
+    const point={x:start.x+dx,y:start.y+dy};
+    await page.mouse.move(bounds.x+point.x,bounds.y+point.y,{steps:5});
+    await assertAnchor(point);
+    expect((await camera(page))[3]).toBeCloseTo(-dx*.32,0);
+  }
+  await page.mouse.up();
+  await expect(page.locator('#panel-content h1')).toHaveText('United States');
+  await page.evaluate(()=>testMap.jumpTo({center:[-98,40],zoom:5,bearing:0}));
+  const colorado=await page.evaluate(()=>{
+    const {x,y}=testMap.project([-105.45,38.7]);
+    return [x,y];
+  });
+  await page.mouse.click(bounds.x+colorado[0],bounds.y+colorado[1]);
+  await expect(page.locator('#panel-content h1')).toHaveText('Colorado');
+  await lock.click();
+  const locked=(await camera(page))[3];
+  await page.keyboard.press('e');
+  expect((await camera(page))[3]).toBe(locked);
+});
+
+test('desktop layer toggles sit by Atlas and Tools opens a compact menu', async ({ page },testInfo) => {
+  await assertRendered(page,testInfo);
+  const tools=page.locator('.tools-trigger'),atlas=page.locator('#desktop-atlas-toggle');
+  const overlays=page.locator('#desktop-layer-controls');
+  const counties=overlays.locator('#toggle-counties'),metros=overlays.locator('#toggle-metros');
+  await expect(counties).toBeVisible();
+  await expect(metros).toBeVisible();
+  await expect(atlas).toBeVisible();
+  await expect(tools).toHaveCSS('border-top-color','rgba(0, 0, 0, 0)');
+  await expect(tools.locator('.tools-desktop svg')).toHaveCSS('width','22px');
+  await tools.hover();
+  await expect(tools).toHaveCSS('border-top-color','rgb(35, 53, 72)');
+  await tools.click();
+  const dropdown=page.locator('.tools-options');
+  expect((await dropdown.boundingBox()).width).toBeLessThan(125);
+  expect((await dropdown.getByText('VIEW',{exact:true}).boundingBox()).height).toBeLessThan(31);
+  await page.keyboard.press('Escape');
+  await counties.click();
+  await expect(counties).toHaveCSS('color',activeGold);
+  await atlas.click();
+  await expect(page.locator('.app')).toHaveAttribute('data-desktop-atlas','nation');
+  await expect(counties).toBeVisible();
+  await expect(metros).toBeVisible();
+  await counties.click();
+  await expect(counties).toHaveAttribute('aria-pressed','false');
+  await expect(page.locator('.app')).toHaveAttribute('data-desktop-atlas','nation');
+  await screenshot(page,testInfo,'desktop-atlas-layer-controls');
+});
+
 test('desktop USA home defaults to CONUS and keeps the chosen extent through Atlas', async ({ page }, testInfo) => {
   await exposeMap(page);
   await assertRendered(page,testInfo);
@@ -279,8 +361,13 @@ test('desktop USA home defaults to CONUS and keeps the chosen extent through Atl
   }
   await page.evaluate(([lng,lat,zoom,bearing])=>testMap.jumpTo({center:[lng,lat],zoom,bearing}),original);
   await expect.poll(visibleStates).toContain('PR');
-  expect(await visibleStates()).not.toContain('AK');
-  expect(await visibleStates()).not.toContain('HI');
+  await page.evaluate(()=>testMap.jumpTo({center:[-137,34],zoom:2.5}));
+  await expect.poll(visibleStates).toEqual(expect.arrayContaining(['AK','HI']));
+  await expect(conus).toHaveAttribute('aria-pressed','true');
+  await page.evaluate(([lng,lat,zoom,bearing])=>testMap.jumpTo({center:[lng-4,lat],zoom:zoom-.2,bearing}),original);
+  await usa.click();
+  await waitForCamera(page);
+  expect(await camera(page)).toEqual(original);
   await usa.click({delay:660});
   await expect(panel.locator('.section-kicker')).toHaveText('USA ATLAS');
   await all.click();
@@ -301,7 +388,8 @@ test('desktop USA home defaults to CONUS and keeps the chosen extent through Atl
   await page.getByRole('button',{name:'National view',exact:true}).click();
   await expect(panel.locator('.section-kicker')).toHaveText('USA STATS');
   await expect(conus).toHaveAttribute('aria-pressed','true');
-  await expect.poll(visibleStates).not.toContain('AK');
+  await waitForCamera(page);
+  expect(await camera(page)).toEqual(original);
 });
 
 test('desktop Atlas expands, restores a rotated camera, and reopens the hidden sidebar on selection', async ({ page }, testInfo) => {
@@ -826,6 +914,14 @@ test.describe('phone viewport', () => {
     const cdp=await page.context().newCDPSession(page);
     const touch=(type,point)=>cdp.send('Input.dispatchTouchEvent',{type,touchPoints:point?[point]:[]});
     await expect(mode).toHaveText('USA STATS');
+    const original=await camera(page);
+    await page.evaluate(()=>testMap.jumpTo({center:[-137,34],zoom:2.05}));
+    await expect.poll(()=>page.evaluate(()=>testMap.queryRenderedFeatures({layers:['state-hit']}).map(f=>f.properties.abbr)))
+      .toEqual(expect.arrayContaining(['AK','HI']));
+    await expect(page.getByRole('button',{name:'CONUS',exact:true})).toHaveAttribute('aria-pressed','true');
+    await page.locator('#phone-home').tap();
+    await waitForCamera(page);
+    expect(await camera(page)).toEqual(original);
     await expect(label).toBeVisible();
     const badge=await label.boundingBox();
     await touch('touchStart',{x:badge.x+badge.width/2,y:badge.y+badge.height/2});

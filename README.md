@@ -1,11 +1,11 @@
-# USAtlas V0.9E preview
+# USAtlas V0.9F preview
 
 Requires Python 3. Clone the repository or extract its source ZIP, then run **Start_Atlas.cmd** from that folder. The launcher opens **http://127.0.0.1:8020/**.
 [Development handoff](HANDOFF.md) covers the current preview, repeatable checks, and open work.
 
 ## USA overview
 
-Startup and Home open USA Stats. CONUS frames the lower 48, D.C. and the Puerto Rico inset. ALL adds Alaska and Hawaii. Both show the same national population and land area from [Census QuickFacts](https://www.census.gov/quickfacts/fact/table/US/PST045222).
+Startup and Home open USA Stats. CONUS frames the lower 48, D.C. and the Puerto Rico inset. Pan west or zoom out to reach the Alaska and Hawaii insets from CONUS. ALL frames those insets too. Both show the same national population and land area from [Census QuickFacts](https://www.census.gov/quickfacts/fact/table/US/PST045222).
 
 Tap or click the USA map label for USA Stats. Hold it to open USA Atlas. The whole label stays on the Canadian side of the border and disappears above zoom 3.5. On a phone, swipe up from the USA Stats sheet or its top handle to open USA Atlas.
 
@@ -34,11 +34,11 @@ Tap or click the USA map label for USA Stats. Hold it to open USA Atlas. The who
 
 ## Counties and metros
 
-Use **COUNTIES** and **METROS** in the map controls, including from State Atlas. The text and border turn gold when the layer is on. With a state selected, county and metro outlines stay scoped to that state while you zoom, pan, or rotate. A metro spanning several states appears for any state it covers. Clear the state selection for nationwide coverage. County selection is available from zoom 4.5. An intentionally selected county or metro receives a bold white map label, including at zooms below the ordinary labels. Selected state abbreviations and city names also use bold white lettering.
+Use **COUNTIES** and **METROS** next to the Atlas button on desktop or in the phone map dock. The text and border turn gold when the layer is on. With a state selected, county and metro outlines stay scoped to that state while you zoom, pan, or rotate. A metro spanning several states appears for any state it covers. Clear the state selection for nationwide coverage. County selection is available from zoom 4.5. An intentionally selected county or metro receives a bold white map label, including at zooms below the ordinary labels. Selected state abbreviations and city names also use bold white lettering.
 
 ## Rotation and search
 
-Click or tap the rose or its center to toggle the lock at the current bearing. Hold the center for about 0.6 seconds to return north and lock. You can also choose **N**, then tap the rose to lock. A gold padlock marks the locked state. The shackle opens and the icon fades shortly after unlocking. Right-drag on a PC or twist with two fingers on a phone. The rose and its upright letters follow the map bearing. Choose any direction to snap to that heading. **R** returns north while retaining the current lock setting.
+Click or tap the rose or its center to toggle the lock at the current bearing. Hold the center for about 0.6 seconds to return north and lock. You can also choose **N**, then tap the rose to lock. A gold padlock marks the locked state. The shackle opens and the icon fades shortly after unlocking. On PC, drag with the left or right mouse button while unlocked to rotate around the grabbed map location. Hold **Q** or **E** to turn west or east slowly. On a phone, twist with two fingers. The rose and its upright letters follow the map bearing. Choose any direction to snap to that heading. **R** returns north while retaining the current lock setting.
 
 Use one finger to drag around the center from a direction label or the outer half of a compass spoke. A locked circular gesture holds the bearing until release, then unlocks. An unlocked circular gesture turns the map as the rose follows your finger.
 

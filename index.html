@@ -5,10 +5,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#020307">
-  <meta name="atlas-version" content="ALPHA 0.9E">
-  <title>USAtlas | V0.9E</title>
+  <meta name="atlas-version" content="ALPHA 0.9F">
+  <title>USAtlas | V0.9F</title>
   <link href="./assets/vendor/maplibre-gl.css" rel="stylesheet">
-  <link rel="stylesheet" href="./assets/atlas.css?v=09e">
+  <link rel="stylesheet" href="./assets/atlas.css?v=09f">
   <link rel="stylesheet" href="./assets/phone.css?v=09e">
 </head>
 <body>
@@ -57,8 +57,6 @@
         <div class="map-controls">
           <button id="zoom-in" title="Zoom in" aria-label="Zoom in">+</button>
           <button id="zoom-out" title="Zoom out" aria-label="Zoom out">−</button>
-          <button id="toggle-counties" title="Show counties and enable county selection (off by default)" aria-label="Toggle county selection" aria-pressed="false">COUNTIES</button>
-          <button id="toggle-metros" title="Toggle metro areas" aria-label="Toggle metro boundaries" aria-pressed="false">METROS</button>
           <button id="map-layers" type="button" disabled>LAYERS</button>
         </div>
         <div class="rotation-tools rotation-north-locked" role="group" aria-label="Map rotation">
@@ -118,6 +116,10 @@
         <div class="panel-top">
           <span class="panel-eyebrow">GEOGRAPHIC INTELLIGENCE</span>
           <div class="panel-buttons">
+            <div id="desktop-layer-controls" class="panel-layer-controls" role="group" aria-label="Map overlays">
+              <button id="toggle-counties" type="button" title="Show counties and enable county selection" aria-label="Toggle county selection" aria-pressed="false">COUNTIES</button>
+              <button id="toggle-metros" type="button" title="Toggle metro areas" aria-label="Toggle metro boundaries" aria-pressed="false">METROS</button>
+            </div>
             <button id="desktop-state-back" type="button" class="panel-action" hidden>Back</button>
             <button id="desktop-atlas-toggle" type="button" class="panel-action" aria-controls="panel-content" hidden>Atlas</button>
           </div>
@@ -158,7 +160,7 @@
     </div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
   </div>
-  <script type="module" src="./js/atlas.mjs?v=09e"></script>
+  <script type="module" src="./js/atlas.mjs?v=09f"></script>
 </body>
 </html>
 

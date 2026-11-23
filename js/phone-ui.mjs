@@ -15,6 +15,7 @@ export function setupPhoneUI(map,{getSelected,hit,stateAt,insideState,insideMetr
   const app=$('.app'),content=$('.content'),shell=$('.map-shell'),header=$('.topbar');
   const rotation=$('.rotation-tools'),toolsMenu=$('#tools-menu');
   const panel=$('#info-panel'),info=$('#panel-content'),controls=$('.map-controls');
+  const desktopLayers=$('#desktop-layer-controls'),layerButtons=[...desktopLayers.children],layers=$('#map-layers');
   const dock=$('#phone-dock'),tray=$('#phone-tray'),sheet=$('.phone-sheet');
   const dockBody=$('#phone-dock-body'),mapHud=[$('#zoom-text'),$('#map-key-toggle'),$('#map-key')];
   const up=$('#phone-up'),down=$('#phone-down'),grip=$('#phone-grip');
@@ -355,11 +356,13 @@ export function setupPhoneUI(map,{getSelected,hit,stateAt,insideState,insideMetr
     dock.hidden=!active;
     if(active){
       dockBody.append(...mapHud);
+      layers.before(...layerButtons);
       $('#phone-tray-inner').append(controls);
       $('#phone-sheet-inner').append(panel);
       show(getSelected()?'summary':'closed');
     }else{
       shell.append(...mapHud);
+      desktopLayers.append(...layerButtons);
       shell.insertBefore(controls,rotation);content.append(panel);
       delete app.dataset.phoneStage;
       historyBack.hidden=true;

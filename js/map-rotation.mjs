@@ -1,4 +1,5 @@
 import {HOLD_MS,HOLD_SLOP} from './phone-gestures.mjs?v=09e';
+import {bindDesktopRotation} from './desktop-rotation.mjs?v=09f';
 
 export const isNorthUp=bearing=>Math.abs(((bearing%360+540)%360)-180)<1e-6;
 
@@ -21,6 +22,8 @@ export function setupRotation(map,controls,onChange){
   const heading=controls.querySelector('#rotation-bearing');
   let locked=true,minimized=false;
   let drag=null,centerHold=null,skipClick=false;
+  const isPhone=()=>Boolean(controls.closest('.phone-layout'));
+  const desktop=bindDesktopRotation(map,()=>!locked&&!isPhone(),onChange);
 
   function showBearing(){
     const bearing=map.getBearing(),degrees=Math.round((bearing+360)%360)%360;
@@ -34,10 +37,9 @@ export function setupRotation(map,controls,onChange){
     if(value&&!locked&&map.isRotating())map.stop();
     locked=value;
     if(locked){
-      map.dragRotate.disable();
+      desktop.stop();
       map.touchZoomRotate.disableRotation();
     }else{
-      map.dragRotate.enable();
       map.touchZoomRotate.enableRotation();
     }
     const action=locked?'Unlock map rotation':'Lock map rotation in place';
@@ -78,7 +80,6 @@ export function setupRotation(map,controls,onChange){
   face.addEventListener('transitionend',event=>{
     if(event.target===face&&event.propertyName==='transform')onChange();
   });
-  const isPhone=()=>Boolean(controls.closest('.phone-layout'));
   toggle.addEventListener('pointerup',event=>{
     if(!minimized||!isPhone()||!event.isPrimary||event.pointerType!=='touch')return;
     const {left,right,top,bottom}=toggle.getBoundingClientRect();
@@ -92,6 +93,7 @@ export function setupRotation(map,controls,onChange){
   });
 
   function snap(bearing){
+    desktop.stop();
     map.rotateTo(bearing,{duration:280});
   }
   function northAndLock(){
@@ -194,7 +196,7 @@ export function setupRotation(map,controls,onChange){
     event.preventDefault();
   },true);
 
-  // R and the compass are the explicit keyboard rotation controls.
+  // The Atlas handles Q, E, R and the compass explicitly.
   map.keyboard.disableRotation();
   setLocked(true);
   map.on('rotate',showBearing);
@@ -212,5 +214,5 @@ export function setupRotation(map,controls,onChange){
       snap(0);
     }
   });
-  return {get dragging(){return Boolean(drag?.started);}};
+  return {get dragging(){return Boolean(drag?.started||desktop.active);}};
 }
