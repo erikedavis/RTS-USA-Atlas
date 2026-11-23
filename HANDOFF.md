@@ -1,4 +1,8 @@
-# USAtlas V0.8J preview
+# USAtlas V0.8K preview
+
+The locked compass, active CTY and MSA controls, their State Atlas buttons and the open map key use gold. City facts link to the state beside the city name. Selecting it uses the map's state-abbreviation fit on PC and phone. The regular map includes all five Great Lakes shorelines at national and regional scales. The data source and version are recorded in `data/manifest.json`.
+
+## V0.8J preview
 
 The compass padlock is centered over the rose. Its open icon holds for about three-quarters of a second and fades. The center remains the lock control and the spokes reset north and lock. State Atlas has a synchronized Show counties and Show metros row directly under the facts. Home and Key sit close to the map or dock edge on PC and phone.
 

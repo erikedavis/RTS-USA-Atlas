@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
 
+const activeGold = 'rgb(243, 217, 158)';
+
 /** A passing HTTP fetch or JS syntax test is not proof that the map rendered. */
 async function assertRendered(page, testInfo) {
   const errors = [];
@@ -7,7 +9,7 @@ async function assertRendered(page, testInfo) {
   const response = await page.goto('/', { waitUntil: 'domcontentloaded' });
   expect(response?.ok(), 'The atlas must respond over HTTP').toBe(true);
   await expect(page.locator('#map-loading'), 'Atlas loading overlay must disappear').toBeHidden({ timeout: 50_000 });
-  await expect(page.locator('meta[name="atlas-version"]')).toHaveAttribute('content', 'ALPHA 0.8J');
+  await expect(page.locator('meta[name="atlas-version"]')).toHaveAttribute('content', 'ALPHA 0.8K');
   await expect(page.locator('canvas.maplibregl-canvas')).toHaveCount(1);
   const renderer = await page.evaluate(() => {
     const canvas = document.querySelector('canvas.maplibregl-canvas');
@@ -146,6 +148,7 @@ test('desktop compass turns with the map and highlights one direction on hover',
   await expect(controls.locator('[data-bearing]')).toHaveCount(8);
   await expect(controls).toHaveClass(/rotation-north-locked/);
   await expect(rose.locator('.compass-light')).toHaveCSS('fill', 'rgb(167, 196, 216)');
+  await expect(lock).toHaveCSS('color', activeGold);
   await north.hover();
   await expect(north.locator('span')).toHaveCSS('transform', 'matrix(1.22, 0, 0, 1.22, 0, 0)');
   await expect(east.locator('span')).toHaveCSS('opacity', '0.66');
@@ -272,8 +275,22 @@ test('major city searches work and produce checkable screenshots', async ({ page
   }
 });
 
+test('all five Great Lake shorelines render on the regional map and rotate with it', async ({ page }, testInfo) => {
+  await exposeMap(page);
+  await assertRendered(page, testInfo);
+  await readMap(page);
+  const lakeNames = () => page.evaluate(() => [...new Set(testMap
+    .queryRenderedFeatures({layers:['great-lakes-shoreline']}).map(lake => lake.properties.name))].sort());
+  const expected = ['Lake Erie','Lake Huron','Lake Michigan','Lake Ontario','Lake Superior'];
+  for (const bearing of [0, 34]) {
+    await page.evaluate(bearing => testMap.jumpTo({center:[-84.5,44.9],zoom:5,bearing}), bearing);
+    await expect.poll(lakeNames).toEqual(expected);
+  }
+  await screenshot(page, testInfo, 'great-lakes');
+});
+
 for (const isPhone of [false, true]) {
-  test.describe(isPhone ? 'phone MSA' : 'desktop MSA', () => {
+  test.describe(isPhone ? 'phone Atlas' : 'desktop Atlas', () => {
     if (isPhone) test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
 
     test('metro outlines follow the state selection at a rotated overview zoom', async ({ page }, testInfo) => {
@@ -290,6 +307,7 @@ for (const isPhone of [false, true]) {
       if (isPhone) await msa.tap();
       else await page.getByRole('button', { name: 'Show metros', exact: true }).click();
       await expect(msa).toHaveAttribute('aria-pressed', 'true');
+      await expect(msa).toHaveCSS('color', activeGold);
       expect(await camera(page)).toEqual(beforeToggle);
 
       const metros = () => page.evaluate(() => [...new Set(testMap.queryRenderedFeatures({ layers: ['metro-lines'] })
@@ -305,6 +323,7 @@ for (const isPhone of [false, true]) {
       const atlasMetros = page.getByRole('button', { name: 'Show metros', exact: true });
       const cty = page.locator('#toggle-counties');
       await expect(atlasMetros).toHaveAttribute('aria-pressed', 'true');
+      await expect(atlasMetros).toHaveCSS('color', activeGold);
       await expect(page.locator('#panel-content .fact-sources')).toBeHidden();
       await expect(page.locator('#panel-content .facts-date')).toBeHidden();
       await expect(page.locator('#panel-content .census-record')).toBeHidden();
@@ -312,14 +331,18 @@ for (const isPhone of [false, true]) {
       await activate(atlasMetros);
       await expect(msa).toHaveAttribute('aria-pressed', 'false');
       await expect(atlasMetros).toHaveAttribute('aria-pressed', 'false');
+      await expect(atlasMetros).not.toHaveCSS('color', activeGold);
       await expect.poll(metros).toEqual([]);
       await activate(atlasCounties);
       await expect(cty).toHaveAttribute('aria-pressed', 'true');
       await expect(atlasCounties).toHaveAttribute('aria-pressed', 'true');
+      await expect(atlasCounties).toHaveCSS('color', activeGold);
+      await expect(cty).toHaveCSS('color', activeGold);
       await expect.poll(() => countyStates(page)).toEqual(['47']);
       await activate(atlasCounties);
       await expect(cty).toHaveAttribute('aria-pressed', 'false');
       await expect(atlasCounties).toHaveAttribute('aria-pressed', 'false');
+      await expect(atlasCounties).not.toHaveCSS('color', activeGold);
       await expect.poll(() => countyStates(page)).toEqual([]);
       await activate(atlasMetros);
       await expect(msa).toHaveAttribute('aria-pressed', 'true');
@@ -335,6 +358,45 @@ for (const isPhone of [false, true]) {
       else await msa.click();
       await expect.poll(metros).toEqual([]);
     });
+
+    test('the city state link selects and fits California from San Diego Atlas', async ({ page }, testInfo) => {
+      await exposeMap(page);
+      await assertRendered(page, testInfo);
+      await readMap(page);
+      await page.locator('#search').fill('San Diego');
+      const city = page.getByRole('button', {name:/^San Diego, CA\s*PLACE$/});
+      if (isPhone) await city.tap();
+      else await city.click();
+      const heading = page.locator('#panel-content h1');
+      await expect(heading).toHaveText('San Diego');
+      await waitForCamera(page);
+      const stateLink = page.getByRole('button', {name:'California',exact:true});
+      await expect(stateLink).toBeVisible();
+      const linkOnRight = await stateLink.evaluate(button => {
+        const title = button.closest('.place-heading').querySelector('h1');
+        return button.getBoundingClientRect().left > title.getBoundingClientRect().right;
+      });
+      expect(linkOnRight).toBe(true);
+
+      const atlas = isPhone ? page.getByRole('button', {name:'Open city atlas'}) : page.locator('#desktop-atlas-toggle');
+      if (isPhone) await atlas.tap();
+      else await atlas.click();
+      const app = page.locator('.app');
+      const atlasKind = isPhone ? 'data-phone-atlas-kind' : 'data-desktop-atlas';
+      await expect(app).toHaveAttribute(atlasKind, 'place');
+      await waitForCamera(page);
+      await screenshot(page, testInfo, 'san-diego-state-link');
+      const initial = await camera(page);
+      if (isPhone) await stateLink.tap();
+      else await stateLink.click();
+      await expect(heading).toHaveText('California');
+      await expect(app).not.toHaveAttribute(atlasKind);
+      await waitForCamera(page);
+      const fitted = await camera(page);
+      expect(fitted[2]).toBeLessThan(initial[2] - 1);
+      expect(fitted[3]).toBe(initial[3]);
+      await expect.poll(() => page.evaluate(() => testMap.getFilter('state-selected')?.at(-1))).toBe('06');
+    });
   });
 }
 
@@ -349,6 +411,7 @@ test.describe('phone viewport', () => {
     const lock = page.locator('#rotation-lock');
     const lockGlyph = lock.locator('svg');
     await expect(controls.locator('[data-bearing]')).toHaveCount(8);
+    await expect(lock).toHaveCSS('color', activeGold);
     const aligned = await lock.evaluate(el => {
       const lock = el.getBoundingClientRect(), rose = document.querySelector('.compass-rose').getBoundingClientRect();
       return Math.max(Math.abs((lock.left + lock.right - rose.left - rose.right) / 2),
@@ -455,6 +518,7 @@ test.describe('phone viewport', () => {
     await checkDock('closed');
     await key.tap();
     await expect(page.locator('#map-key')).toBeVisible();
+    await expect(key).toHaveCSS('color', activeGold);
     await key.tap();
     await expect(page.locator('#map-key')).toBeHidden();
     await page.getByRole('button', { name: 'Show map tools' }).tap();

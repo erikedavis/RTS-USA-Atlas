@@ -2,6 +2,7 @@
   --void: #020307; --land: #0b1119; --panel: #070b11; --line: #233345;
   --line-soft:#16212e; --ink:#d9e4ee; --muted:#75889b; --soft:#a9b8c7;
   --cold:#7c9fbf; --bright:#b7d6ed; --accent:#86adc8;
+  --active-gold:#f3d99e; --active-border:#b98946; --active-background:#2b2114;
 }
 * { box-sizing:border-box; }
 html, body { padding:0; margin:0; height:100%; width:100%; background:var(--void); color:var(--ink); font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif; }
@@ -72,6 +73,11 @@ button { color:inherit; cursor:pointer; }
 .selection-icon {font-size:36px;color:#537c9b;margin:5px 0 16px;font-weight:200;}
 .empty-kicker,.section-kicker{font-size:10px;color:#79a3bd;letter-spacing:.16em;}
 .panel-content h1{font-size:23px;line-height:1.2;font-weight:600;letter-spacing:.075em;margin:9px 0 20px;}
+.place-heading {display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;column-gap:12px;margin:9px 0 20px;}
+.panel-content .place-heading h1 {margin:0;min-width:0;overflow-wrap:anywhere;}
+.place-state {display:flex;align-items:baseline;gap:5px;margin-inline-start:auto;white-space:nowrap;}
+.place-state-link {border:0;padding:0;background:none;color:var(--bright);font-size:12px;min-height:24px;text-decoration:underline;text-underline-offset:3px;}
+.place-state-link:is(:hover,:focus-visible) {color:#f1f9ff;}
 .panel-content p{font-size:12px;line-height:1.7;color:#92a5b4;}
 .panel-content .subtle{font-size:11px;color:#5f7285;}
 .empty-line{height:1px;background:linear-gradient(90deg,#426077,transparent);margin:24px 0 24px;}
@@ -99,9 +105,11 @@ button { color:inherit; cursor:pointer; }
 .state-label {background:transparent;border:0;padding:0;pointer-events:auto;cursor:pointer;min-width:22px;min-height:22px;display:flex;align-items:center;justify-content:center;}
 .state-label:hover,.state-label:focus-visible{color:#e7f5ff;text-shadow:0 0 9px #d4f2ff88;}
 .city-marker:focus-visible{outline:1px solid #a8d0e8;outline-offset:2px;}
-.map-controls button.active,.state-layer-actions button.active{border-color:#9fbdd0;background:#1d3449;color:#f1f9ff;}
 .panel-action {background:#101e2b;color:#bcd8ea;border:1px solid #38536a;padding:9px 12px;margin-top:14px;font-size:11px;letter-spacing:.08em;}
 .panel-action:hover{background:#182d3d;}
+.map-controls button[aria-pressed="true"],.state-layer-actions button[aria-pressed="true"] {
+  border-color:var(--active-border);background:var(--active-background);color:var(--active-gold);
+}
 .panel-help {color:#7e96aa;font-size:10px;line-height:1.5;margin-top:8px;}
 .state-layer-actions {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0 0;}
 .state-layer-actions .panel-action {margin:0;min-height:44px;padding:5px 4px;text-transform:uppercase;}
@@ -131,7 +139,7 @@ button { color:inherit; cursor:pointer; }
 .metro-place-list{list-style:none;margin:8px 0;padding:0;}
 .metro-place-list li{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-top:1px solid #203141;font-size:12px;font-variant-numeric:tabular-nums;}
 .app:not(.phone-layout):not([data-desktop-atlas]) .panel-content {padding-block:17px;}
-.app:not(.phone-layout):not([data-desktop-atlas]) .panel-content h1 {margin-bottom:12px;}
+.app:not(.phone-layout):not([data-desktop-atlas]) .panel-content > :is(h1,.place-heading) {margin-bottom:12px;}
 .app:not(.phone-layout):not([data-desktop-atlas]) .population-caption {margin-bottom:12px;}
 .app:not(.phone-layout):not([data-desktop-atlas]) .fact-city {gap:3px;margin-bottom:6px;padding:7px 10px;}
 .city-tooltip .maplibregl-popup-content{background:#10202d;border:1px solid #49657a;color:#c6dfed;padding:9px 12px;font-size:11px;line-height:1.5;box-shadow:0 4px 14px #0008;}
@@ -154,6 +162,7 @@ button { color:inherit; cursor:pointer; }
 .map-key-toggle svg{width:38px;height:22px;margin-bottom:-1px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linejoin:round;stroke-linecap:round;}
 .dev-zoom{right:68px;bottom:4px;color:#a5bed0;font-size:11px;font-variant-numeric:tabular-nums;}
 .map-key-toggle:hover,.map-key-toggle:focus-visible,.map-key-toggle[aria-expanded="true"]{opacity:1;}
+.map-key-toggle[aria-expanded="true"] {color:var(--active-gold);}
 .map-key{position:absolute;right:18px;bottom:62px;z-index:9;width:min(280px,calc(100% - 36px));padding:16px 19px;background:#0c1621f5;border:1px solid #39546a;box-shadow:0 12px 32px #000a;color:#c5d8e6;}
 .map-key h2{font-size:15px;margin:0 0 9px;color:#e2f3ff;}
 .map-key p{font-size:11px;margin:0;color:#93afc3;}
@@ -216,17 +225,16 @@ button { color:inherit; cursor:pointer; }
   text-shadow:0 1px 3px #020307;
   transition:opacity .15s ease,transform .15s ease,color .15s ease;
 }
-.compass-direction:is(:focus-visible,:active) span {color:#f3d99e;opacity:1;transform:scale(1.22);}
+.compass-direction:is(:focus-visible,:active) span {color:var(--active-gold);opacity:1;transform:scale(1.22);}
 #rotation-lock {
   position:absolute;z-index:2;top:50%;left:50%;width:min(44px,40%);height:min(44px,40%);
-  transform:translate(-50%,-50%);border-radius:50%;color:var(--compass-light);
+  transform:translate(-50%,-50%);border-radius:50%;color:var(--active-gold);
 }
 #rotation-lock svg {
-  width:22px;height:22px;overflow:visible;pointer-events:none;opacity:var(--compass-opacity);
+  width:22px;height:22px;overflow:visible;pointer-events:none;
   filter:drop-shadow(0 0 1px #020307) drop-shadow(0 0 1px #020307);
 }
 .compass-shackle {transform-origin:7.5px 11px;transition:transform .22s ease;}
-.rotation-unlocked #rotation-lock {color:#f3d99e;}
 .rotation-unlocked #rotation-lock svg {animation:compass-lock-release .94s ease both;}
 .rotation-unlocked .compass-shackle {transform:rotate(-28deg);}
 @keyframes compass-lock-release {
@@ -234,7 +242,7 @@ button { color:inherit; cursor:pointer; }
   100% {opacity:0;}
 }
 @media (hover:hover) and (pointer:fine) {
-  .compass-direction:hover span {color:#f3d99e;opacity:1;transform:scale(1.22);}
+  .compass-direction:hover span {color:var(--active-gold);opacity:1;transform:scale(1.22);}
   #rotation-lock[data-hint]::after {
     content:attr(data-hint);position:absolute;right:100%;top:50%;transform:translateY(-50%);
     padding:6px 9px;border:1px solid #3c4d5b;background:#0b141e;color:#d9e4ee;

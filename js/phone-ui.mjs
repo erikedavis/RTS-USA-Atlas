@@ -136,6 +136,11 @@ export function setupPhoneUI(map,{getSelected,hit,stateAt,insideState,insideMetr
     }
   }
 
+  function selectAndFitState(feature){
+    leaveAtlas({restore:false,fast:true});
+    select(feature,{zoom:true,duration:reducedMotion.matches?0:400});
+  }
+
   function openCityFromState(feature){
     map.stop();
     const full=stage==='atlas';
@@ -196,9 +201,7 @@ export function setupPhoneUI(map,{getSelected,hit,stateAt,insideState,insideMetr
     badgeTap(result){
       if(!result?.feature)return;
       requestAnimationFrame(()=>{
-        if(!active)return;
-        leaveAtlas({restore:false,fast:true});
-        select(result.feature,{zoom:true,duration:reducedMotion.matches?0:400});
+        if(active)selectAndFitState(result.feature);
       });
     },
     hold(result){
@@ -362,5 +365,5 @@ export function setupPhoneUI(map,{getSelected,hit,stateAt,insideState,insideMetr
     resizeFrame=requestAnimationFrame(()=>{if(stage==='atlas')fitAtlas(getSelected(),0);});
   });
   updateMode();
-  return {get active(){return active;},get focused(){return stage==='atlas'&&active;},selectionChanged,leaveAtlas,openCityFromState};
+  return {get active(){return active;},get focused(){return stage==='atlas'&&active;},selectionChanged,leaveAtlas,openCityFromState,selectAndFitState};
 }

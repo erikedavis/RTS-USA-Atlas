@@ -7,7 +7,7 @@
   .view-current {display:none;}
   .view-options {left:auto;right:0;min-width:156px;}
   .view-options :is(.view-active,button) {display:flex;align-items:center;min-height:44px;padding:0 12px;}
-  .view-options .view-active {color:#b7d6ed;border-bottom:1px solid #233548;}
+  .view-options .view-active {color:var(--active-gold);border-bottom:1px solid #233548;}
   .topbar .search-wrap {max-width:none;}
   .topbar .search-wrap input {text-overflow:ellipsis;}
 }
@@ -89,6 +89,8 @@
   width:100%;height:var(--phone-summary);min-height:0;border:0;border-top:1px solid #30485d;
 }
 .phone-layout .panel-content {min-height:0;padding:10px 12px 15px;overscroll-behavior:contain;overflow-y:auto;}
+.phone-layout .place-heading {margin:0 0 7px;}
+.phone-layout .place-state-link {min-height:44px;}
 .phone-layout .phone-state-overview {display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:10px;align-items:start;}
 .phone-layout .phone-state-overview h1 {margin:4px 0 6px;letter-spacing:.025em;}
 .phone-layout .phone-state-overview .section-kicker {font-size:9px;letter-spacing:.11em;}

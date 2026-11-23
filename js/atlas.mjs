@@ -8,7 +8,7 @@ import {addGeographyLabels} from './geography-labels.mjs';
 import {createStateLabels} from './state-labels.mjs';
 import {prepareStateShapes,shapeContainsPoint} from './state-label-placement.mjs';
 import {isNorthUp,screenBounds,setupRotation} from './map-rotation.mjs?v=08i';
-import {setupPhoneUI} from './phone-ui.mjs?v=08h';
+import {setupPhoneUI} from './phone-ui.mjs?v=08k';
 import {COUNTY_LABEL_ZOOM,createCountyLabels} from './county-labels.mjs';
 import {INSETS, NATIONAL_BOUNDS, displayData, displayPoint, geographicPoint, hawaiiTailMarks, insetFrames} from './insets.mjs';
 
@@ -167,6 +167,17 @@ function display(f) {
   const heading=[element('div','section-kicker',p.kind==='state'?'STATE OVERVIEW':p.kind==='place'?'CITY / PLACE OVERVIEW':
     p.kind==='metro'?(p.class==='metro'?'METRO AREA OVERVIEW':'MICROPOLITAN AREA OVERVIEW'):
     'GEOGRAPHIC RECORD / '+(p.kind||'FEATURE').toUpperCase()),element('h1','',title||'UNNAMED')];
+  const state=p.kind==='place'&&findStateByGeoid(p.state_fips);
+  if(state){
+    const name=element('button','place-state-link',state.properties.name);
+    name.type='button';
+    name.addEventListener('click',()=>selectAndFitState(state));
+    const location=element('div','place-state');
+    location.append(element('span','record-label','State:'),name);
+    const line=element('div','place-heading');
+    line.append(heading[1],location);
+    heading[1]=line;
+  }
   let overview;
   if(phone?.active&&p.kind==='state'){
     const grid=element('div','phone-state-overview');
@@ -450,7 +461,7 @@ function focusStateAtlas(fips,fast){
   map.setPaintProperty('state-atlas-surface','fill-opacity',fips ? .98 : 0);
   map.setPaintProperty('state-surface','fill-opacity',fips?0:.98);
   map.setPaintProperty('state-lines','line-opacity',fips?0:.9);
-  for(const id of ['inset-surface','inset-lines','geography-lake','geography-peninsula','geography-island']){
+  for(const id of ['inset-surface','inset-lines','great-lakes-shoreline','geography-lake','geography-peninsula','geography-island']){
     map.setLayoutProperty(id,'visibility',fips?'none':'visible');
   }
   for(const id of ['hawaii-tail-islands','hawaii-tail-label']){
@@ -645,6 +656,10 @@ function toggleMetros(force){
 function findStateByGeoid(geoid){
   return states.features.find(feature=>feature.properties.geoid===geoid);
 }
+function selectAndFitState(state){
+  if(phone?.active)phone.selectAndFitState(state);
+  else select(state,{zoom:true});
+}
 function countySelectable(){return countySelectionOverride;}
 function updateLayerButtons(){
   const metroVisible=metroMode()!=='off';
@@ -653,7 +668,6 @@ function updateLayerButtons(){
     ['metros',metroVisible,metroVisible?'Hide metro areas':'Show metro areas'],
   ]){
     for(const button of document.querySelectorAll(`[data-layer-toggle="${layer}"]`)){
-      button.classList.toggle('active',visible);
       button.setAttribute('aria-pressed',String(visible));
       button.title=title;
     }
@@ -684,7 +698,7 @@ function makeLabels() {
   cityLayers=createCityLayers(map,cities,{isNational:isNationalView,metroOverview,phoneViewport:()=>Boolean(phone?.active),stateLabelsFirst});
   stateLabelsController=createStateLabels(map,stateLabels,states,maplibregl.Marker,(geoid,event)=>{
     const state=findStateByGeoid(geoid);
-    if(state&&(!phone?.active||event.detail===0))select(state,{zoom:true});
+    if(state&&(!phone?.active||event.detail===0))selectAndFitState(state);
   },isNationalView,cityLayers.protectedMarkerBoxes,wideStateLabels,stateLabelsFirst);
   cityLayers.setReservations(mapReservations);
   countyNames=createCountyLabels(map);
@@ -750,6 +764,7 @@ function addSourcesAndLayers() {
   map.addLayer({id:'inset-surface',type:'fill',source:'inset-frames',paint:{'fill-color':'#070d14','fill-opacity':.9}});
   map.addLayer({id:'inset-lines',type:'line',layout:{'line-join':'bevel','line-cap':'butt'},source:'inset-frames',paint:{'line-color':'#30485b','line-width':1}});
   map.addSource('states',{type:'geojson',data:states});
+  map.addSource('great-lakes',{type:'geojson',data:new URL('../data/great-lakes.geojson',import.meta.url).href});
   map.addSource('counties',{type:'geojson',data:emptyFC});
   map.addSource('local-places',{type:'geojson',data:emptyFC});
   map.addSource('place-areas',{type:'geojson',data:emptyFC});
@@ -773,6 +788,9 @@ function addSourcesAndLayers() {
   map.addLayer({id:cityMetroLayers[1],type:'line',source:'metros',filter:['==',['get','geoid'],'__none__'],layout:{'line-join':'round'},
     paint:{'line-color':'#b2d8f4','line-width':1.7,'line-opacity':.92}});
   map.addLayer({id:'state-lines',type:'line',layout:{'line-join':'bevel','line-cap':'butt'},source:'states',paint:{'line-color':'#718da8','line-width':['interpolate',['linear'],['zoom'],3,.8,9,1.7],'line-opacity':.9}});
+  map.addLayer({id:'great-lakes-shoreline',type:'line',source:'great-lakes',layout:{'line-join':'round'},
+    paint:{'line-color':'#648aa5','line-width':['interpolate',['linear'],['zoom'],2,.8,6,1.1],
+      'line-opacity':['interpolate',['linear'],['zoom'],2,.7,7,.7,9.5,0]}});
   const hawaii=states.features.find(f=>f.properties.abbr==='HI');
   if(hawaii){
     map.addSource('hawaii-tail',{type:'geojson',data:hawaiiTailMarks(hawaii.geometry)});
