@@ -9,7 +9,7 @@ async function assertRendered(page, testInfo) {
   const response = await page.goto('/', { waitUntil: 'domcontentloaded' });
   expect(response?.ok(), 'The atlas must respond over HTTP').toBe(true);
   await expect(page.locator('#map-loading'), 'Atlas loading overlay must disappear').toBeHidden({ timeout: 50_000 });
-  await expect(page.locator('meta[name="atlas-version"]')).toHaveAttribute('content', 'ALPHA 0.9D');
+  await expect(page.locator('meta[name="atlas-version"]')).toHaveAttribute('content', 'ALPHA 0.9E');
   await expect(page.locator('canvas.maplibregl-canvas')).toHaveCount(1);
   const renderer = await page.evaluate(() => {
     const canvas = document.querySelector('canvas.maplibregl-canvas');
@@ -78,10 +78,17 @@ async function expectBearing(page, expected) {
 }
 
 async function tapRoseSpoke(page, isPhone = false) {
+  await waitForCompassShift(page);
   const { x, y, width, height } = await page.locator('#compass-home').boundingBox();
   const point = [x + width / 2 + 31, y + height / 2];
   if (isPhone) await page.touchscreen.tap(...point);
   else await page.mouse.click(...point);
+}
+
+async function waitForCompassShift(page) {
+  await page.locator('#compass-face').evaluate(async face => {
+    await Promise.all(face.getAnimations().map(animation => animation.finished));
+  });
 }
 
 async function bottomHudGeometry(page, isPhone = false) {
@@ -184,6 +191,56 @@ test('desktop compass turns with the map and highlights one direction on hover',
   await tapRoseSpoke(page);
   await expect(lock).toHaveAttribute('aria-pressed', 'true');
   await expect(controls).toHaveClass(/rotation-north-locked/);
+});
+
+test('desktop compass tucks into the corner and its return chevron tracks the sidebar', async ({ page }, testInfo) => {
+  await assertRendered(page,testInfo);
+  const lock=page.locator('#rotation-lock');
+  const face=page.locator('#compass-face');
+  const toggle=page.locator('#compass-toggle');
+  const glyph=toggle.locator('.compass-chevron');
+  const text=toggle.locator('.compass-toggle-text');
+  const mapEdge=()=>page.locator('#map').evaluate(node=>node.getBoundingClientRect().right);
+  const rose=face.locator('.compass-rose');
+  const north=face.locator('[data-bearing="0"] span');
+  const east=face.locator('[data-bearing="90"] span');
+  const map=await page.locator('#map').boundingBox();
+  const locked=await rose.boundingBox();
+  expect((await north.boundingBox()).y-map.y).toBeLessThan(12);
+  expect(await mapEdge()-(await east.boundingBox()).x-(await east.boundingBox()).width).toBeLessThan(12);
+  await expect(glyph).toHaveCSS('opacity','0.42');
+  await expect(text).toHaveCSS('opacity','0');
+  await lock.hover();
+  await expect(glyph).toHaveCSS('transform','matrix(1.3, 0, 0, 1.3, 0, 0)');
+  await expect(text).toHaveCSS('opacity','1');
+  await expect(text).toHaveText('Hide compass');
+  await screenshot(page,testInfo,'desktop-compass-hide');
+  await lock.click();
+  await expect(toggle).toBeHidden();
+  await expect.poll(async()=> (await rose.boundingBox()).width).toBeGreaterThan(locked.width+8);
+  expect((await rose.boundingBox()).y).toBeGreaterThan(locked.y+8);
+  expect((await rose.boundingBox()).x).toBeLessThan(locked.x-8);
+  await lock.click();
+  await toggle.click();
+  await expect(face).toHaveAttribute('inert','');
+  await expect(toggle).toHaveAccessibleName('Return compass');
+  await expect.poll(async()=> (await face.boundingBox()).x).toBeGreaterThan(await mapEdge());
+  const before=await mapEdge();
+  await page.getByRole('button',{name:'Hide stats',exact:true}).click();
+  await expect.poll(mapEdge).toBeGreaterThan(before+200);
+  const right=await mapEdge();
+  await expect.poll(async()=>{const box=await toggle.boundingBox();return Math.abs(box.x+box.width-right);}).toBeLessThan(1);
+  await expect(face).toHaveAttribute('inert','');
+  const peek=toggle.locator('.compass-peek');
+  await expect(peek).toHaveCSS('opacity','0');
+  await toggle.hover();
+  await expect(peek).toHaveCSS('opacity','1');
+  await expect(text).toHaveCSS('opacity','1');
+  await expect(text).toHaveText('Return compass');
+  await screenshot(page,testInfo,'desktop-compass-return');
+  await toggle.click();
+  await expect(face).not.toHaveAttribute('inert');
+  await expect(lock).toHaveAttribute('aria-pressed','true');
 });
 
 test('desktop USA home defaults to CONUS and keeps the chosen extent through Atlas', async ({ page }, testInfo) => {
@@ -656,6 +713,41 @@ test.describe('phone viewport', () => {
     await expect(page.locator('.rotation-tools')).toHaveAttribute('inert', '');
   });
 
+  test('phone compass hides on a straight locked swipe and returns from the edge', async ({ page }, testInfo) => {
+    await exposeMap(page);
+    await assertRendered(page,testInfo);
+    await readMap(page);
+    const face=page.locator('#compass-face');
+    const lock=page.locator('#rotation-lock');
+    const toggle=page.locator('#compass-toggle');
+    const text=toggle.locator('.compass-toggle-text');
+    const initial=await camera(page);
+    const west=await face.locator('[data-bearing="270"]').boundingBox();
+    const start={x:Math.round(west.x+west.width/2-15),y:Math.round(west.y+west.height/2)};
+    const cdp=await page.context().newCDPSession(page);
+    const touch=(type,point)=>cdp.send('Input.dispatchTouchEvent',{type,touchPoints:point?[point]:[]});
+    await expect(toggle).toBeVisible();
+    await expect(text).toBeHidden();
+    await touch('touchStart',start);
+    for(let dx=10;dx<=90;dx+=10)await touch('touchMove',{x:start.x+dx,y:start.y+2});
+    await expect(face).not.toHaveAttribute('inert');
+    await touch('touchEnd');
+    await expect(face).toHaveAttribute('inert','');
+    await expect(toggle).toHaveAccessibleName('Return compass');
+    await expect(lock).toHaveAttribute('aria-pressed','true');
+    await expect(text).toBeHidden();
+    await expect(toggle.locator('.compass-peek')).toBeHidden();
+    await expect.poll(async()=> (await face.boundingBox()).x).toBeGreaterThan(390);
+    expect(await camera(page)).toEqual(initial);
+    await screenshot(page,testInfo,'phone-compass-hidden');
+    await toggle.tap();
+    await expect(face).not.toHaveAttribute('inert');
+    await expect(toggle).toHaveAccessibleName('Hide compass');
+    await lock.tap();
+    await expect(lock).toHaveAttribute('aria-pressed','false');
+    await expect(toggle).toBeHidden();
+  });
+
   test('phone compass circular drag unlocks on lift and then follows a finger across north', async ({ page }, testInfo) => {
     await exposeMap(page);
     await assertRendered(page,testInfo);
@@ -680,6 +772,7 @@ test.describe('phone viewport', () => {
     await touch('touchEnd');
     await expect(lock).toHaveAttribute('aria-pressed','false');
     await expectBearing(page,0);
+    await waitForCompassShift(page);
     await page.evaluate(()=>testMap.jumpTo({bearing:350}));
     const spoke=await page.locator('.compass-rose').evaluate(svg=>{
       const point=new DOMPoint(50,12).matrixTransform(svg.getScreenCTM());

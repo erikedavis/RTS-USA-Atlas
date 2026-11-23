@@ -7,7 +7,7 @@ import {populateMapKey} from './city-symbols.mjs';
 import {createGeographyLabels} from './geography-labels.mjs?v=09d';
 import {createStateLabels} from './state-labels.mjs?v=09c';
 import {prepareStateShapes,shapeContainsPoint} from './state-label-placement.mjs';
-import {isNorthUp,screenBounds,setupRotation} from './map-rotation.mjs';
+import {isNorthUp,screenBounds,setupRotation} from './map-rotation.mjs?v=09e';
 import {setupPhoneUI} from './phone-ui.mjs?v=09d';
 import {COUNTY_LABEL_ZOOM,createCountyLabels} from './county-labels.mjs';
 import {createSelectedAreaLabel} from './selected-area-label.mjs';
@@ -380,11 +380,13 @@ function boundsOf(geom) {
 function fitAtCurrentBearing(bounds,options){
   const bearing=map.getBearing();
   let {padding}=options;
-  if(!isNorthUp(bearing)){
+  const compass=$('.rotation-tools:not([inert]) .compass-face:not([inert])');
+  if(!isNorthUp(bearing)&&compass){
     if(typeof padding==='number')padding={top:padding,right:padding,bottom:padding,left:padding};
-    const hud=$('.rotation-tools').getBoundingClientRect();
-    const cap=map.getContainer().clientHeight*.28;
-    padding={...padding,top:Math.max(padding.top,Math.min(cap,hud.height+14))};
+    const container=map.getContainer();
+    const hudBottom=compass.getBoundingClientRect().bottom-container.getBoundingClientRect().top;
+    const cap=container.clientHeight*.28;
+    padding={...padding,top:Math.max(padding.top,Math.min(cap,hudBottom+14))};
   }
   map.fitBounds(bounds,{...options,padding,bearing});
 }
@@ -872,7 +874,7 @@ function toggleCountySelection(force){
 }
 function mapControlReservations(includeSelected=false){
   const r=map.getContainer().getBoundingClientRect();
-  const controls=[...document.querySelectorAll('.map-controls:not(.phone-dock .map-controls),#reset-view,#sidebar-toggle,.rotation-tools:not([inert]),.map-hud,.inset-label,#usa-label,.map-key-toggle,.map-key:not([hidden]),.phone-grip,.phone-dock-row:not([inert]),.phone-home:not([hidden]),.phone-atlas-back:not([hidden]),.phone-history-back:not([hidden])')];
+  const controls=[...document.querySelectorAll('.map-controls:not(.phone-dock .map-controls),#reset-view,#sidebar-toggle,.rotation-tools:not([inert]) :is(.compass-face:not([inert]),#compass-toggle:not([hidden])),.map-hud,.inset-label,#usa-label,.map-key-toggle,.map-key:not([hidden]),.phone-grip,.phone-dock-row:not([inert]),.phone-home:not([hidden]),.phone-atlas-back:not([hidden]),.phone-history-back:not([hidden])')];
   if(includeSelected)controls.push($('.selected-area-label'));
   return controls.filter(n=>n?.offsetWidth&&n.offsetHeight)
     .map(n=>{const b=n.getBoundingClientRect();return {x0:b.left-r.left,y0:b.top-r.top,x1:b.right-r.left,y1:b.bottom-r.top};});

@@ -1,4 +1,8 @@
-# USAtlas V0.9D preview
+# USAtlas V0.9E preview
+
+The locked compass sits against the upper-right map edge and expands inward on unlock. Desktop hover shows Hide compass or Return compass. A straight rightward swipe hides the locked compass on phones, and the edge chevron brings it back.
+
+## V0.9D preview
 
 Metro Stats and Atlas show linked states, counties and largest place. County Stats show linked state and largest place. Metro membership comes from Vintage 2025 Census population estimates and their July 2023 OMB delineations. Long Island is labeled along its axis at regional zoom when space allows. Shared geography placement can move nearby city names while preserving their visibility and size.
 

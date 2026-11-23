@@ -8,13 +8,16 @@ export function screenBounds(map,[[west,south],[east,north]]){
   };
 }
 
-export function setupRotation(map,controls,onDragEnd){
+export function setupRotation(map,controls,onChange){
   const rose=controls.querySelector('#compass-home');
   const dial=controls.querySelector('.compass-dial');
   const roseArt=rose.querySelector('svg');
+  const face=controls.querySelector('#compass-face');
+  const toggle=controls.querySelector('#compass-toggle');
+  const toggleText=toggle.querySelector('.compass-toggle-text');
   const lock=controls.querySelector('#rotation-lock');
   const heading=controls.querySelector('#rotation-bearing');
-  let locked=true;
+  let locked=true,minimized=false;
   let drag=null,skipClick=false;
 
   function showBearing(){
@@ -45,8 +48,49 @@ export function setupRotation(map,controls,onDragEnd){
     lock.setAttribute('aria-label',locked?'Unlock map rotation':'Lock map rotation in place');
     lock.dataset.hint=locked?'Map rotation is locked. Click to unlock.':'Click to lock rotation here.';
     controls.classList.toggle('rotation-unlocked',!locked);
+    toggle.hidden=!locked;
+    if(!locked)controls.classList.remove('compass-near');
     showBearing();
+    onChange();
   }
+
+  function setMinimized(value){
+    if(!locked||minimized===value)return;
+    minimized=value;
+    face.inert=minimized;
+    controls.classList.toggle('compass-minimized',minimized);
+    controls.classList.remove('compass-near');
+    const action=minimized?'Return compass':'Hide compass';
+    toggle.setAttribute('aria-label',action);
+    toggle.setAttribute('aria-expanded',String(!minimized));
+    toggleText.textContent=action;
+    onChange();
+  }
+
+  const shell=controls.parentElement;
+  shell.addEventListener('pointermove',event=>{
+    if(event.pointerType!=='mouse'||!locked||minimized||controls.inert)return;
+    const a=face.getBoundingClientRect(),b=toggle.getBoundingClientRect();
+    const {clientX:x,clientY:y}=event;
+    controls.classList.toggle('compass-near',x>=Math.min(a.left,b.left)-7&&x<=a.right&&
+      y>=a.top&&y<=a.bottom+5);
+  },{passive:true});
+  shell.addEventListener('pointerleave',()=>controls.classList.remove('compass-near'));
+  face.addEventListener('transitionend',event=>{
+    if(event.target===face&&event.propertyName==='transform')onChange();
+  });
+  const isPhone=()=>Boolean(controls.closest('.phone-layout'));
+  toggle.addEventListener('pointerup',event=>{
+    if(!minimized||!isPhone()||!event.isPrimary||event.pointerType!=='touch')return;
+    const {left,right,top,bottom}=toggle.getBoundingClientRect();
+    const {clientX:x,clientY:y}=event;
+    // A touch immediately after the hide swipe may not synthesize a click.
+    if(x>=left&&x<=right&&y>=top&&y<=bottom)setMinimized(false);
+  });
+  toggle.addEventListener('click',event=>{
+    if(!minimized&&isPhone()&&event.detail>0)return;
+    setMinimized(!minimized);
+  });
 
   function snap(bearing){
     map.rotateTo(bearing,{duration:280});
@@ -65,14 +109,19 @@ export function setupRotation(map,controls,onDragEnd){
     if(event.isPrimary)skipClick=false;
     if(!event.isPrimary||event.pointerType==='mouse')return;
     const button=event.target.closest('button');
-    if(!button?.matches('[data-bearing]')&&(button!==rose||!onOuterSpoke(event)))return;
+    const canTurn=button?.matches('[data-bearing]')||(button===rose&&onOuterSpoke(event));
+    const canHide=locked&&!minimized&&event.pointerType==='touch'&&face.contains(event.target)&&isPhone();
+    if(!canTurn&&!canHide)return;
     const bounds=dial.getBoundingClientRect();
     const center={x:bounds.left+bounds.width/2,y:bounds.top+bounds.height/2};
-    drag={id:event.pointerId,center,angle:angleAt(event,center),turn:0,
+    drag={id:event.pointerId,center,angle:angleAt(event,center),turn:0,canTurn,canHide,maxY:0,
+      swipeDistance:Math.max(34,face.offsetWidth*.29),
       startX:event.clientX,startY:event.clientY,bearing:map.getBearing(),started:false};
   });
   controls.addEventListener('pointermove',event=>{
     if(event.pointerId!==drag?.id)return;
+    drag.maxY=Math.max(drag.maxY,Math.abs(event.clientY-drag.startY));
+    if(!drag.canTurn)return;
     const angle=angleAt(event,drag.center);
     drag.turn+=((angle-drag.angle+540)%360)-180;
     drag.angle=angle;
@@ -84,18 +133,24 @@ export function setupRotation(map,controls,onDragEnd){
   });
   controls.addEventListener('pointerup',event=>{
     if(event.pointerId!==drag?.id)return;
-    skipClick=drag.started||Math.hypot(event.clientX-drag.startX,event.clientY-drag.startY)>=10;
-    if(drag.started&&locked)setLocked(false);
+    const dx=event.clientX-drag.startX,dy=event.clientY-drag.startY;
+    // Only a deliberate, nearly horizontal pass can hide the locked rose.
+    // Circular strokes on the ring still use the rotation gesture on lift.
+    const hide=locked&&drag.canHide&&dx>=drag.swipeDistance&&
+      Math.max(drag.maxY,Math.abs(dy))<=Math.max(10,dx*.23);
     const turned=drag.started;
+    skipClick=turned||Math.hypot(dx,dy)>=10;
     drag=null;
-    if(turned)onDragEnd();
+    if(hide)setMinimized(true);
+    else if(turned&&locked)setLocked(false);
+    else if(turned)onChange();
   });
   for(const type of ['pointercancel','lostpointercapture']){
     controls.addEventListener(type,event=>{
       if(event.pointerId!==drag?.id)return;
       const turned=drag.started;
       drag=null;
-      if(turned)onDragEnd();
+      if(turned)onChange();
     });
   }
   controls.addEventListener('click',event=>{

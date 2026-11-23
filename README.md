@@ -1,4 +1,4 @@
-# USAtlas V0.9D preview
+# USAtlas V0.9E preview
 
 Requires Python 3. Clone the repository or extract its source ZIP, then run **Start_Atlas.cmd** from that folder. The launcher opens **http://127.0.0.1:8020/**.
 [Development handoff](HANDOFF.md) covers the current preview, repeatable checks, and open work.
@@ -11,6 +11,7 @@ Tap or click the USA map label for USA Stats. Hold it to open USA Atlas. The who
 
 ## Desktop controls
 
+- The locked compass hugs the map's upper-right corner and expands inward when unlocked. Hover near the locked rose to reveal **Hide compass**. Hover the remaining left chevron for **Return compass** and click to bring it back. It stays aligned with the stats sidebar.
 - Select a state, city or metro, then choose **Atlas** in the right sidebar. The sidebar widens. State Atlas frames the outline and fades out surrounding states. City Atlas keeps the zoom and highlights its metro when one exists. Metro Atlas frames the metro and includes a list of Census places with points inside its boundary.
 - **Back** restores the previous map position, zoom and bearing. A linked city opened from a state returns to that state's atlas or stats.
 - The city panel shows its state, metro, and county beside the city name. Each link selects and fits that area in compact facts and City Atlas. For cities spanning multiple counties, the county links to the one containing the city's mapped point.
@@ -20,6 +21,7 @@ Tap or click the USA map label for USA Stats. Hold it to open USA Atlas. The who
 
 ## Phone controls
 
+- Swipe from left to right across the locked compass to slide it away. Tap the left chevron at the edge to return it. The compass can be hidden while rotation is locked.
 - Tap the C14 logo and blue chevron to open Tools. View shows the current Statistical mode. Geographic and Strategic are reserved for later releases.
 - Home, the zoom readout, and the map key sit along the bottom and move with the tools and stats bar. **COUNTIES**, **METROS**, and **LAYERS** stay available in City and State Atlas. **LAYERS** is reserved for a future update.
 - One tap on state land opens compact facts at the current map position. A quick double-tap on the map zooms two levels around the tap. Tap or double-tap a state abbreviation to fit the state and show its compact facts. With a state selected, tap another state's land to switch, or use the **×** by the chevrons to clear it.
