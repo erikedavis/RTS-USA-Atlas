@@ -1,4 +1,8 @@
-# USAtlas V0.9H preview
+# USAtlas V0.9I preview
+
+On a phone, tap the rose to unlock rotation before tapping a direction. Direction taps are inactive while locked.
+
+## V0.9H preview
 
 On a phone, swipe right across the compass to reset north, lock rotation and hide the rose. Tap the edge chevron or swipe left from its hit area to restore the compass locked at north.
 

@@ -236,7 +236,7 @@ export function setupRotation(map,controls,onChange){
   for(const button of [rose,lock])button.addEventListener('click',()=>setLocked(!locked));
   controls.addEventListener('click',event=>{
     const button=event.target.closest('button[data-bearing]');
-    if(button&&!minimized)snap(Number(button.dataset.bearing));
+    if(button&&!minimized&&(!locked||!isPhone()))snap(Number(button.dataset.bearing));
   });
   document.addEventListener('keydown',event=>{
     if(event.defaultPrevented||event.isComposing||event.altKey||event.ctrlKey||event.metaKey||

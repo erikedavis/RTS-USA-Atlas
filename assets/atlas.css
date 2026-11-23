@@ -299,7 +299,7 @@ button { color:inherit; cursor:pointer; }
   text-shadow:0 1px 3px #020307;
   transition:opacity .15s ease,transform .15s ease,color .15s ease;
 }
-.compass-direction:is(:focus-visible,:active) span {color:var(--active-gold);opacity:1;transform:scale(1.22);}
+:where(.app:not(.phone-layout),.rotation-unlocked) .compass-direction:is(:focus-visible,:active) span {color:var(--active-gold);opacity:1;transform:scale(1.22);}
 #rotation-lock {
   position:absolute;z-index:2;top:50%;left:50%;width:min(44px,40%);height:min(44px,40%);
   transform:translate(-50%,-50%);border-radius:50%;color:var(--active-gold);
@@ -344,7 +344,7 @@ button { color:inherit; cursor:pointer; }
   .app:not(.phone-layout) .compass-minimized #compass-toggle:is(:hover,:focus-visible) .compass-peek {
     opacity:1;translate:0 -50%;
   }
-  .compass-direction:hover span {color:var(--active-gold);opacity:1;transform:scale(1.22);}
+  :where(.app:not(.phone-layout),.rotation-unlocked) .compass-direction:hover span {color:var(--active-gold);opacity:1;transform:scale(1.22);}
   #rotation-lock[data-hint]::after {
     content:attr(data-hint);position:absolute;right:-24px;top:calc(50% + var(--compass-size) * .36);
     padding:6px 9px;border:1px solid #3c4d5b;background:#0b141e;color:#d9e4ee;

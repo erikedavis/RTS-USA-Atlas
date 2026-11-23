@@ -9,7 +9,7 @@ async function assertRendered(page, testInfo) {
   const response = await page.goto('/', { waitUntil: 'domcontentloaded' });
   expect(response?.ok(), 'The atlas must respond over HTTP').toBe(true);
   await expect(page.locator('#map-loading'), 'Atlas loading overlay must disappear').toBeHidden({ timeout: 50_000 });
-  await expect(page.locator('meta[name="atlas-version"]')).toHaveAttribute('content', 'ALPHA 0.9H');
+  await expect(page.locator('meta[name="atlas-version"]')).toHaveAttribute('content', 'ALPHA 0.9I');
   await expect(page.locator('canvas.maplibregl-canvas')).toHaveCount(1);
   const renderer = await page.evaluate(() => {
     const canvas = document.querySelector('canvas.maplibregl-canvas');
@@ -882,7 +882,7 @@ test.describe('phone viewport', () => {
     }
   });
 
-  test('phone compass keeps all eight directions and the lock tappable', async ({ page }, testInfo) => {
+  test('phone compass direction taps require unlocking with the rose or padlock', async ({ page }, testInfo) => {
     await exposeMap(page);
     await assertRendered(page, testInfo);
     await readMap(page);
@@ -899,7 +899,12 @@ test.describe('phone viewport', () => {
     expect(aligned).toBeLessThan(1);
     await screenshot(page, testInfo, 'compass-locked-phone');
 
-    await lock.tap();
+    for(const direction of await controls.locator('[data-bearing]').all()){
+      await direction.tap();
+      await expectBearing(page,0);
+      await expect(lock).toHaveAttribute('aria-pressed','true');
+    }
+    await tapRoseSpoke(page,true);
     await expect(lock).toHaveAttribute('aria-pressed', 'false');
     await expect(lockGlyph).toHaveCSS('animation-name', 'compass-lock-release');
     await expect(lockGlyph).toHaveCSS('opacity', '0');
@@ -910,6 +915,9 @@ test.describe('phone viewport', () => {
     await expect(lockGlyph).toHaveCSS('opacity', '1');
     await expectBearing(page, 135);
     await expect(controls).not.toHaveClass(/rotation-north-locked/);
+    await controls.getByRole('button',{name:'North up',exact:true}).tap();
+    await expectBearing(page,135);
+    await expect(lock).toHaveAttribute('aria-pressed','true');
     await screenshot(page, testInfo, 'compass-locked-angle-phone');
 
     await page.setViewportSize({ width: 744, height: 390 });
@@ -975,8 +983,11 @@ test.describe('phone viewport', () => {
       await expect(lock).toHaveAttribute('aria-pressed','true');
       await expectBearing(page,0);
     }
+    await lock.tap();
     await face.getByRole('button',{name:'Southeast up',exact:true}).tap();
     await expectBearing(page,135);
+    await lock.tap();
+    await expect(lock).toHaveAttribute('aria-pressed','true');
     await hide(135);
     await screenshot(page,testInfo,'phone-compass-hidden');
 

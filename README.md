@@ -1,4 +1,4 @@
-# USAtlas V0.9H preview
+# USAtlas V0.9I preview
 
 Requires Python 3. Clone the repository or extract its source ZIP, then run **Start_Atlas.cmd** from that folder. The launcher opens **http://127.0.0.1:8020/**.
 [Development handoff](HANDOFF.md) covers the current preview, repeatable checks, and open work.
@@ -22,7 +22,7 @@ Tap or click the USA map label for USA Stats. Hold it to open USA Atlas. The who
 
 ## Phone controls
 
-- Swipe right across the compass to return north, lock rotation and slide it away. Tap the edge chevron or swipe left from it to bring the locked compass back.
+- Tap the rose to unlock the compass before tapping a direction. Swipe right across the compass to return north, lock rotation and slide it away. Tap the edge chevron or swipe left from it to bring the locked compass back.
 - Tap the C14 logo and blue chevron to open Tools. View shows the current Statistical mode. Geographic and Strategic are reserved for later releases.
 - Home, the zoom readout, and the map key sit along the bottom and move with the tools and stats bar. **COUNTIES**, **METROS**, and **LAYERS** stay available in City and State Atlas. **LAYERS** is reserved for a future update.
 - One tap on state land opens compact facts at the current map position. A quick double-tap on the map zooms two levels around the tap. Tap or double-tap a state abbreviation to fit the state and show its compact facts. With a state selected, tap another state's land to switch, or use the **×** by the chevrons to clear it.
