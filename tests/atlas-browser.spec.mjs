@@ -195,7 +195,7 @@ test('desktop Atlas expands, restores a rotated camera, and reopens the hidden s
   await waitForCamera(page);
   await page.evaluate(() => testMap.jumpTo({ center: [-96, 37.6], zoom: 4.3, bearing: 45 }));
   const stateCamera = await camera(page);
-  await page.getByRole('button', { name: 'SHOW / SELECT COUNTIES' }).click();
+  await page.getByRole('button', { name: 'Show counties', exact: true }).click();
   await expect.poll(() => countyStates(page)).toEqual(['20']);
   expect(await camera(page)).toEqual(stateCamera);
   await page.locator('#toggle-counties').click();
