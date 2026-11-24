@@ -85,10 +85,15 @@
 .phone-layout .phone-dock-row {display:grid;grid-template-rows:0fr;transition:grid-template-rows .24s cubic-bezier(.2,.8,.25,1);}
 .phone-layout .phone-dock-row:not([inert]) {grid-template-rows:1fr;pointer-events:auto;}
 .phone-layout .phone-dock-row > div {min-height:0;overflow:hidden;}
-.phone-layout .phone-tray {touch-action:none;}
+.phone-layout .phone-tray {position:relative;touch-action:none;--tray-inset:7px;--tray-gap:5px;}
 .phone-layout .phone-tray .map-controls {
   position:static;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
-  height:var(--phone-tray);padding:3px 7px;gap:5px;background:#070d15;border-top:1px solid #233345;
+  height:var(--phone-tray);padding:3px var(--tray-inset);gap:var(--tray-gap);background:#070d15;border-top:1px solid #233345;
+}
+.phone-layout .phone-layers-menu {
+  top:auto;bottom:calc(100% + 4px);left:auto;right:var(--tray-inset);z-index:9;
+  width:calc((100% - 2 * var(--tray-inset) - 2 * var(--tray-gap)) / 3);min-width:0;
+  font-size:11px;letter-spacing:.06em;pointer-events:auto;
 }
 .phone-layout .phone-tray .map-controls button {height:100%;width:100%;font-size:11px;font-weight:600;letter-spacing:.055em;}
 .phone-layout .phone-tray .map-controls button:not(:is(#toggle-counties,#toggle-metros,#map-layers)) {display:none;}

@@ -1,4 +1,8 @@
-# USAtlas V0.9J preview
+# USAtlas V0.9K preview
+
+The desktop sidebar hides from its inside left edge. On a phone, the bottom Layers button opens the same Standard entry as Tools → Layers.
+
+## V0.9J preview
 
 On desktop, the hide chevron sits inside the right side of the sidebar and returns to the map edge when collapsed. The development version appears in gold beside Search. On both layouts, Tools → Layers expands to show Standard in gold.
 

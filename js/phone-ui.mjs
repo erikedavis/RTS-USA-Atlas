@@ -16,6 +16,7 @@ export function setupPhoneUI(map,{getSelected,hit,stateAt,insideState,insideMetr
   const rotation=$('.rotation-tools'),toolsMenu=$('#tools-menu');
   const panel=$('#info-panel'),info=$('#panel-content'),controls=$('.map-controls');
   const desktopLayers=$('#desktop-layer-controls'),layerButtons=[...desktopLayers.children],layers=$('#map-layers');
+  const headerLayers=$('#layers-menu'),layerOptions=$('#layer-options'),layersPopup=$('#phone-layers-menu');
   const dock=$('#phone-dock'),tray=$('#phone-tray'),sheet=$('.phone-sheet');
   const dockBody=$('#phone-dock-body'),mapHud=[$('#zoom-text'),$('#map-key-toggle'),$('#map-key')];
   const up=$('#phone-up'),down=$('#phone-down'),grip=$('#phone-grip');
@@ -49,6 +50,7 @@ export function setupPhoneUI(map,{getSelected,hit,stateAt,insideState,insideMetr
   }
 
   function show(next){
+    if(next!==stage)closeLayers();
     stage=next;
     const full=stage==='atlas';
     app.dataset.phoneStage=stage;
@@ -70,6 +72,32 @@ export function setupPhoneUI(map,{getSelected,hit,stateAt,insideState,insideMetr
     clearTimeout(labelTimer);
     labelTimer=setTimeout(refreshLabels,reducedMotion.matches?0:250);
   }
+
+  function closeLayers(){
+    if(layersPopup.hidden)return;
+    layersPopup.hidden=true;
+    layers.setAttribute('aria-expanded','false');
+    headerLayers.append(layerOptions);
+  }
+
+  layers.addEventListener('click',()=>{
+    if(!active||stage==='closed')return;
+    if(!layersPopup.hidden){closeLayers();return;}
+    toolsMenu.open=false;
+    headerLayers.open=false;
+    $('#search').blur();
+    closeKey();
+    layersPopup.append(layerOptions);
+    layersPopup.hidden=false;
+    layers.setAttribute('aria-expanded','true');
+  });
+  toolsMenu.addEventListener('toggle',()=>{if(toolsMenu.open)closeLayers();});
+  document.addEventListener('keydown',event=>{
+    if(event.key!=='Escape'||layersPopup.hidden)return;
+    event.stopPropagation();
+    closeLayers();
+    layers.focus({preventScroll:true});
+  },true);
 
   function openAtlas({fit=true,frameCity=false}={}){
     const feature=getSelected();
@@ -312,6 +340,7 @@ export function setupPhoneUI(map,{getSelected,hit,stateAt,insideState,insideMetr
   historyBack.addEventListener('click',backToState);
   document.addEventListener('pointerdown',event=>{
     if(active&&!map.getContainer().contains(event.target))mapTouches.cancel();
+    if(!layersPopup.hidden&&!layersPopup.contains(event.target)&&!layers.contains(event.target))closeLayers();
   },true);
 
   // Pull up from the summary to open the atlas, and pull down from the top
@@ -348,10 +377,12 @@ export function setupPhoneUI(map,{getSelected,hit,stateAt,insideState,insideMetr
 
   function updateMode(){
     if(active===media.matches)return;
+    closeLayers();
     if(stage==='atlas')leaveAtlas();
     mapTouches.cancel();
     beforeModeChange();
     active=media.matches;
+    layers.disabled=!active;
     app.classList.toggle('phone-layout',active);
     dock.hidden=!active;
     if(active){

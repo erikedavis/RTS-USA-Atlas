@@ -9,7 +9,7 @@ async function assertRendered(page, testInfo) {
   const response = await page.goto('/', { waitUntil: 'domcontentloaded' });
   expect(response?.ok(), 'The atlas must respond over HTTP').toBe(true);
   await expect(page.locator('#map-loading'), 'Atlas loading overlay must disappear').toBeHidden({ timeout: 50_000 });
-  await expect(page.locator('meta[name="atlas-version"]')).toHaveAttribute('content', 'ALPHA 0.9J');
+  await expect(page.locator('meta[name="atlas-version"]')).toHaveAttribute('content', 'ALPHA 0.9K');
   await expect(page.locator('canvas.maplibregl-canvas')).toHaveCount(1);
   const renderer = await page.evaluate(() => {
     const canvas = document.querySelector('canvas.maplibregl-canvas');
@@ -125,7 +125,7 @@ test('desktop national map loads, has working WebGL, and renders', async ({ page
   }
   await expect(page.locator('.topbar #search')).toBeVisible();
   const version=page.locator('#build-version');
-  await expect(version).toHaveText('0.9J');
+  await expect(version).toHaveText('0.9K');
   await expect(version).toHaveCSS('color',activeGold);
   const searchBox=await page.locator('#search').boundingBox();
   expect((await version.boundingBox()).x).toBeGreaterThan(searchBox.x+searchBox.width);
@@ -486,8 +486,9 @@ test('desktop Atlas expands, restores a rotated camera, and reopens the hidden s
 
   const hide=page.getByRole('button',{name:'Hide stats'});
   const openPanel=await sidebar.boundingBox(),openChevron=await hide.boundingBox();
-  expect(openChevron.x).toBeGreaterThan(openPanel.x);
-  expect(Math.abs(openChevron.x+openChevron.width-openPanel.x-openPanel.width)).toBeLessThan(1);
+  expect(openChevron.x-openPanel.x).toBeGreaterThanOrEqual(0);
+  expect(openChevron.x-openPanel.x).toBeLessThanOrEqual(1);
+  expect((await page.locator('#panel-content').boundingBox()).x).toBeGreaterThanOrEqual(openChevron.x+openChevron.width);
   await hide.click();
   const show=page.getByRole('button',{name:'Show stats'});
   await expect(show).toBeVisible();
@@ -719,7 +720,8 @@ for (const isPhone of [false, true]) {
       await expect(msa).toBeVisible();
       await expect(cty).toHaveText('COUNTIES');
       await expect(msa).toHaveText('METROS');
-      await expect(page.locator('#map-layers')).toBeDisabled();
+      if(isPhone)await expect(page.locator('#map-layers')).toBeEnabled();
+      else await expect(page.locator('#map-layers')).toBeDisabled();
       await expect(page.locator('#panel-content button', { hasText: /Show counties|Show metros/i })).toHaveCount(0);
       await expect(msa).toHaveAttribute('aria-pressed', 'true');
       await expect(page.locator('#panel-content .fact-sources')).toBeHidden();
@@ -1146,7 +1148,7 @@ test.describe('phone viewport', () => {
       const idleSearch = await search.boundingBox();
       const idleTools = await tools.boundingBox();
       const version=page.locator('#build-version');
-      await expect(version).toHaveText('0.9J');
+      await expect(version).toHaveText('0.9K');
       await expect(version).toHaveCSS('color',activeGold);
       const buildLabel=await version.boundingBox();
       expect(buildLabel.x).toBeGreaterThan(idleSearch.x+idleSearch.width);
@@ -1192,6 +1194,58 @@ test.describe('phone viewport', () => {
       await results.getByRole('button', { name: /Colorado/ }).tap();
       await expect(page.locator('#panel-content h1')).toHaveText('Colorado');
     }
+  });
+
+  test('phone bottom Layers opens the shared Standard menu in Stats and Atlas',async({page},testInfo)=>{
+    await page.emulateMedia({reducedMotion:'reduce'});
+    await assertRendered(page,testInfo);
+    const app=page.locator('.app');
+    const button=page.locator('#map-layers'), popup=page.locator('#phone-layers-menu');
+    const header=page.locator('#layers-menu'), tools=page.locator('#tools-menu');
+    const standard=page.locator('#layer-options [aria-current]');
+    const openBottom=async()=>{
+      await button.tap();
+      await expect(button).toHaveAttribute('aria-expanded','true');
+      await expect(popup.locator(standard)).toBeVisible();
+      await expect(standard).toHaveText('STANDARD');
+      await expect(standard).toHaveCSS('color',activeGold);
+      await expect(tools).not.toHaveAttribute('open');
+      const [menu,anchor]=await Promise.all([popup.boundingBox(),button.boundingBox()]);
+      expect(Math.abs(menu.x-anchor.x)).toBeLessThan(1);
+      expect(Math.abs(menu.width-anchor.width)).toBeLessThan(1);
+      expect(menu.y+menu.height).toBeLessThan(anchor.y);
+    };
+    const expectClosed=async()=>{
+      await expect(button).toHaveAttribute('aria-expanded','false');
+      await expect(popup).toBeHidden();
+      await expect(header.locator(standard)).toBeAttached();
+    };
+    await expect(app).toHaveAttribute('data-phone-stage','summary');
+    await tools.locator(':scope > summary').tap();
+    await header.locator('summary').tap();
+    await expect(header.locator(standard)).toBeVisible();
+    await openBottom();
+    await screenshot(page,testInfo,'phone-bottom-layers-stats');
+    await button.tap();
+    await expectClosed();
+    await openBottom();
+    await tools.locator(':scope > summary').tap();
+    await expectClosed();
+    await header.locator('summary').tap();
+    await expect(header.locator(standard)).toBeVisible();
+
+    await page.getByRole('button',{name:'Open USA atlas',exact:true}).tap();
+    await expect(app).toHaveAttribute('data-phone-stage','atlas');
+    await expect(page.locator('.topbar')).toHaveAttribute('inert','');
+    await openBottom();
+    await screenshot(page,testInfo,'phone-bottom-layers-atlas');
+    await page.keyboard.press('Escape');
+    await expectClosed();
+    await expect(app).toHaveAttribute('data-phone-stage','atlas');
+    await openBottom();
+    await page.locator('#phone-atlas-back').tap();
+    await expectClosed();
+    await expect(app).toHaveAttribute('data-phone-stage','summary');
   });
 
   test('phone Home, Zoom and Key follow the top of the tools and stats bar', async ({ page }, testInfo) => {

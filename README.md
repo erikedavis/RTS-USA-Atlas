@@ -1,4 +1,4 @@
-# USAtlas V0.9J preview
+# USAtlas V0.9K preview
 
 Requires Python 3. Clone the repository or extract its source ZIP, then run **Start_Atlas.cmd** from that folder. The launcher opens **http://127.0.0.1:8020/**.
 [Development handoff](HANDOFF.md) covers the current preview, repeatable checks, and open work.
@@ -18,13 +18,13 @@ Tap or click the USA map label for USA Stats. Hold it to open USA Atlas. The who
 - The city panel shows its state, metro, and county beside the city name. Each link selects and fits that area in compact facts and City Atlas. For cities spanning multiple counties, the county links to the one containing the city's mapped point.
 - Metro Stats and Atlas link to their states, counties and largest Census place by population. County Stats link to their state and use the county's existing Census largest-place record.
 - Geographic labels share map space with city names. The layout can move a city name to another position beside its symbol when both names fit.
-- The chevron inside the right edge of the sidebar hides it. Click the chevron at the map edge to reopen it, or make a new selection. Home sits at the lower-left edge of the map and Key sits at the lower-right edge. The hammer in the header opens Tools.
+- The chevron inside the left edge of the sidebar hides it. Click the chevron at the map edge to reopen it, or make a new selection. Home sits at the lower-left edge of the map and Key sits at the lower-right edge. The hammer in the header opens Tools.
 
 ## Phone controls
 
 - Tap the rose to unlock the compass before tapping a direction. Swipe right across the compass to return north, lock rotation and slide it away. Tap the edge chevron or swipe left from it to bring the locked compass back.
 - Tap the C14 logo and blue chevron to open Tools. Layers expands to show Standard and View expands to show Statistical. The gold number beside Search identifies the development build.
-- Home, the zoom readout, and the map key sit along the bottom and move with the tools and stats bar. **COUNTIES**, **METROS**, and **LAYERS** stay available in City and State Atlas. **LAYERS** is reserved for a future update.
+- Home, the zoom readout, and the map key sit along the bottom and move with the tools and stats bar. **COUNTIES**, **METROS**, and **LAYERS** stay available in City and State Atlas. The bottom **LAYERS** button opens the same Standard entry as the header menu.
 - One tap on state land opens compact facts at the current map position. A quick double-tap on the map zooms two levels around the tap. Tap or double-tap a state abbreviation to fit the state and show its compact facts. With a state selected, tap another state's land to switch, or use the **×** by the chevrons to clear it.
 - Hold on a state or its abbreviation for about 0.6 seconds to open State Atlas. Hold a city name to fit the city above its Atlas facts. A city-symbol hold opens City Atlas at the current zoom. Drag the map far enough to move the city out of the center and City Atlas returns to compact stats while the map follows your finger. Tap a city name to read facts in place or tap its symbol to zoom. Tap outside the highlighted metro to clear the city at the current map position.
 - Open Metro Atlas with the up chevron in Metro Stats or hold a metro area on the map. State, county and largest-city links are on the right in both views.

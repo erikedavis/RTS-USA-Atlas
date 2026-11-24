@@ -88,18 +88,18 @@ button { color:inherit; cursor:pointer; }
   padding:7px 8px;letter-spacing:.04em;
 }
 .panel-layer-controls button:is(:hover,:focus-visible){background:#182d3d;}
-#sidebar-toggle {position:absolute;right:0;top:50%;z-index:1;translate:0 -50%;height:44px;width:28px;padding:0;display:grid;place-items:center;border:1px solid #26394c;background:#0c1520;color:#bdd5e6;border-radius:5px 0 0 5px;}
+#sidebar-toggle {position:absolute;left:0;top:50%;z-index:1;translate:0 -50%;height:44px;width:28px;padding:0;display:grid;place-items:center;border:1px solid #26394c;background:#0c1520;color:#bdd5e6;border-radius:0 5px 5px 0;}
 #sidebar-toggle:is(:hover,:focus-visible) {background:#182d3d;}
 #sidebar-toggle svg {width:12px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
 .app:not(.phone-layout)[data-desktop-atlas] .info-panel {width:min(407px,49%);}
 .app:not(.phone-layout).sidebar-hidden .info-panel {width:0;border:0;}
 .app:not(.phone-layout).sidebar-hidden .info-panel > :not(#sidebar-toggle) {visibility:hidden;}
-.sidebar-hidden #sidebar-toggle {left:-28px;right:auto;}
+.sidebar-hidden #sidebar-toggle {left:-28px;border-radius:5px 0 0 5px;}
 .sidebar-hidden #sidebar-toggle svg {transform:rotate(180deg);}
 .app:not(.phone-layout)[data-desktop-atlas='state'] :is(.inset-label,.state-label:not([data-phone-focused])) {opacity:0;pointer-events:none;}
 .app:not(.phone-layout) .state-label {transition:opacity .18s ease;}
 .panel-content {padding:30px 25px;overflow:auto;flex:1;}
-.app:not(.phone-layout) .panel-content {margin-inline-end:28px;padding-inline-end:8px;}
+.app:not(.phone-layout) .panel-content {margin-inline-start:28px;padding-inline-start:8px;}
 .selection-icon {font-size:36px;color:#537c9b;margin:5px 0 16px;font-weight:200;}
 .empty-kicker,.section-kicker{font-size:10px;color:#79a3bd;letter-spacing:.16em;}
 .panel-content h1{font-size:23px;line-height:1.2;font-weight:600;letter-spacing:.075em;margin:9px 0 20px;}
@@ -153,12 +153,13 @@ button { color:inherit; cursor:pointer; }
 .city-marker:focus-visible{outline:1px solid #a8d0e8;outline-offset:2px;}
 .panel-action {background:#101e2b;color:#bcd8ea;border:1px solid #38536a;padding:9px 12px;margin-top:14px;font-size:11px;letter-spacing:.08em;}
 .panel-action:hover{background:#182d3d;}
-:is(.map-controls,.panel-layer-controls) button[aria-pressed="true"] {
+:is(.map-controls,.panel-layer-controls) button[aria-pressed="true"],#map-layers[aria-expanded="true"] {
   border-color:var(--active-border);color:var(--active-gold);
 }
 .panel-help {color:#7e96aa;font-size:10px;line-height:1.5;margin-top:8px;}
 .app[data-desktop-atlas] .panel-content > :is(.facts-date,.fact-sources,.census-record:not(.metro-atlas-places),.panel-help) {display:none;}
-.map-controls #map-layers {width:auto;min-width:36px;padding-inline:4px;font-size:9px;opacity:.6;cursor:default;}
+.map-controls #map-layers {width:auto;min-width:36px;padding-inline:4px;font-size:9px;}
+#map-layers:disabled {opacity:.6;cursor:default;}
 .app:not(.phone-layout):not([data-desktop-atlas='state']):not([data-desktop-atlas='place']) #map-layers {display:none;}
 
 /* v0.2c: map-anchored city overlay. All draw positions use MapLibre map.project()
