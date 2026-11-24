@@ -1,4 +1,8 @@
-# USAtlas V0.9I preview
+# USAtlas V0.9J preview
+
+On desktop, the hide chevron sits inside the right side of the sidebar and returns to the map edge when collapsed. The development version appears in gold beside Search. On both layouts, Tools → Layers expands to show Standard in gold.
+
+## V0.9I preview
 
 On a phone, tap the rose to unlock rotation before tapping a direction. Direction taps are inactive while locked.
 

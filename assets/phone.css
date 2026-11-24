@@ -6,8 +6,8 @@
   .tools-mobile {display:flex;gap:8px;}
   .tools-mobile img {height:clamp(24px,7vw,30px);}
   .tools-options {width:100%;min-width:0;}
-  .tools-options :is(button,.view-active,.view-menu summary) {min-height:36px;padding-inline:10px;}
-  .tools-options .view-options :is(button,.view-active) {padding-inline-start:16px;}
+  .tools-options :is(button,.tools-current,.tools-section summary) {min-height:36px;padding-inline:10px;}
+  .tools-options .tools-section-options :is(button,.tools-current) {padding-inline-start:16px;}
   .topbar .search-wrap {max-width:none;}
   .topbar .search-wrap input {text-overflow:ellipsis;}
 }

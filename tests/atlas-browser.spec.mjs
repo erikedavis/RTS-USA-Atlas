@@ -9,7 +9,7 @@ async function assertRendered(page, testInfo) {
   const response = await page.goto('/', { waitUntil: 'domcontentloaded' });
   expect(response?.ok(), 'The atlas must respond over HTTP').toBe(true);
   await expect(page.locator('#map-loading'), 'Atlas loading overlay must disappear').toBeHidden({ timeout: 50_000 });
-  await expect(page.locator('meta[name="atlas-version"]')).toHaveAttribute('content', 'ALPHA 0.9I');
+  await expect(page.locator('meta[name="atlas-version"]')).toHaveAttribute('content', 'ALPHA 0.9J');
   await expect(page.locator('canvas.maplibregl-canvas')).toHaveCount(1);
   const renderer = await page.evaluate(() => {
     const canvas = document.querySelector('canvas.maplibregl-canvas');
@@ -124,16 +124,29 @@ test('desktop national map loads, has working WebGL, and renders', async ({ page
     expect(gap).toBeLessThanOrEqual(6);
   }
   await expect(page.locator('.topbar #search')).toBeVisible();
+  const version=page.locator('#build-version');
+  await expect(version).toHaveText('0.9J');
+  await expect(version).toHaveCSS('color',activeGold);
+  const searchBox=await page.locator('#search').boundingBox();
+  expect((await version.boundingBox()).x).toBeGreaterThan(searchBox.x+searchBox.width);
   await expect(page.locator('#go-ak, #go-hi, #go-pr, .toolbar, #source-tag, .city-legend')).toHaveCount(0);
   const tools = page.locator('#tools-menu > summary');
   await tools.hover();
   await expect(tools.locator('.tools-label')).toHaveCSS('opacity','1');
   await tools.click();
+  const layers=page.locator('#layers-menu');
+  const standard=layers.locator('[aria-current]');
+  await expect(standard).toBeHidden();
+  await layers.locator('summary').click();
+  await expect(standard).toBeVisible();
+  await expect(standard).toHaveText('STANDARD');
+  await expect(standard).toHaveCSS('color',activeGold);
   const summary = page.locator('#view-menu summary');
   await summary.click();
   await expect(page.getByRole('button', { name: 'GEOGRAPHIC', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'STRATEGIC', exact: true })).toBeVisible();
   await page.keyboard.press('Escape');
+  await expect(layers).not.toHaveAttribute('open', '');
   await expect(page.locator('#view-menu')).not.toHaveAttribute('open', '');
   await expect(page.locator('#tools-menu')).not.toHaveAttribute('open','');
   const zoomIn = page.getByRole('button', { name: 'Zoom in' });
@@ -471,8 +484,15 @@ test('desktop Atlas expands, restores a rotated camera, and reopens the hidden s
   const heading = page.locator('#panel-content h1');
   const atlas = page.locator('#desktop-atlas-toggle');
 
-  await page.getByRole('button', { name: 'Hide stats' }).click();
-  await expect(page.getByRole('button', { name: 'Show stats' })).toBeVisible();
+  const hide=page.getByRole('button',{name:'Hide stats'});
+  const openPanel=await sidebar.boundingBox(),openChevron=await hide.boundingBox();
+  expect(openChevron.x).toBeGreaterThan(openPanel.x);
+  expect(Math.abs(openChevron.x+openChevron.width-openPanel.x-openPanel.width)).toBeLessThan(1);
+  await hide.click();
+  const show=page.getByRole('button',{name:'Show stats'});
+  await expect(show).toBeVisible();
+  const hiddenChevron=await show.boundingBox(),map=await page.locator('#map').boundingBox();
+  expect(Math.abs(hiddenChevron.x+hiddenChevron.width-map.x-map.width)).toBeLessThan(1);
   expect((await sidebar.boundingBox()).width).toBe(0);
   await searchFor(page, 'Kansas');
   await expect(heading).toHaveText('Kansas');
@@ -1111,11 +1131,13 @@ test.describe('phone viewport', () => {
     expect(map.width).toBe(390);
   });
 
-  test('phone logo Tools menu contains View and leaves room for Search', async ({ page }, testInfo) => {
+  test('phone logo Tools menu contains Layers and View and leaves room for Search', async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 320, height: 680 });
     await assertRendered(page, testInfo);
     const search = page.getByRole('textbox', { name: 'Find a state, county or city' });
     const tools = page.locator('#tools-menu > summary');
+    const layers=page.locator('#layers-menu');
+    const standard=layers.locator('[aria-current]');
     const view = page.locator('#view-menu summary');
     const results = page.locator('#search-results');
     const geographic = page.getByRole('button', { name: 'GEOGRAPHIC', exact: true });
@@ -1123,6 +1145,12 @@ test.describe('phone viewport', () => {
       await page.setViewportSize(viewport);
       const idleSearch = await search.boundingBox();
       const idleTools = await tools.boundingBox();
+      const version=page.locator('#build-version');
+      await expect(version).toHaveText('0.9J');
+      await expect(version).toHaveCSS('color',activeGold);
+      const buildLabel=await version.boundingBox();
+      expect(buildLabel.x).toBeGreaterThan(idleSearch.x+idleSearch.width);
+      expect(buildLabel.x+buildLabel.width).toBeLessThanOrEqual(viewport.width);
       expect(idleTools.x + idleTools.width).toBeLessThan(idleSearch.x);
       expect(idleTools.height).toBeGreaterThanOrEqual(44);
       await expect(view).toBeHidden();
@@ -1133,7 +1161,13 @@ test.describe('phone viewport', () => {
       await tools.tap();
       await expect(results).toBeHidden();
       await expect(search).not.toBeFocused();
-      await expect(page.locator('#tools-menu').getByRole('button',{name:'LAYERS',exact:true})).toBeDisabled();
+      await expect(standard).toBeHidden();
+      await layers.locator('summary').tap();
+      await expect(standard).toBeVisible();
+      await expect(standard).toHaveText('STANDARD');
+      await expect(standard).toHaveCSS('color',activeGold);
+      await layers.locator('summary').tap();
+      await expect(standard).toBeHidden();
       await expect(page.getByRole('button',{name:'MEASURE',exact:true})).toBeDisabled();
       const dropdown=await page.locator('.tools-options').boundingBox();
       expect(Math.abs(dropdown.x-idleTools.x)).toBeLessThan(1);
@@ -1143,7 +1177,7 @@ test.describe('phone viewport', () => {
       await expect(page.locator('#view-menu [aria-current]')).toHaveText('STATISTICAL');
       await expect(geographic).toBeVisible();
       await expect(page.getByRole('button', { name: 'STRATEGIC', exact: true })).toBeVisible();
-      const menu = await page.locator('.view-options').boundingBox();
+      const menu = await page.locator('#view-menu .tools-section-options').boundingBox();
       expect(menu.x + menu.width).toBeLessThanOrEqual(viewport.width);
       expect(menu.y).toBeGreaterThan(idleTools.y + idleTools.height);
       await screenshot(page, testInfo, `phone-view-${viewport.width}`);

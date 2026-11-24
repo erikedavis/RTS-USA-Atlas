@@ -5,11 +5,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#020307">
-  <meta name="atlas-version" content="ALPHA 0.9I">
-  <title>USAtlas | V0.9I</title>
+  <meta name="atlas-version" content="ALPHA 0.9J">
+  <title>USAtlas | V0.9J</title>
   <link href="./assets/vendor/maplibre-gl.css" rel="stylesheet">
-  <link rel="stylesheet" href="./assets/atlas.css?v=09i">
-  <link rel="stylesheet" href="./assets/phone.css?v=09h">
+  <link rel="stylesheet" href="./assets/atlas.css?v=09j">
+  <link rel="stylesheet" href="./assets/phone.css?v=09j">
 </head>
 <body>
   <div class="app">
@@ -26,11 +26,16 @@
           </span>
         </summary>
         <div class="tools-options">
-          <button type="button" disabled>LAYERS</button>
-          <details class="view-menu" id="view-menu">
+          <details class="tools-section" id="layers-menu">
+            <summary>LAYERS<span class="tools-chevron"></span></summary>
+            <div class="tools-section-options">
+              <div class="tools-current" aria-current="true">STANDARD</div>
+            </div>
+          </details>
+          <details class="tools-section" id="view-menu">
             <summary>VIEW<span class="tools-chevron"></span></summary>
-            <div class="view-options">
-              <div class="view-active" aria-current="true">STATISTICAL</div>
+            <div class="tools-section-options">
+              <div class="tools-current" aria-current="true">STATISTICAL</div>
               <button type="button" data-view="geographic">GEOGRAPHIC</button>
               <button type="button" data-view="strategic">STRATEGIC</button>
             </div>
@@ -43,6 +48,7 @@
         <input id="search" enterkeyhint="search" placeholder="Find state, county, city…" autocomplete="off" spellcheck="false">
         <div id="search-results" class="search-results" hidden></div>
       </div>
+      <span class="build-version" id="build-version"></span>
     </header>
 
     <div class="content">
@@ -162,7 +168,7 @@
     </div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
   </div>
-  <script type="module" src="./js/atlas.mjs?v=09i"></script>
+  <script type="module" src="./js/atlas.mjs?v=09j"></script>
 </body>
 </html>
 

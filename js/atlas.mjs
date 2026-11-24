@@ -15,6 +15,7 @@ import {INSETS, NATIONAL_BOUNDS, CONUS_BOUNDS, displayData, displayPoint, geogra
 
 const BASE = './data/';
 const $ = (selector) => document.querySelector(selector);
+$('#build-version').textContent=$('meta[name="atlas-version"]').content.split(' ').pop();
 const app = $('.app');
 const info = $('#panel-content');
 const panel = $('#info-panel');
@@ -1263,15 +1264,18 @@ function setupUI() {
     closeKey:()=>{if(!key.hidden)setKey(false);},
   });
   const toolsMenu=$('#tools-menu'),toolsTrigger=toolsMenu.querySelector('summary');
-  const viewMenu=$('#view-menu'),searchBox=$('#search');
+  const sections=toolsMenu.querySelectorAll('.tools-section'),searchBox=$('#search');
+  function closeToolSections(){
+    for(const section of sections)section.open=false;
+  }
   function closeTools(){
     toolsMenu.open=false;
-    viewMenu.open=false;
+    closeToolSections();
   }
   searchBox.addEventListener('focus',closeTools);
   toolsMenu.addEventListener('toggle',()=>{
     if(toolsMenu.open)searchBox.blur();
-    else viewMenu.open=false;
+    else closeToolSections();
   });
   document.addEventListener('click',event=>{
     if(toolsMenu.open&&!toolsMenu.contains(event.target))closeTools();
