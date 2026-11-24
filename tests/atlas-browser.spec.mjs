@@ -404,7 +404,7 @@ test('desktop layer toggles sit by Atlas and Tools opens a compact menu', async 
   await tools.hover();
   await expect(tools).toHaveCSS('border-top-color','rgb(35, 53, 72)');
   await tools.click();
-  const dropdown=page.locator('.tools-options');
+  const dropdown=page.locator('#tools-menu > .tools-options');
   expect((await dropdown.boundingBox()).width).toBeLessThan(125);
   expect((await dropdown.getByText('VIEW',{exact:true}).boundingBox()).height).toBeLessThan(31);
   await page.keyboard.press('Escape');
@@ -1171,7 +1171,7 @@ test.describe('phone viewport', () => {
       await layers.locator('summary').tap();
       await expect(standard).toBeHidden();
       await expect(page.getByRole('button',{name:'MEASURE',exact:true})).toBeDisabled();
-      const dropdown=await page.locator('.tools-options').boundingBox();
+      const dropdown=await page.locator('#tools-menu > .tools-options').boundingBox();
       expect(Math.abs(dropdown.x-idleTools.x)).toBeLessThan(1);
       expect(Math.abs(dropdown.width-idleTools.width)).toBeLessThan(1);
       expect((await view.boundingBox()).height).toBeLessThan(44);
