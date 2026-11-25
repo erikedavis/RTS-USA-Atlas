@@ -648,15 +648,15 @@ test('desktop light theme recolors water and keeps Atlas state', async ({ page }
   await theme.click();
   await page.mouse.move(800,65);
   await expect(root).toHaveAttribute('data-theme','light');
-  await expect(theme.locator('.appearance-sun')).toBeVisible();
+  await expect(theme.locator('.appearance-sun')).toHaveCSS('fill','rgb(154, 104, 59)');
   await expect(page.locator('.brand img')).toHaveCSS('content',/brand-c14-light\.svg/);
   const lock=page.locator('#rotation-lock'),rose=page.locator('.compass-rose');
   const north=page.getByRole('button',{name:'North up',exact:true});
-  await expect(lock).toHaveCSS('color',activeGold);
+  await expect(lock).toHaveCSS('color','rgb(163, 115, 67)');
   await expect(rose.locator('.compass-light')).toHaveCSS('fill','rgb(98, 98, 98)');
   await expect(rose.locator('.compass-shadow')).toHaveCSS('fill','rgb(135, 135, 135)');
   await lock.click();
-  await expect(rose.locator('.compass-light')).toHaveCSS('fill','rgb(0, 0, 0)');
+  await expect(rose.locator('.compass-light')).toHaveCSS('fill','rgb(7, 88, 129)');
   await expect(rose.locator('.compass-shadow')).toHaveCSS('fill','rgb(0, 0, 0)');
   await expect(north).toHaveCSS('color','rgb(0, 0, 0)');
   await expect(north).toHaveCSS('font-weight','800');
@@ -1130,6 +1130,41 @@ test.describe('phone viewport', () => {
       })).toEqual({name:'Long Island',angle:-16,city:'New York'});
       await screenshot(page,testInfo,`long-island-${bearing}`);
     }
+  });
+
+  test('Hawaiian geographic labels fit around cities and appear in State Atlas', async ({page},testInfo)=>{
+    test.setTimeout(150_000);
+    await exposeMap(page);
+    await assertRendered(page,testInfo);
+    await readMap(page);
+    const labels=()=>page.evaluate(()=>[...new Set(testMap.queryRenderedFeatures({layers:['geography-island']})
+      .map(feature=>feature.properties.name))]);
+    for(const [center,zoom,expected] of [
+      [[-159.87,22.0],7.4,['Kauaʻi','Niʻihau','Lehua']],
+      [[-160.51,21.69],8.1,['Kaʻula']],
+      [[-156.70,20.95],7.5,['Molokaʻi','Lānaʻi']],
+      [[-156.51,20.61],8.35,['Maui','Molokini','Kahoʻolawe']],
+      [[-155.42,19.63],7.45,['Hawaiʻi']],
+      [[-177.10,28.28],6.2,['Kure Atoll','Midway Atoll','Pearl and Hermes Atoll']],
+      [[-171.65,26.22],5.7,['Lisianski Island','Laysan Island','Maro Reef']],
+      [[-164.95,24.12],5.3,['Gardner Pinnacles','French Frigate Shoals','Mokumanamana','Nihoa']],
+    ]){
+      await page.evaluate(({center,zoom})=>testMap.jumpTo({center,zoom,bearing:0}),{center,zoom});
+      await expect.poll(labels).toEqual(expect.arrayContaining(expected));
+    }
+    for(const bearing of [0,30]){
+      await page.evaluate(bearing=>testMap.jumpTo({center:[-157.94,21.40],zoom:6.8,bearing}),bearing);
+      await expect.poll(labels).toContain('Oʻahu');
+      await expect.poll(()=>page.evaluate(()=>testMap.queryRenderedFeatures({layers:['city-name-0']})
+        .some(city=>city.properties.name==='Honolulu'))).toBe(true);
+    }
+    await page.evaluate(()=>testMap.jumpTo({bearing:0}));
+    await searchFor(page,'HI');
+    await waitForCamera(page);
+    await page.getByRole('button',{name:'Open state atlas'}).tap();
+    await expect(page.locator('.app')).toHaveAttribute('data-phone-atlas-kind','state');
+    await expect.poll(labels).toEqual(expect.arrayContaining(['Oʻahu','Maui','Hawaiʻi']));
+    await screenshot(page,testInfo,'hawaiian-island-labels');
   });
 
   test('phone compass direction taps require unlocking with the rose or padlock', async ({ page }, testInfo) => {

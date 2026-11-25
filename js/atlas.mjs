@@ -1,10 +1,10 @@
 // USA Atlas - adaptive city hierarchy and official Census 2025 geography.
 // Local renderer and geography; no external requests at runtime.
 import * as maplibregl from '../assets/vendor/maplibre-gl.mjs';
-import {createCityLayers} from './city-display.mjs?v=10a2';
+import {createCityLayers} from './city-display.mjs?v=10a4';
 import {isMetroScale} from './city-layout.mjs';
 import {populateMapKey} from './city-symbols.mjs?v=09p';
-import {createGeographyLabels} from './geography-labels.mjs?v=10a2';
+import {createGeographyLabels} from './geography-labels.mjs?v=10a4';
 import {createStateLabels} from './state-labels.mjs?v=10a2';
 import {prepareStateShapes,shapeContainsPoint} from './state-label-placement.mjs';
 import {isNorthUp,screenBounds,setupRotation} from './map-rotation.mjs?v=10a';
@@ -596,10 +596,11 @@ function focusStateAtlas(fips,fast){
   map.setPaintProperty('state-atlas-surface','fill-opacity',fips ? .98 : 0);
   map.setPaintProperty('state-surface','fill-opacity',fips?0:.98);
   map.setPaintProperty('state-lines','line-opacity',fips?0:.9);
-  for(const id of ['great-lakes-shoreline','geography-lake','geography-peninsula','geography-island']){
+  for(const id of ['great-lakes-shoreline','geography-lake','geography-peninsula']){
     map.setLayoutProperty(id,'visibility',fips?'none':'visible');
   }
   map.setLayoutProperty('great-lakes-fill','visibility',fips?'none':'visible');
+  map.setLayoutProperty('geography-island','visibility',!fips||fips==='15'?'visible':'none');
   for(const id of ['hawaii-tail-islands','hawaii-tail-label']){
     if(map.getLayer(id))map.setLayoutProperty(id,'visibility',!fips||fips==='15'?'visible':'none');
   }

@@ -82,7 +82,7 @@ If Safari can't reach the address, check that both devices are on the same trust
 - On desktop, click a city name to read its facts in place. Click its map symbol to jump to the city. Hover names enlarge and linger for half a second.
 - Small-state abbreviations use fixed geographic positions. A nearby badge can move inside its state when there is room. The exterior badge is shown only when it clears neighboring land. Michigan’s default anchor is just north of St. Johns. Hawaii and Puerto Rico use badges within their geography when space permits.
 - On desktop, clicking a state’s land opens its facts at the current view. Its abbreviation fits the full outline to the map.
-- Labels for the Great Lakes, Upper Peninsula and Long Island sit in the background. Long Island fades from close views.
+- Geographic labels for the Great Lakes, Upper Peninsula, Long Island, and Hawaiian islands appear when space permits and yield to city names. Hawaiian labels use the names documented by the [Hawaiʻi Board on Geographic Names](https://planning.hawaii.gov/gis/hbgn/) and [NOAA’s Papahānaumokuākea Marine National Monument](https://www.papahanaumokuakea.gov/visit/).
 - City and state label placement refreshes after zooming or panning, so it stays off the camera's animation frames.
 - Counties have population, area and largest place facts. Enable them with CTY, county search, or the state's county button.
 

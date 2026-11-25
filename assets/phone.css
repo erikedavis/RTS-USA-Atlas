@@ -68,7 +68,7 @@
 .phone-layout .compass-minimized #compass-edge-lock:not([hidden]) {
   position:absolute;z-index:2;top:var(--compass-return-y);right:calc(var(--compass-return-right) + 42px);
   width:44px;height:44px;
-  display:grid;transform:translateY(-50%);color:var(--active-gold);
+  display:grid;transform:translateY(-50%);color:var(--compass-lock-ink);
   animation:compass-edge-appear .24s steps(1,end) both;
 }
 .phone-layout #compass-edge-lock[inert] {pointer-events:none;}

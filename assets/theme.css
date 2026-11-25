@@ -126,6 +126,7 @@
   --legend-capital:#d5e8f6;
   --legend-divider:#263a4a;
   --compass-spire:#d4a85f;
+  --compass-lock-ink:var(--active-gold);
   --compass-deep:#334756;
   --compass-direction-ink:#e4ebf2;
   --compass-locked-ink:var(--map-icon);
@@ -275,13 +276,13 @@
   --legend-detail:#000;
   --legend-capital:#000;
   --legend-divider:#bba98a;
-  --compass-spire:#000;
+  --compass-spire:#075881;
+  --compass-lock-ink:#a37343;
   --compass-deep:#000;
-  --compass-shadow-opacity:.72;
   --compass-direction-ink:#000;
   --compass-locked-ink:#626262;
   --compass-locked-shadow:#878787;
-  --compass-glow:#0002;
+  --compass-glow:#07588130;
   --lock-hint-surface:#293839;
   --compass-hint:#000;
   --compass-tip-border:#8f7c5d;
@@ -292,7 +293,7 @@
   --phone-fact-edge:#a99572;
   --phone-record-edge:#b4a280;
   --phone-atlas-surface:#e8dabb;
-  --theme-indicator:#8f5725;
+  --theme-indicator:#9a683b;
   --build-ink:var(--brand-blue);
   --scope-accent:var(--brand-blue);
   --idle-gold:#f3d99e;

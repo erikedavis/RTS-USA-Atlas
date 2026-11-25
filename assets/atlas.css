@@ -49,7 +49,6 @@ button { color:inherit; cursor:pointer; }
   --compass-light:var(--compass-locked-ink);
   --compass-shadow:var(--compass-locked-shadow);
   --compass-letters:var(--compass-locked-ink);
-  --compass-facet-opacity:1;
   --compass-opacity:1;
   --compass-chevron-ink:var(--compass-locked-ink);
 }
@@ -304,7 +303,6 @@ button { color:inherit; cursor:pointer; }
   --compass-light:var(--compass-spire);
   --compass-shadow:var(--compass-deep);
   --compass-letters:var(--compass-direction-ink);
-  --compass-facet-opacity:var(--compass-shadow-opacity,1);
   --compass-opacity:1;
   position:absolute;z-index:8;top:0;right:0;width:var(--compass-size);
   pointer-events:none;
@@ -359,7 +357,7 @@ button { color:inherit; cursor:pointer; }
 }
 .rotation-north-locked .compass-rose {filter:none;}
 .compass-light {fill:var(--compass-light);}
-.compass-shadow {fill:var(--compass-shadow);fill-opacity:var(--compass-facet-opacity);}
+.compass-shadow {fill:var(--compass-shadow);}
 .compass-rose path {transition:fill .18s ease;}
 .compass-direction {
   --direction-x:0%;--direction-y:0%;
@@ -380,12 +378,13 @@ button { color:inherit; cursor:pointer; }
 :where(.app:not(.phone-layout),.rotation-unlocked) .compass-direction:is(:focus-visible,:active) span {color:var(--active-gold);opacity:1;transform:scale(1.22);}
 #rotation-lock {
   position:absolute;z-index:2;top:50%;left:50%;width:min(44px,40%);height:min(44px,40%);
-  transform:translate(-50%,-50%);border-radius:50%;color:var(--active-gold);
+  transform:translate(-50%,-50%);border-radius:50%;color:var(--compass-lock-ink);
 }
 :is(#rotation-lock,#compass-edge-lock) svg {
   width:22px;height:22px;overflow:visible;pointer-events:none;
   filter:drop-shadow(0 0 1px var(--void)) drop-shadow(0 0 1px var(--void));
 }
+:root[data-theme="light"] :is(#rotation-lock,#compass-edge-lock) svg {filter:drop-shadow(0 0 1px #f5dfb2);}
 .compass-shackle {transform-origin:7.5px 11px;transition:transform .22s ease;}
 .rotation-unlocked :is(#rotation-lock,#compass-edge-lock) svg {animation:compass-lock-release .94s ease both;}
 .rotation-unlocked .compass-shackle {transform:rotate(-28deg);}

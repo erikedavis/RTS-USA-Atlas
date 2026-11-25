@@ -77,7 +77,7 @@ export function createCityLayers(map,cities,{isNational,metroOverview,phoneViewp
   }
   const viewport={width,height,measure},reserved=reservations();
   result=layoutCities(projected,{...viewport,zoom,state,selectedId,national:isNational(),metroOverview:metroOverview(),phoneViewport:phoneViewport(),stateLabelsFirst:stateLabelsFirst(),reserved,previous});
-  geographyLabels.layout(result,viewport,reserved);
+  geographyLabels.layout(result,viewport,reserved,focusedState);
   previous=result.placements;
   map.getSource('major-cities').setData(fc(result.items.map(i=>pointFeature(i))));
   if(hovered)drawHover();
