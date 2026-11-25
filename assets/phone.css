@@ -38,12 +38,16 @@
   --compass-size:166px;--compass-return-right:env(safe-area-inset-right,0px);
   transition:transform .24s ease,opacity .2s ease;
 }
+.phone-layout .rotation-tools,
+.phone-layout .rotation-tools * {
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+}
 .phone-layout .rotation-tools:not(.compass-minimized) .compass-face {
-  pointer-events:auto;touch-action:none;user-select:none;-webkit-touch-callout:none;
+  pointer-events:auto;touch-action:none;
 }
 .phone-layout .compass-minimized .compass-face button {pointer-events:none;}
 .phone-layout :is(#compass-toggle,.compass-return-swipe) {
-  touch-action:none;user-select:none;-webkit-touch-callout:none;
+  touch-action:none;
 }
 .phone-layout .compass-minimized .compass-return-swipe {
   display:block;position:absolute;top:var(--compass-return-y);right:var(--compass-return-right);
@@ -57,7 +61,7 @@
 .phone-layout .compass-minimized #compass-edge-lock:not([hidden]) {
   position:absolute;z-index:2;top:var(--compass-return-y);right:calc(var(--compass-return-right) + 42px);
   width:44px;height:44px;
-  display:grid;transform:translateY(-50%);color:var(--active-gold);-webkit-touch-callout:none;
+  display:grid;transform:translateY(-50%);color:var(--active-gold);
   animation:compass-edge-appear .24s steps(1,end) both;
 }
 .phone-layout #compass-edge-lock[inert] {pointer-events:none;}
