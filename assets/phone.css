@@ -25,8 +25,19 @@
 .phone-layout[data-phone-stage='summary'] {--phone-hud-lift:calc(var(--phone-grip) + var(--phone-tray) + var(--phone-summary));}
 .phone-layout .topbar {
   position:absolute;inset:env(safe-area-inset-top) env(safe-area-inset-right) auto env(safe-area-inset-left);
-  height:var(--phone-header);min-height:var(--phone-header);padding:0 9px;gap:9px;
+  height:var(--phone-header);min-height:var(--phone-header);padding:0 9px 0 51px;gap:8px;
   transition:transform .24s ease,opacity .2s ease;
+}
+.phone-layout #appearance-toggle {
+  top:env(safe-area-inset-top);left:calc(env(safe-area-inset-left) + 4px);width:44px;height:44px;
+  -webkit-touch-callout:none;-webkit-user-select:none;user-select:none;touch-action:manipulation;
+}
+.phone-layout .appearance-hint {display:none;}
+@media (max-width:365px) {
+  .phone-layout .tools-mobile {gap:5px;}
+  .phone-layout .tools-mobile img {height:22px;}
+  .phone-layout .topbar {gap:6px;}
+  .phone-layout .search-wrap input {padding-inline:7px;}
 }
 .phone-layout :is(#reset-view,#sidebar-toggle,.panel-top,.panel-footer) {display:none;}
 .phone-layout .search-wrap {flex:1;min-width:0;max-width:none;}
@@ -84,7 +95,7 @@
   transform:translateY(var(--phone-drag,0px));
 }
 .phone-layout .phone-control {
-  border:0;background:transparent;padding:0;color:#a7c4d8;opacity:.68;
+  border:0;background:transparent;padding:0;color:var(--map-icon);opacity:.68;
   display:grid;place-items:center;width:44px;min-width:44px;touch-action:none;
 }
 .phone-layout .phone-control[hidden] {display:none;}
@@ -94,14 +105,14 @@
 .phone-layout .phone-home svg {width:23px;height:23px;margin-bottom:-1px;}
 .phone-layout .phone-history-back {
   position:absolute;left:9px;top:clamp(55px,30%,210px);z-index:11;width:50px;min-height:52px;
-  gap:2px;color:#fff;opacity:1;font-size:9px;font-weight:700;letter-spacing:.17em;
-  filter:drop-shadow(0 1px 4px #000);
+  gap:2px;color:var(--selected-label);opacity:1;font-size:9px;font-weight:700;letter-spacing:.17em;
+  filter:drop-shadow(0 1px 4px var(--map-text-shadow));
 }
 .phone-layout .phone-history-back svg {width:32px;height:26px;stroke-width:2.5;}
 .phone-layout #map.state-label-priority .state-label {min-width:0;min-height:0;padding:2px;}
 .phone-layout .phone-grip {display:flex;justify-content:center;margin:auto;width:max-content;height:var(--phone-grip);pointer-events:auto;touch-action:none;}
 .phone-layout .phone-grip[hidden] {display:none;}
-.phone-layout .phone-grip .phone-control {height:100%;background:#0b1521bb;}
+.phone-layout .phone-grip .phone-control {height:100%;background:var(--phone-grip-surface);}
 .phone-layout .phone-grip .phone-control:first-of-type {border-radius:8px 0 0 0;}
 .phone-layout .phone-grip .phone-control:last-of-type {border-radius:0 8px 0 0;}
 .phone-layout .phone-grip .phone-control:only-of-type,
@@ -112,7 +123,7 @@
 .phone-layout .phone-tray {position:relative;touch-action:none;--tray-inset:7px;--tray-gap:5px;}
 .phone-layout .phone-tray .map-controls {
   position:static;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
-  height:var(--phone-tray);padding:3px var(--tray-inset);gap:var(--tray-gap);background:#070d15;border-top:1px solid #233345;
+  height:var(--phone-tray);padding:3px var(--tray-inset);gap:var(--tray-gap);background:var(--phone-tray-surface);border-top:1px solid var(--line);
 }
 .phone-layout .phone-layers-menu {
   top:auto;bottom:calc(100% + 4px);left:auto;right:var(--tray-inset);z-index:9;
@@ -123,7 +134,7 @@
 .phone-layout .phone-tray .map-controls button:not(:is(#toggle-counties,#toggle-metros,#map-layers)) {display:none;}
 .phone-layout .phone-tray .map-controls #map-layers {width:100%;font-size:11px;}
 .phone-layout .info-panel {
-  width:100%;height:var(--phone-summary);min-height:0;border:0;border-top:1px solid #30485d;
+  width:100%;height:var(--phone-summary);min-height:0;border:0;border-top:1px solid var(--phone-panel-edge);
 }
 .phone-layout .panel-content {min-height:0;padding:10px 12px 15px;overscroll-behavior:contain;overflow-y:auto;}
 .phone-layout .state-label.usa-label {min-width:44px;min-height:44px;font-size:21.5px;}
@@ -150,13 +161,13 @@
 .phone-layout .phone-state-facts {display:grid;align-content:start;gap:4px;}
 .phone-layout .phone-state-facts .fact-city {
   margin:0;padding:3px 5px;min-height:0;max-width:100%;background:none;
-  border:0;border-left:1px solid #294254;gap:2px;
+  border:0;border-left:1px solid var(--phone-fact-edge);gap:2px;
 }
-.phone-layout .phone-state-facts .fact-city:hover {background:#152a3a;}
+.phone-layout .phone-state-facts .fact-city:hover {background:var(--fact-city-hover);}
 .phone-layout .phone-state-facts .fact-city-role,.phone-layout .phone-state-facts .record-label {font-size:8px;letter-spacing:.06em;}
 .phone-layout .phone-state-facts .fact-city strong {font-size:12px;line-height:1.15;}
 .phone-layout .phone-state-facts .fact-city-pop {font-size:10px;line-height:1.1;}
-.phone-layout .phone-state-facts .record-row {min-height:0;padding:4px 0 0 5px;gap:4px;justify-content:flex-start;border-top:1px solid #1d3244;border-bottom:0;}
+.phone-layout .phone-state-facts .record-row {min-height:0;padding:4px 0 0 5px;gap:4px;justify-content:flex-start;border-top:1px solid var(--phone-record-edge);border-bottom:0;}
 .phone-layout .phone-state-facts .record-value {font-size:10px;}
 .phone-layout .panel-content:has(.phone-state-overview) > :is(.census-record,.panel-action,.facts-date,.fact-sources) {display:none;}
 
@@ -170,7 +181,7 @@
   position:absolute;top:0;left:0;width:100%;height:32px;z-index:11;
 }
 .phone-layout[data-phone-stage='atlas'] .phone-facts-grip {margin:auto;width:100%;height:24px;}
-.phone-layout[data-phone-stage='atlas'] .phone-sheet > div {background:#0b131e;border-top:1px solid #30485d;}
+.phone-layout[data-phone-stage='atlas'] .phone-sheet > div {background:var(--phone-atlas-surface);border-top:1px solid var(--phone-panel-edge);}
 .phone-layout[data-phone-stage='atlas'] .info-panel {height:var(--phone-atlas-facts-height,var(--phone-atlas-sheet));border-top:0;}
 .phone-layout[data-phone-stage='atlas'] .panel-content {padding-top:4px;}
 .phone-layout[data-phone-stage='atlas'] .panel-content > :is(.facts-date,.fact-sources,.census-record,.panel-help) {display:none;}

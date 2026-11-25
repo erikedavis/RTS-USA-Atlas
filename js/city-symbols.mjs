@@ -28,36 +28,40 @@ export const capitalMarkSize=zoom=>7.8+3.2*overviewFade(zoom);
 
 export const cityIconName=tier=>`population-${tier}`;
 
-function paintSymbol(canvas,tier,scale=1){
+function paintSymbol(canvas,tier,color,scale=1){
   const ctx=canvas.getContext('2d',{willReadFrequently:true});
   ctx.translate(canvas.width/2,canvas.height/2);
   ctx.scale(canvas.width/32*scale,canvas.height/32*scale);
-  ctx.fillStyle='#d5e8f6';
+  ctx.fillStyle=color;
   ctx.fill(new Path2D(tiers[tier].path));
   return ctx;
 }
 
-export function registerCitySymbols(map){
+export function registerCitySymbols(map,color){
   const canvas=document.createElement('canvas');
   for(let tier=0;tier<tiers.length;tier++){
     canvas.width=canvas.height=128;
-    const ctx=paintSymbol(canvas,tier);
-    map.addImage(cityIconName(tier),ctx.getImageData(0,0,128,128),{pixelRatio:4});
+    const ctx=paintSymbol(canvas,tier,color);
+    const name=cityIconName(tier),image=ctx.getImageData(0,0,128,128);
+    if(map.hasImage(name))map.updateImage(name,image);
+    else map.addImage(name,image,{pixelRatio:4});
   }
 }
 
-export function populateMapKey(list){
+export function populateMapKey(list,color){
+  const items=document.createDocumentFragment();
   for(const [index,tier] of [...tiers.entries()].reverse()){
     const item=document.createElement('li');
     const canvas=document.createElement('canvas');
     canvas.width=canvas.height=104;
     canvas.setAttribute('aria-hidden','true');
     const label=document.createElement('span');label.textContent=tier.label;
-    paintSymbol(canvas,index,tier.diameter/11);
-    item.append(canvas,label);list.append(item);
+    paintSymbol(canvas,index,color,tier.diameter/11);
+    item.append(canvas,label);items.append(item);
   }
   const capital=document.createElement('li');
   const asterisk=document.createElement('span');asterisk.className='map-key-asterisk';asterisk.textContent='*';asterisk.setAttribute('aria-hidden','true');
   const description=document.createElement('span');description.textContent='Capital (asterisk)';
-  capital.append(asterisk,description);list.append(capital);
+  capital.append(asterisk,description);items.append(capital);
+  list.replaceChildren(items);
 }

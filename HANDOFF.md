@@ -1,4 +1,6 @@
-# USAtlas V0.9O preview
+# USAtlas V0.9P preview
+
+Phase 02 preview. The top-left crescent or sun switches the interface and live map paints in place. Interface roles live in `assets/theme.css` and map roles in `js/appearance.mjs`. Light mode uses the packaged Natural Earth ocean geometry and the existing Great Lakes polygons. Palette and physical phone acceptance remain open.
 
 Hiding the compass preserves the bearing and lock state. The hide chevron moves with the rose as it expands and can be tapped on a phone. The phone accepts a short left swipe around the return chevron. The phone compass suppresses the browser's text selection and callout so a press and hold stays a compass gesture. Desktop compass keyboard controls remain available while hidden. A locked two-finger map twist on a phone pulses the visible lock or shows a temporary unlock button beside the return chevron.
 

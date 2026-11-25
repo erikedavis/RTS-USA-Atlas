@@ -16,7 +16,7 @@ export function createCountyLabels(map){
     visibility:'none','text-field':['get','label'],'text-font':['Noto Sans Regular'],
     'text-size':['get','size'],'text-letter-spacing':.04,'text-allow-overlap':true,
     'text-ignore-placement':true,'text-max-width':40,
-  },paint:{'text-color':'#a1b4c6','text-halo-color':'#0a131e','text-halo-width':1.3}});
+  },paint:{'text-halo-width':1.3}});
 
   function layout(counties,anchors,obstacles,selectedId){
     const features=[],zoom=map.getZoom(),size=countyLabelSize(zoom);

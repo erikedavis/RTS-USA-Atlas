@@ -9,7 +9,7 @@ async function assertRendered(page, testInfo) {
   const response = await page.goto('/', { waitUntil: 'domcontentloaded' });
   expect(response?.ok(), 'The atlas must respond over HTTP').toBe(true);
   await expect(page.locator('#map-loading'), 'Atlas loading overlay must disappear').toBeHidden({ timeout: 50_000 });
-  await expect(page.locator('meta[name="atlas-version"]')).toHaveAttribute('content', 'ALPHA 0.9O');
+  await expect(page.locator('meta[name="atlas-version"]')).toHaveAttribute('content', 'ALPHA 0.9P');
   await expect(page.locator('canvas.maplibregl-canvas')).toHaveCount(1);
   const renderer = await page.evaluate(() => {
     const canvas = document.querySelector('canvas.maplibregl-canvas');
@@ -134,7 +134,7 @@ test('desktop national map loads, has working WebGL, and renders', async ({ page
   }
   await expect(page.locator('.topbar #search')).toBeVisible();
   const version=page.locator('#build-version');
-  await expect(version).toHaveText('0.9O');
+  await expect(version).toHaveText('0.9P');
   await expect(version).toHaveCSS('color',activeGold);
   const searchBox=await page.locator('#search').boundingBox();
   expect((await version.boundingBox()).x).toBeGreaterThan(searchBox.x+searchBox.width);
@@ -531,6 +531,58 @@ test('desktop USA home defaults to CONUS and keeps the chosen extent through Atl
   await expect(conus).toHaveAttribute('aria-pressed','true');
   await waitForCamera(page);
   expect(await camera(page)).toEqual(original);
+});
+
+test('desktop light theme recolors water and keeps Atlas state', async ({ page }, testInfo) => {
+  await exposeMap(page);
+  await assertRendered(page,testInfo);
+  await readMap(page);
+  const theme=page.locator('#appearance-toggle'),root=page.locator('html');
+  await expect(theme.locator('.appearance-moon')).toBeVisible();
+  await screenshot(page,testInfo,'theme-desktop-dark-national');
+  await theme.hover();
+  await expect(page.locator('#appearance-hint')).toHaveText('Dark mode · Switch to light');
+  await expect(page.locator('#appearance-hint')).toHaveCSS('opacity','1');
+  await expect(theme.locator('.appearance-moon')).toBeVisible();
+  await theme.click();
+  await page.mouse.move(800,65);
+  await expect(root).toHaveAttribute('data-theme','light');
+  await expect(theme.locator('.appearance-sun')).toBeVisible();
+  await screenshot(page,testInfo,'theme-desktop-light-national');
+  await page.evaluate(()=>testMap.jumpTo({center:[-79,42],zoom:5.1,bearing:0}));
+  const waterAt=(coordinates,layer)=>page.evaluate(({coordinates,layer})=>
+    testMap.queryRenderedFeatures(testMap.project(coordinates),{layers:[layer]}).length,{coordinates,layer});
+  await expect.poll(()=>waterAt([-74,38],'atlas-ocean')).toBeGreaterThan(0);
+  expect(await waterAt([-79,46],'atlas-ocean')).toBe(0);
+  await expect.poll(()=>waterAt([-81.55,42.20],'great-lakes-fill')).toBeGreaterThan(0);
+  await screenshot(page,testInfo,'theme-desktop-light-northeast');
+  const key=page.getByRole('button',{name:'Map key',exact:true});
+  await key.click();
+  await expect(page.locator('#map-key-symbols li')).toHaveCount(8);
+  await screenshot(page,testInfo,'theme-desktop-light-legend');
+  await theme.click();
+  await expect(key).toHaveAttribute('aria-expanded','true');
+  await expect(page.locator('#map-key-symbols li')).toHaveCount(8);
+  await theme.click();
+  await key.click();
+  await searchFor(page,'Idaho');
+  await page.locator('#desktop-atlas-toggle').click();
+  await expect(page.locator('.app')).toHaveAttribute('data-desktop-atlas','state');
+  await page.locator('#toggle-counties').click();
+  await page.locator('#toggle-metros').click();
+  await waitForCamera(page);
+  await page.evaluate(()=>testMap.setBearing(37));
+  const before=await camera(page);
+  await screenshot(page,testInfo,'theme-desktop-light-idaho-atlas');
+  await theme.click();
+  await expect(root).toHaveAttribute('data-theme','dark');
+  await expect(page.locator('#panel-content h1')).toHaveText('Idaho');
+  await expect(page.locator('.app')).toHaveAttribute('data-desktop-atlas','state');
+  for(const id of ['counties','metros'])await expect(page.locator('#toggle-'+id)).toHaveAttribute('aria-pressed','true');
+  expect(await camera(page)).toEqual(before);
+  await theme.click();
+  await assertRendered(page,testInfo);
+  await expect(theme.locator('.appearance-sun')).toBeVisible();
 });
 
 test('desktop Atlas expands, restores a rotated camera, and reopens the hidden sidebar on selection', async ({ page }, testInfo) => {
@@ -1278,6 +1330,41 @@ test.describe('phone viewport', () => {
     await expect(page.getByRole('button',{name:'ALL',exact:true})).toHaveAttribute('aria-pressed','true');
   });
 
+  test('phone light theme keeps Atlas open and fits portrait and landscape', async ({ page }, testInfo) => {
+    await exposeMap(page);
+    await assertRendered(page,testInfo);
+    await readMap(page);
+    const theme=page.locator('#appearance-toggle');
+    await expect(theme.locator('.appearance-moon')).toBeVisible();
+    await screenshot(page,testInfo,'theme-phone-dark-national');
+    await theme.tap();
+    await expect(theme.locator('.appearance-sun')).toBeVisible();
+    await screenshot(page,testInfo,'theme-phone-light-national');
+    await searchFor(page,'Idaho');
+    await page.getByRole('button',{name:'Open state atlas'}).tap();
+    await expect(page.locator('.app')).toHaveAttribute('data-phone-atlas-kind','state');
+    await waitForCamera(page);
+    const fitted=await camera(page);
+    await theme.tap();
+    await expect(theme.locator('.appearance-moon')).toBeVisible();
+    await expect(page.locator('.app')).toHaveAttribute('data-phone-atlas-kind','state');
+    expect(await camera(page)).toEqual(fitted);
+    await theme.tap();
+    await screenshot(page,testInfo,'theme-phone-light-idaho-atlas');
+    await page.locator('#phone-atlas-back').tap();
+    await page.setViewportSize({width:744,height:390});
+    await expect(page.locator('#search')).toBeVisible();
+    await screenshot(page,testInfo,'theme-phone-light-landscape');
+    await page.setViewportSize({width:320,height:650});
+    const search=await page.locator('#search').boundingBox();
+    const tools=await page.locator('#tools-menu').boundingBox();
+    const toggle=await theme.boundingBox();
+    expect(search.width).toBeGreaterThan(95);
+    expect(tools.x).toBeGreaterThan(toggle.x+toggle.width);
+    await assertRendered(page,testInfo);
+    await expect(theme.locator('.appearance-sun')).toBeVisible();
+  });
+
   test('phone startup hides the desktop sidebar while the map loads', async ({ page }) => {
     await page.route('**/js/atlas.mjs?*', route => route.abort());
     await page.goto('/');
@@ -1304,7 +1391,7 @@ test.describe('phone viewport', () => {
       const idleSearch = await search.boundingBox();
       const idleTools = await tools.boundingBox();
       const version=page.locator('#build-version');
-      await expect(version).toHaveText('0.9O');
+      await expect(version).toHaveText('0.9P');
       await expect(version).toHaveCSS('color',activeGold);
       const buildLabel=await version.boundingBox();
       expect(buildLabel.x).toBeGreaterThan(idleSearch.x+idleSearch.width);

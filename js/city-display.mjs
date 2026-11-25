@@ -1,5 +1,6 @@
 import {layoutCities,placeLabel,appearance,requiredCityLabel,cityMarkerBox,HOVER_GRACE_MS} from './city-layout.mjs?v=09d';
-import {capitalMarkSize,cityIconName,registerCitySymbols} from './city-symbols.mjs';
+import {capitalMarkSize,cityIconName,registerCitySymbols} from './city-symbols.mjs?v=09p';
+import {setThemePaint} from './appearance.mjs?v=09p1';
 const fc=features=>({type:'FeatureCollection',features});
 export function createCityLayers(map,cities,{isNational,metroOverview,phoneViewport,stateLabelsFirst,geographyLabels}){
  const byId=new Map(cities.features.map(f=>[f.properties.geoid,f]));
@@ -19,7 +20,6 @@ export function createCityLayers(map,cities,{isNational,metroOverview,phoneViewp
    font:[item.style.weight],anchor:pl?.anchor||'left',offset:pl?[pl.dx/pl.size,pl.dy/pl.size]:[1,0],showLabel:!!pl}};
  }
  for(const id of ['major-cities','hover-city'])map.addSource(id,{type:'geojson',data:fc([])});
- registerCitySymbols(map);
  const iconLayout={'icon-image':['get','symbol'],'icon-size':['/',['get','radius'],8],
   'icon-allow-overlap':true,'icon-ignore-placement':true};
  map.addLayer({id:'city-dot-0',type:'symbol',source:'major-cities',layout:iconLayout,paint:{'icon-opacity':['get','iconOpacity']}});
@@ -27,21 +27,20 @@ export function createCityLayers(map,cities,{isNational,metroOverview,phoneViewp
   'text-offset':['get','capitalOffset'],'text-allow-overlap':true,'text-ignore-placement':true};
  const capitalFilter=['==',['get','is_capital'],true];
  map.addLayer({id:'city-capital-mark',type:'symbol',source:'major-cities',filter:capitalFilter,layout:capitalLayout,
-  paint:{'text-color':'#d5e8f6','text-opacity':['get','iconOpacity']}});
+  paint:{'text-opacity':['get','iconOpacity']}});
  map.addLayer({id:'city-hit',type:'circle',source:'major-cities',paint:{
   'circle-radius':['max',5.5,['+',['get','radius'],1.5],['case',['get','is_capital'],['*',['get','radius'],1.85],0]],
   'circle-opacity':.001}});
- const names={type:'symbol',layout:{'text-field':['get','name'],'text-transform':'uppercase','text-font':['case',['==',['at',0,['get','font']],'Noto Sans Bold'],['literal',['Noto Sans Bold']],['literal',['Noto Sans Regular']]],'text-size':['get','labelSize'],'text-anchor':['get','anchor'],'text-offset':['get','offset'],'text-allow-overlap':true,'text-max-width':40,'text-padding':0},paint:{'text-color':'#bbd1e0','text-halo-color':'#0a111a','text-halo-width':1.4}};
+ const names={type:'symbol',layout:{'text-field':['get','name'],'text-transform':'uppercase','text-font':['case',['==',['at',0,['get','font']],'Noto Sans Bold'],['literal',['Noto Sans Bold']],['literal',['Noto Sans Regular']]],'text-size':['get','labelSize'],'text-anchor':['get','anchor'],'text-offset':['get','offset'],'text-allow-overlap':true,'text-max-width':40,'text-padding':0},paint:{'text-halo-width':1.4}};
  const selectionText=['boolean',['get','selected'],false];
  map.addLayer({...structuredClone(names),id:'city-name-0',source:'major-cities',filter:['==',['get','showLabel'],true],
-  paint:{...names.paint,'text-color':['case',selectionText,'#fff',names.paint['text-color']],
-   'text-halo-color':['case',selectionText,'rgba(135,185,225,.55)',names.paint['text-halo-color']],
+  paint:{...names.paint,
    'text-halo-width':['case',selectionText,1.7,names.paint['text-halo-width']],
    'text-halo-blur':['case',selectionText,.7,0]}});
- map.addLayer({id:'city-hover-glow',type:'circle',source:'hover-city',paint:{'circle-radius':['+',['get','radius'],6],'circle-color':'#a9dfff','circle-opacity':.5,'circle-blur':.9}});
+ map.addLayer({id:'city-hover-glow',type:'circle',source:'hover-city',paint:{'circle-radius':['+',['get','radius'],6],'circle-opacity':.5,'circle-blur':.9}});
  map.addLayer({id:'city-hover-symbol',type:'symbol',source:'hover-city',layout:{...iconLayout,'icon-size':['/',['*',['get','radius'],1.15],8]}});
- map.addLayer({id:'city-hover-capital-mark',type:'symbol',source:'hover-city',filter:capitalFilter,layout:capitalLayout,paint:{'text-color':'#fff'}});
- map.addLayer({...structuredClone(names),id:'city-name-hover',source:'hover-city',paint:{...names.paint,'text-color':'#ffffff','text-halo-width':2.2}});
+ map.addLayer({id:'city-hover-capital-mark',type:'symbol',source:'hover-city',filter:capitalFilter,layout:capitalLayout});
+ map.addLayer({...structuredClone(names),id:'city-name-hover',source:'hover-city',paint:{...names.paint,'text-halo-width':2.2}});
  map.setPaintProperty('city-name-0','text-opacity',['get','opacity']);
  function hideBaseHover(){
   const visible=['all',['!=',['get','geoid'],hovered]];
@@ -113,6 +112,16 @@ export function createCityLayers(map,cities,{isNational,metroOverview,phoneViewp
  }
  map.on('movestart',clearHover);map.getCanvas().addEventListener('mouseleave',()=>hover());
  return {hitLayers:['city-name-hover','city-name-0','city-hit'],hover,clearHover,labelNear,labelReservations,
+  setAppearance(palette){
+    registerCitySymbols(map,palette.citySymbol);
+    setThemePaint(map,'city-capital-mark','text-color',palette.citySymbol);
+    setThemePaint(map,'city-name-0','text-color',['case',selectionText,palette.selectedCity,palette.cityText]);
+    setThemePaint(map,'city-name-0','text-halo-color',['case',selectionText,palette.selectedCityHalo,palette.cityHalo]);
+    setThemePaint(map,'city-hover-capital-mark','text-color',palette.selectedCity);
+    setThemePaint(map,'city-name-hover','text-color',palette.cityHoverText);
+    setThemePaint(map,'city-name-hover','text-halo-color',palette.cityHalo);
+    setThemePaint(map,'city-hover-glow','circle-color',palette.cityHoverGlow);
+  },
   update(nextState,selected){
     const nextId=selected?.properties.kind==='place'?selected.properties.geoid:'';
     if(state===nextState&&selectedId===nextId)return;

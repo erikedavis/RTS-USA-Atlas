@@ -1,4 +1,5 @@
 import {cityMarkerBox,overlaps,placeLabel} from './city-layout.mjs?v=09d';
+import {setThemePaint} from './appearance.mjs?v=09p1';
 
 // Angles are map-relative. Long and narrow features can supply a label
 // axis, which also limits how far lettering can slide from its center.
@@ -13,9 +14,9 @@ const geography=[
 ];
 
 const styles={
-  lake:{zoom:4.25,fadeIn:5.35,fadeOut:8.55,end:9.65,color:'#98bdd5',opacity:.55,size:11.3},
-  peninsula:{zoom:5.05,fadeIn:5.75,fadeOut:7.8,end:9.35,color:'#a3b8c8',opacity:.49,size:9.6},
-  island:{zoom:4.95,fadeIn:5.35,fadeOut:8.1,end:9.45,color:'#aec4d5',opacity:.69,size:9.8}
+  lake:{zoom:4.25,fadeIn:5.35,fadeOut:8.55,end:9.65,opacity:.55,size:11.3},
+  peninsula:{zoom:5.05,fadeIn:5.75,fadeOut:7.8,end:9.35,opacity:.49,size:9.6},
+  island:{zoom:4.95,fadeIn:5.35,fadeOut:8.1,end:9.45,opacity:.69,size:9.8}
 };
 const font='Noto Sans Regular',letterSpacing=.13;
 const collection=features=>({type:'FeatureCollection',features});
@@ -81,12 +82,20 @@ export function createGeographyLabels(map){
   for(const [kind,region] of Object.entries(styles)){
     map.addLayer({id:`geography-${kind}`,type:'symbol',source,
       minzoom:region.zoom,maxzoom:region.end,filter:['==',['get','kind'],kind],
-      layout:{...layout,'text-size':region.size},paint:{'text-color':region.color,
-        'text-halo-color':'#0b121a','text-halo-width':.7,
-        'text-opacity':['interpolate',['linear'],['zoom'],region.zoom,0,region.fadeIn,region.opacity,region.fadeOut,region.opacity,region.end,0]}});
+      layout:{...layout,'text-size':region.size},paint:{'text-halo-width':.7}});
   }
   let boxes=[],lastData='';
   return {
+    setAppearance(palette){
+      for(const [kind,region] of Object.entries(styles)){
+        const id=`geography-${kind}`,opacity=Math.min(.94,region.opacity*palette.geographyStrength);
+        setThemePaint(map,id,'text-color',palette[kind+'Text']);
+        setThemePaint(map,id,'text-halo-color',kind==='lake'?palette.lakeHalo:palette.geographyHalo);
+        setThemePaint(map,id,'text-opacity',[
+          'interpolate',['linear'],['zoom'],region.zoom,0,region.fadeIn,opacity,region.fadeOut,opacity,region.end,0,
+        ]);
+      }
+    },
     reservations:()=>boxes,
     layout(result,viewport,reserved){
       const zoom=map.getZoom(),names=result.items.filter(city=>city.placement);

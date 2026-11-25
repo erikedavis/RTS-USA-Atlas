@@ -1,15 +1,16 @@
 // USA Atlas 0.3A - adaptive city hierarchy and display insets, official Census 2025 geography.
 // Local renderer and geography; no external requests at runtime.
 import * as maplibregl from '../assets/vendor/maplibre-gl.mjs';
-import {createCityLayers} from './city-display.mjs?v=09f';
+import {createCityLayers} from './city-display.mjs?v=09p1';
 import {isMetroScale} from './city-layout.mjs';
-import {populateMapKey} from './city-symbols.mjs';
-import {createGeographyLabels} from './geography-labels.mjs?v=09d';
+import {populateMapKey} from './city-symbols.mjs?v=09p';
+import {createGeographyLabels} from './geography-labels.mjs?v=09p1';
 import {createStateLabels} from './state-labels.mjs?v=09f';
 import {prepareStateShapes,shapeContainsPoint} from './state-label-placement.mjs';
 import {isNorthUp,screenBounds,setupRotation} from './map-rotation.mjs?v=09n';
 import {setupPhoneUI} from './phone-ui.mjs?v=09k';
-import {COUNTY_LABEL_ZOOM,createCountyLabels} from './county-labels.mjs';
+import {COUNTY_LABEL_ZOOM,createCountyLabels} from './county-labels.mjs?v=09p';
+import {applyMapAppearance,mapPalette,mode,setupAppearance} from './appearance.mjs?v=09p1';
 import {createSelectedAreaLabel} from './selected-area-label.mjs';
 import {INSETS, NATIONAL_BOUNDS, CONUS_BOUNDS, displayData, displayPoint, geographicPoint, hawaiiTailMarks, insetFrames} from './insets.mjs';
 
@@ -601,6 +602,7 @@ function focusStateAtlas(fips,fast){
   for(const id of ['inset-surface','inset-lines','great-lakes-shoreline','geography-lake','geography-peninsula','geography-island']){
     map.setLayoutProperty(id,'visibility',fips?'none':'visible');
   }
+  map.setLayoutProperty('great-lakes-fill','visibility',!fips&&mode()==='light'?'visible':'none');
   for(const id of ['hawaii-tail-islands','hawaii-tail-label']){
     if(map.getLayer(id))map.setLayoutProperty(id,'visibility',!fips||fips==='15'?'visible':'none');
   }
@@ -715,7 +717,8 @@ function updateCountyView(){
     renderedCountyScope=scope;
     const filter=scope?['==',['get','state_fips'],scope]:null;
     for(const id of ['county-hit','county-lines','county-names'])map.setFilter(id,filter);
-    map.setPaintProperty('county-lines','line-color',scope?'#6685a0':'#3b5268');
+    const palette=mapPalette();
+    map.setPaintProperty('county-lines','line-color',scope?palette.countyScoped:palette.countyLine);
     map.setPaintProperty('county-lines','line-opacity',scope ? .86 : .58);
     countyNames.clear();
   }
@@ -980,9 +983,11 @@ function updateInsetTitles(){
   }
 }
 function addSourcesAndLayers() {
+  map.addSource('ocean',{type:'geojson',data:new URL('../data/ocean.geojson',import.meta.url).href});
+  map.addLayer({id:'atlas-ocean',type:'fill',source:'ocean',layout:{visibility:'none'}});
   map.addSource('inset-frames',{type:'geojson',data:insetFrames});
-  map.addLayer({id:'inset-surface',type:'fill',source:'inset-frames',paint:{'fill-color':'#070d14','fill-opacity':.9}});
-  map.addLayer({id:'inset-lines',type:'line',layout:{'line-join':'bevel','line-cap':'butt'},source:'inset-frames',paint:{'line-color':'#30485b','line-width':1}});
+  map.addLayer({id:'inset-surface',type:'fill',source:'inset-frames',paint:{'fill-opacity':.9}});
+  map.addLayer({id:'inset-lines',type:'line',layout:{'line-join':'bevel','line-cap':'butt'},source:'inset-frames',paint:{'line-width':1}});
   map.addSource('states',{type:'geojson',data:states});
   map.addSource('great-lakes',{type:'geojson',data:new URL('../data/great-lakes.geojson',import.meta.url).href});
   map.addSource('counties',{type:'geojson',data:emptyFC});
@@ -991,44 +996,45 @@ function addSourcesAndLayers() {
   map.addSource('metros',{type:'geojson',data:emptyFC});
   map.addSource('metro-labels',{type:'geojson',data:emptyFC});
 
-  map.addLayer({id:'state-surface',type:'fill',source:'states',paint:{'fill-color':'#101923','fill-opacity':.98}});
-  map.addLayer({id:'state-atlas-surface',type:'fill',source:'states',filter:['==',['get','geoid'],'__none__'],paint:{'fill-color':'#101923','fill-opacity':0}});
+  map.addLayer({id:'state-surface',type:'fill',source:'states',paint:{'fill-opacity':.98}});
+  map.addLayer({id:'state-atlas-surface',type:'fill',source:'states',filter:['==',['get','geoid'],'__none__'],paint:{'fill-opacity':0}});
+  map.addLayer({id:'great-lakes-fill',type:'fill',source:'great-lakes',layout:{visibility:'none'}});
   map.addLayer({id:'state-hit',type:'fill',source:'states',paint:{'fill-color':'#182637','fill-opacity':.01}});
   map.addLayer({id:'county-hit',type:'fill',source:'counties',minzoom:4.5,layout:{visibility:'none'},paint:{'fill-color':'#3d5977','fill-opacity':.01}});
-  map.addLayer({id:'county-lines',type:'line',layout:{visibility:'none','line-join':'bevel','line-cap':'butt'},source:'counties',paint:{'line-color':'#3b5268','line-width':['interpolate',['linear'],['zoom'],2,.45,4.5,.7,8,1.15],'line-opacity':.58}});
+  map.addLayer({id:'county-lines',type:'line',layout:{visibility:'none','line-join':'bevel','line-cap':'butt'},source:'counties',paint:{'line-width':['interpolate',['linear'],['zoom'],2,.45,4.5,.7,8,1.15],'line-opacity':.58}});
   map.addLayer({id:'place-area-hit',type:'fill',source:'place-areas',minzoom:8.3,paint:{'fill-color':'#40597a','fill-opacity':.01}});
-  map.addLayer({id:'place-area-lines',type:'line',layout:{'line-join':'bevel','line-cap':'butt'},source:'place-areas',minzoom:8.3,paint:{'line-color':'#546b83','line-opacity':.38,'line-width':.6}});
+  map.addLayer({id:'place-area-lines',type:'line',layout:{'line-join':'bevel','line-cap':'butt'},source:'place-areas',minzoom:8.3,paint:{'line-opacity':.38,'line-width':.6}});
   map.addLayer({id:'metro-hit',type:'fill',source:'metros',minzoom:4.4,layout:{visibility:'none'},paint:{'fill-color':'#a7bbcc','fill-opacity':.01}});
-  map.addLayer({id:'metro-surface',type:'fill',source:'metros',layout:{visibility:'none'},paint:{'fill-color':'#506c90','fill-opacity':.095}});
-  map.addLayer({id:'metro-lines',type:'line',source:'metros',layout:{visibility:'none','line-join':'bevel','line-cap':'butt'},paint:{'line-color':'#839bb9','line-width':['interpolate',['linear'],['zoom'],2,.5,5,1.15],'line-opacity':.58,'line-dasharray':[2,3]}});
+  map.addLayer({id:'metro-surface',type:'fill',source:'metros',layout:{visibility:'none'},paint:{'fill-opacity':.095}});
+  map.addLayer({id:'metro-lines',type:'line',source:'metros',layout:{visibility:'none','line-join':'bevel','line-cap':'butt'},paint:{'line-width':['interpolate',['linear'],['zoom'],2,.5,5,1.15],'line-opacity':.58,'line-dasharray':[2,3]}});
   map.addLayer({id:'metro-outline-hit',type:'line',source:'metros',minzoom:4.4,layout:{visibility:'none'},
     paint:{'line-width':7,'line-opacity':.01}});
   map.addLayer({id:cityMetroLayers[0],type:'fill',source:'metros',filter:['==',['get','geoid'],'__none__'],
-    paint:{'fill-color':'#6f97ba','fill-opacity':.17}});
+    paint:{'fill-opacity':.17}});
   map.addLayer({id:cityMetroLayers[1],type:'line',source:'metros',filter:['==',['get','geoid'],'__none__'],layout:{'line-join':'round'},
-    paint:{'line-color':'#b2d8f4','line-width':1.7,'line-opacity':.92}});
-  map.addLayer({id:'state-lines',type:'line',layout:{'line-join':'bevel','line-cap':'butt'},source:'states',paint:{'line-color':'#718da8','line-width':['interpolate',['linear'],['zoom'],3,.8,9,1.7],'line-opacity':.9}});
+    paint:{'line-width':1.7,'line-opacity':.92}});
+  map.addLayer({id:'state-lines',type:'line',layout:{'line-join':'bevel','line-cap':'butt'},source:'states',paint:{'line-width':['interpolate',['linear'],['zoom'],3,.8,9,1.7],'line-opacity':.9}});
   map.addLayer({id:'great-lakes-shoreline',type:'line',source:'great-lakes',layout:{'line-join':'round'},
-    paint:{'line-color':'#648aa5','line-width':['interpolate',['linear'],['zoom'],2,.8,6,1.1],
+    paint:{'line-width':['interpolate',['linear'],['zoom'],2,.8,6,1.1],
       'line-opacity':['interpolate',['linear'],['zoom'],2,.7,7,.7,9.5,0]}});
   const hawaii=states.features.find(f=>f.properties.abbr==='HI');
   if(hawaii){
     map.addSource('hawaii-tail',{type:'geojson',data:hawaiiTailMarks(hawaii.geometry)});
     map.addLayer({id:'hawaii-tail-islands',type:'circle',source:'hawaii-tail',maxzoom:8.5,filter:['==',['get','kind'],'island'],
-      paint:{'circle-color':'#9ab4c6','circle-radius':.9,'circle-opacity':['interpolate',['linear'],['zoom'],4,.85,8.5,0]}});
+      paint:{'circle-radius':.9,'circle-opacity':['interpolate',['linear'],['zoom'],4,.85,8.5,0]}});
     map.addLayer({id:'hawaii-tail-label',type:'symbol',source:'hawaii-tail',minzoom:2.8,maxzoom:5.5,filter:['==',['get','kind'],'label'],
-      layout:{'text-field':['get','name'],'text-font':['Noto Sans Regular'],'text-size':8,'text-letter-spacing':.12},paint:{'text-color':'#718da8'}});
+      layout:{'text-field':['get','name'],'text-font':['Noto Sans Regular'],'text-size':8,'text-letter-spacing':.12}});
   }
-  map.addLayer({id:'state-selected',type:'line',layout:{'line-join':'bevel','line-cap':'butt'},source:'states',filter:['==',['get','geoid'],'__none__'],paint:{'line-color':'#b6def5','line-width':1.8,'line-opacity':1}});
-  map.addLayer({id:'county-selected',type:'line',layout:{visibility:'none','line-join':'bevel','line-cap':'butt'},source:'counties',filter:['==',['get','geoid'],'__none__'],paint:{'line-color':'#c2e0f5','line-width':2.6,'line-opacity':1}});
-  map.addLayer({id:'place-selected',type:'line',layout:{'line-join':'bevel','line-cap':'butt'},source:'place-areas',filter:['==',['get','geoid'],'__none__'],paint:{'line-color':'#a2d7fc','line-width':2.2,'line-opacity':1}});
-  map.addLayer({id:'metro-selected',type:'line',source:'metros',filter:['==',['get','geoid'],'__none__'],layout:{visibility:'none','line-join':'bevel','line-cap':'butt'},paint:{'line-color':'#c6daed','line-width':2.3}});
+  map.addLayer({id:'state-selected',type:'line',layout:{'line-join':'bevel','line-cap':'butt'},source:'states',filter:['==',['get','geoid'],'__none__'],paint:{'line-width':1.8,'line-opacity':1}});
+  map.addLayer({id:'county-selected',type:'line',layout:{visibility:'none','line-join':'bevel','line-cap':'butt'},source:'counties',filter:['==',['get','geoid'],'__none__'],paint:{'line-width':2.6,'line-opacity':1}});
+  map.addLayer({id:'place-selected',type:'line',layout:{'line-join':'bevel','line-cap':'butt'},source:'place-areas',filter:['==',['get','geoid'],'__none__'],paint:{'line-width':2.2,'line-opacity':1}});
+  map.addLayer({id:'metro-selected',type:'line',source:'metros',filter:['==',['get','geoid'],'__none__'],layout:{visibility:'none','line-join':'bevel','line-cap':'butt'},paint:{'line-width':2.3}});
   geographyLabels=createGeographyLabels(map);
   map.addLayer({id:'metro-names',type:'symbol',source:'metro-labels',minzoom:7.55,layout:{visibility:'none',
     'text-field':['get','label'],'text-font':['Noto Sans Bold'],'text-size':12,'text-letter-spacing':.055,
     'text-max-width':12,'text-padding':9,'text-variable-anchor':['center','top','bottom','left','right'],'text-radial-offset':.5},
-    paint:{'text-color':'#b4cae3','text-halo-color':'#0a1321','text-halo-width':1.6}});
-  map.addLayer({id:'places-hit',type:'circle',source:'local-places',minzoom:9.1,paint:{'circle-radius':['interpolate',['linear'],['zoom'],9.1,2,12,3.5],'circle-color':'#98b5cd','circle-stroke-width':.8,'circle-stroke-color':'#d5e7f3','circle-opacity':.44}});
+    paint:{'text-halo-width':1.6}});
+  map.addLayer({id:'places-hit',type:'circle',source:'local-places',minzoom:9.1,paint:{'circle-radius':['interpolate',['linear'],['zoom'],9.1,2,12,3.5],'circle-stroke-width':.8,'circle-opacity':.44}});
   map.on('mousemove',event=>{
     if(map.isMoving()||!hoverInput.matches||event.originalEvent.sourceCapabilities?.firesTouchEvents)return;
     const hits=map.queryRenderedFeatures(event.point,{layers:hitLayers()});
@@ -1186,7 +1192,6 @@ function setupUI() {
   $('#zoom-in').addEventListener('click',()=>map.zoomIn());
   $('#zoom-out').addEventListener('click',()=>map.zoomOut());
   const keyToggle=$('#map-key-toggle'),key=$('#map-key');
-  populateMapKey($('#map-key-symbols'));
   function setKey(open){key.hidden=!open;keyToggle.setAttribute('aria-expanded',String(open));cityLayers.layout();}
   keyToggle.addEventListener('click',()=>setKey(key.hidden));
   document.addEventListener('click',event=>{
@@ -1297,6 +1302,14 @@ function setupUI() {
   setupSearch();
 }
 
+function refreshAppearance(){
+  if(!cityLayers)return;
+  const palette=applyMapAppearance(map,Boolean(renderedCountyScope),Boolean(atlasFocus));
+  cityLayers.setAppearance(palette);
+  geographyLabels.setAppearance(palette);
+  populateMapKey($('#map-key-symbols'),palette.citySymbol);
+}
+
 async function initialize() {
   try {
     [manifest,states,stateLabels,cities,facts,usaFacts]=await Promise.all([
@@ -1309,19 +1322,22 @@ async function initialize() {
       container:'map',center:[-98.4,38.5],zoom:3.3,minZoom:1.1,maxZoom:16,
       attributionControl:false,pitchWithRotate:false,dragRotate:false,touchPitch:false,maxPitch:0,bearingSnap:0,renderWorldCopies:false,
       pixelRatio:touchInput.matches?Math.min(window.devicePixelRatio,2):undefined,
-      style:{version:8,name:'USA Atlas Statistical',glyphs:new URL('../assets/fonts/',import.meta.url).href+'{fontstack}/{range}.pbf',sources:{},layers:[{id:'background',type:'background',paint:{'background-color':'#020307'}}]}
+      style:{version:8,name:'USA Atlas Statistical',glyphs:new URL('../assets/fonts/',import.meta.url).href+'{fontstack}/{range}.pbf',sources:{},layers:[{id:'background',type:'background',paint:{'background-color':mapPalette().background}}]}
     });
     map.touchZoomRotate.disableRotation();
     map.on('load',()=>{
-      addSourcesAndLayers();makeLabels();setupUI();
+      addSourcesAndLayers();makeLabels();refreshAppearance();setupUI();
       map.on('move',updateHudWhileMoving);
       map.on('moveend',scheduleSettledView);
       map.on('resize',scheduleSettledView);
       emptyPanel();
       fitNation(0);
       scheduleSettledView();
-      $('#map-loading').classList.add('done');
-      setTimeout(()=>{$('#map-loading').style.display='none';},470);
+      map.once('idle',()=>{
+        const loading=$('#map-loading');
+        loading.classList.add('done');
+        setTimeout(()=>{loading.style.display='none';},470);
+      });
     });
     map.on('error',event=>console.warn('MapLibre:',event.error||event));
   }catch(error){
@@ -1333,4 +1349,5 @@ async function initialize() {
     );
   }
 }
+setupAppearance(refreshAppearance);
 initialize();
