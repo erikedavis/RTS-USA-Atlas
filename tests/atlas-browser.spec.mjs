@@ -9,7 +9,7 @@ async function assertRendered(page, testInfo) {
   const response = await page.goto('/', { waitUntil: 'domcontentloaded' });
   expect(response?.ok(), 'The atlas must respond over HTTP').toBe(true);
   await expect(page.locator('#map-loading'), 'Atlas loading overlay must disappear').toBeHidden({ timeout: 50_000 });
-  await expect(page.locator('meta[name="atlas-version"]')).toHaveAttribute('content', 'ALPHA 0.9L');
+  await expect(page.locator('meta[name="atlas-version"]')).toHaveAttribute('content', 'ALPHA 0.9M');
   await expect(page.locator('canvas.maplibregl-canvas')).toHaveCount(1);
   const renderer = await page.evaluate(() => {
     const canvas = document.querySelector('canvas.maplibregl-canvas');
@@ -91,6 +91,15 @@ async function waitForCompassShift(page) {
   });
 }
 
+async function expectHideChevronBesideWest(page) {
+  await expect.poll(()=>page.locator('#compass-toggle').evaluate(toggle=>{
+    const west=document.querySelector('[data-bearing="270"] span').getBoundingClientRect();
+    const chevron=toggle.getBoundingClientRect();
+    return [Math.round((west.left+west.right-chevron.left-chevron.right)/2),
+      Math.round((west.top+west.bottom-chevron.top-chevron.bottom)/2)];
+  })).toEqual([36,0]);
+}
+
 async function bottomHudGeometry(page, isPhone = false) {
   return page.evaluate(isPhone => {
     const rect = selector => document.querySelector(selector).getBoundingClientRect();
@@ -125,7 +134,7 @@ test('desktop national map loads, has working WebGL, and renders', async ({ page
   }
   await expect(page.locator('.topbar #search')).toBeVisible();
   const version=page.locator('#build-version');
-  await expect(version).toHaveText('0.9L');
+  await expect(version).toHaveText('0.9M');
   await expect(version).toHaveCSS('color',activeGold);
   const searchBox=await page.locator('#search').boundingBox();
   expect((await version.boundingBox()).x).toBeGreaterThan(searchBox.x+searchBox.width);
@@ -231,6 +240,7 @@ test('desktop compass tucks into the corner and its return chevron tracks the si
   const east=face.locator('[data-bearing="90"] span');
   const map=await page.locator('#map').boundingBox();
   const locked=await rose.boundingBox();
+  await expectHideChevronBesideWest(page);
   expect((await north.boundingBox()).y-map.y).toBeLessThan(12);
   expect(await mapEdge()-(await east.boundingBox()).x-(await east.boundingBox()).width).toBeLessThan(12);
   await expect(glyph).toHaveCSS('opacity','0.42');
@@ -242,6 +252,7 @@ test('desktop compass tucks into the corner and its return chevron tracks the si
   await screenshot(page,testInfo,'desktop-compass-hide');
   await lock.click();
   await expect(toggle).toBeVisible();
+  await expectHideChevronBesideWest(page);
   await expect.poll(async()=> (await rose.boundingBox()).width).toBeGreaterThan(locked.width+8);
   expect((await rose.boundingBox()).y).toBeGreaterThan(locked.y+8);
   expect((await rose.boundingBox()).x).toBeLessThan(locked.x-8);
@@ -959,6 +970,7 @@ test.describe('phone viewport', () => {
     const lockGlyph = lock.locator('svg');
     await expect(controls.locator('[data-bearing]')).toHaveCount(8);
     await expect(lock).toHaveCSS('color', activeGold);
+    await expectHideChevronBesideWest(page);
     const aligned = await lock.evaluate(el => {
       const lock = el.getBoundingClientRect(), rose = document.querySelector('.compass-rose').getBoundingClientRect();
       return Math.max(Math.abs((lock.left + lock.right - rose.left - rose.right) / 2),
@@ -974,6 +986,7 @@ test.describe('phone viewport', () => {
     }
     await tapRoseSpoke(page,true);
     await expect(lock).toHaveAttribute('aria-pressed', 'false');
+    await expectHideChevronBesideWest(page);
     await expect(lockGlyph).toHaveCSS('animation-name', 'compass-lock-release');
     await expect(lockGlyph).toHaveCSS('opacity', '0');
     await controls.getByRole('button', { name: 'Southeast up', exact: true }).tap();
@@ -1025,12 +1038,14 @@ test.describe('phone viewport', () => {
         await touch('touchMove',{x:start.x+dx*step/8,y:start.y+dy*step/8});
       }
     };
-    async function hide(heading,locked){
+    async function hide(heading,locked,fromChevron=false){
       await waitForCompassShift(page);
-      const start=await face.locator('.compass-direction').evaluateAll(directions=>{
+      const firstDirection=await face.locator('.compass-direction').evaluateAll(directions=>{
         const box=directions.map(button=>button.getBoundingClientRect()).sort((a,b)=>a.left-b.left)[0];
         return {x:box.x+box.width/2,y:box.y+box.height/2};
       });
+      const box=await toggle.boundingBox();
+      const start=fromChevron?{x:box.x+box.width/2,y:box.y+box.height/2}:firstDirection;
       const before=await camera(page);
       await glide(start,72,2);
       await expect(face).not.toHaveAttribute('inert');
@@ -1060,10 +1075,12 @@ test.describe('phone viewport', () => {
     await hide(135,true);
     await screenshot(page,testInfo,'phone-compass-hidden');
 
-    const box=await toggle.boundingBox();
-    const nearChevron={x:box.x+7,y:box.y+box.height/2};
+    const zone=await page.locator('.compass-return-swipe').boundingBox();
+    const nearChevron={x:zone.x+15,y:zone.y+zone.height/2+15};
     const hiddenCamera=await camera(page);
-    await glide(nearChevron,31,2);
+    await page.touchscreen.tap(nearChevron.x,nearChevron.y);
+    await expect(face).toHaveAttribute('inert','');
+    await glide(nearChevron,22,3);
     await touch('touchEnd');
     await expect(face).toHaveAttribute('inert','');
     expect(await camera(page)).toEqual(hiddenCamera);
@@ -1077,8 +1094,8 @@ test.describe('phone viewport', () => {
     await waitForCompassShift(page);
     await face.getByRole('button',{name:'East up',exact:true}).tap();
     await expectBearing(page,90);
-    await hide(90,false);
-    await glide(nearChevron,-47,-3);
+    await hide(90,false,true);
+    await glide(nearChevron,-22,13);
     await expect(face).toHaveAttribute('inert','');
     await expectBearing(page,90);
     await touch('touchEnd');
@@ -1137,6 +1154,10 @@ test.describe('phone viewport', () => {
     await pinch(43,48);
     await expect(edgeLock).toBeVisible();
     await expect(edgeLock).toHaveCSS('color',activeGold);
+    const returnBox=await toggle.boundingBox(),edgeBox=await edgeLock.boundingBox();
+    expect(returnBox.x-edgeBox.x-edgeBox.width).toBeGreaterThanOrEqual(2);
+    const returnGlyph=await toggle.locator('.compass-chevron').boundingBox();
+    expect(returnGlyph.x+returnGlyph.width/2-edgeBox.x-edgeBox.width/2).toBeLessThanOrEqual(50);
     await expect(edgeLock).toBeHidden({timeout:3000});
     await pinch(43,48);
     await expect(edgeLock).toBeVisible();
@@ -1266,7 +1287,7 @@ test.describe('phone viewport', () => {
       const idleSearch = await search.boundingBox();
       const idleTools = await tools.boundingBox();
       const version=page.locator('#build-version');
-      await expect(version).toHaveText('0.9L');
+      await expect(version).toHaveText('0.9M');
       await expect(version).toHaveCSS('color',activeGold);
       const buildLabel=await version.boundingBox();
       expect(buildLabel.x).toBeGreaterThan(idleSearch.x+idleSearch.width);

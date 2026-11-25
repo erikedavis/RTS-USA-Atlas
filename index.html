@@ -5,11 +5,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#020307">
-  <meta name="atlas-version" content="ALPHA 0.9L">
-  <title>USAtlas | V0.9L</title>
+  <meta name="atlas-version" content="ALPHA 0.9M">
+  <title>USAtlas | V0.9M</title>
   <link href="./assets/vendor/maplibre-gl.css" rel="stylesheet">
-  <link rel="stylesheet" href="./assets/atlas.css?v=09l">
-  <link rel="stylesheet" href="./assets/phone.css?v=09l1">
+  <link rel="stylesheet" href="./assets/atlas.css?v=09m">
+  <link rel="stylesheet" href="./assets/phone.css?v=09m">
 </head>
 <body>
   <div class="app">
@@ -76,13 +76,13 @@
                   </g>
                 </svg>
               </button>
-              <button class="compass-direction" type="button" data-bearing="0" style="--direction-y:-37%" aria-label="North up"><span>N</span></button>
+              <button class="compass-direction" type="button" data-bearing="0" style="--direction-y:calc(0% - var(--compass-cardinal-radius))" aria-label="North up"><span>N</span></button>
               <button class="compass-direction" type="button" data-bearing="45" style="--direction-x:26.2%;--direction-y:-26.2%" aria-label="Northeast up"><span>NE</span></button>
-              <button class="compass-direction" type="button" data-bearing="90" style="--direction-x:37%" aria-label="East up"><span>E</span></button>
+              <button class="compass-direction" type="button" data-bearing="90" style="--direction-x:var(--compass-cardinal-radius)" aria-label="East up"><span>E</span></button>
               <button class="compass-direction" type="button" data-bearing="135" style="--direction-x:26.2%;--direction-y:26.2%" aria-label="Southeast up"><span>SE</span></button>
-              <button class="compass-direction" type="button" data-bearing="180" style="--direction-y:37%" aria-label="South up"><span>S</span></button>
+              <button class="compass-direction" type="button" data-bearing="180" style="--direction-y:var(--compass-cardinal-radius)" aria-label="South up"><span>S</span></button>
               <button class="compass-direction" type="button" data-bearing="225" style="--direction-x:-26.2%;--direction-y:26.2%" aria-label="Southwest up"><span>SW</span></button>
-              <button class="compass-direction" type="button" data-bearing="270" style="--direction-x:-37%" aria-label="West up"><span>W</span></button>
+              <button class="compass-direction" type="button" data-bearing="270" style="--direction-x:calc(0% - var(--compass-cardinal-radius))" aria-label="West up"><span>W</span></button>
               <button class="compass-direction" type="button" data-bearing="315" style="--direction-x:-26.2%;--direction-y:-26.2%" aria-label="Northwest up"><span>NW</span></button>
             </div>
             <button id="rotation-lock" type="button" aria-label="Unlock map rotation" aria-pressed="true">
@@ -94,6 +94,7 @@
               </svg>
             </button>
           </div>
+          <div class="compass-return-swipe" aria-hidden="true"></div>
           <button id="compass-toggle" type="button" aria-controls="compass-face" aria-expanded="true" aria-label="Hide compass">
             <svg class="compass-chevron" viewBox="0 0 12 16" aria-hidden="true"><path d="m4 3 5 5-5 5"/></svg>
             <svg class="compass-peek" viewBox="0 0 100 100" aria-hidden="true"><use href="#compass-art"/></svg>
@@ -177,7 +178,7 @@
     </div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
   </div>
-  <script type="module" src="./js/atlas.mjs?v=09l"></script>
+  <script type="module" src="./js/atlas.mjs?v=09m"></script>
 </body>
 </html>
 

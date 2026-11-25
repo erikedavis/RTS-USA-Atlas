@@ -1,4 +1,4 @@
-# USAtlas V0.9L preview
+# USAtlas V0.9M preview
 
 Requires Python 3. Clone the repository or extract its source ZIP, then run **Start_Atlas.cmd** from that folder. The launcher opens **http://127.0.0.1:8020/**.
 [Development handoff](HANDOFF.md) covers the current preview, repeatable checks, and open work.
@@ -11,7 +11,7 @@ Tap or click the USA map label for USA Stats. Hold it to open USA Atlas. The who
 
 ## Desktop controls
 
-- The locked compass hugs the map's upper-right corner and expands inward when unlocked. Hover near the locked rose to reveal **Hide compass**. Hover the remaining left chevron for **Return compass** and click to bring it back. It stays aligned with the stats sidebar.
+- The locked compass hugs the map's upper-right corner and expands inward when unlocked. Its **Hide compass** chevron moves with it. Hover near the rose to reveal the label. Hover the remaining left chevron for **Return compass** and click to bring it back. It stays aligned with the stats sidebar.
 - Select a state, city or metro, then choose **Atlas** in the right sidebar. The sidebar widens. State Atlas frames the outline and fades out surrounding states. City Atlas keeps the zoom and highlights its metro when one exists. Metro Atlas frames the metro and includes a list of Census places with points inside its boundary.
 - **Back** restores the previous map position, zoom and bearing. A linked city opened from a state returns to that state's atlas or stats.
 - **×** clears the selection and hides the sidebar at the current map position. The chevron reopens USA Stats.
@@ -22,7 +22,7 @@ Tap or click the USA map label for USA Stats. Hold it to open USA Atlas. The who
 
 ## Phone controls
 
-- Swipe right across the compass to hide it. Tap the edge chevron or swipe left from it to bring it back at the current bearing and lock state. A deliberate map twist while locked pulses the visible padlock or briefly shows a tappable padlock beside the edge chevron. Tap that padlock to unlock while the rose stays hidden.
+- Swipe right across the compass or its hide chevron to hide it. Tap the edge chevron or swipe left in the area around it to bring it back at the current bearing and lock state. A deliberate map twist while locked pulses the visible padlock or briefly shows a tappable padlock beside the edge chevron. Tap that padlock to unlock while the rose stays hidden.
 - Tap the C14 logo and blue chevron to open Tools. Layers expands to show Standard and View expands to show Statistical. The gold number beside Search identifies the development build.
 - Home, the zoom readout, and the map key sit along the bottom and move with the tools and stats bar. **COUNTIES**, **METROS**, and **LAYERS** stay available in City and State Atlas. The bottom **LAYERS** button opens the same Standard entry as the header menu.
 - One tap on state land opens compact facts at the current map position. A quick double-tap on the map zooms two levels around the tap. Tap or double-tap a state abbreviation to fit the state and show its compact facts. With a state selected, tap another state's land to switch, or use the **×** by the chevrons to clear it.

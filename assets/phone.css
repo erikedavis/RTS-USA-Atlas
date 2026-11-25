@@ -34,20 +34,29 @@
 .phone-layout .search-results {top:39px;}
 .phone-layout .content {margin-top:var(--phone-header);flex-direction:column;}
 .phone-layout #map,.phone-layout .gridlines,.phone-layout .map-vignette,.phone-layout .map-loading {bottom:0;}
-.phone-layout .rotation-tools {--compass-size:166px;transition:transform .24s ease,opacity .2s ease;}
+.phone-layout .rotation-tools {
+  --compass-size:166px;--compass-return-right:env(safe-area-inset-right,0px);
+  transition:transform .24s ease,opacity .2s ease;
+}
 .phone-layout .rotation-tools:not(.compass-minimized) .compass-face {
   pointer-events:auto;touch-action:none;user-select:none;-webkit-touch-callout:none;
 }
 .phone-layout .compass-minimized .compass-face button {pointer-events:none;}
-.phone-layout #compass-toggle {transition:none;}
-.phone-layout .rotation-tools:not(.compass-minimized) #compass-toggle {pointer-events:none;}
-.phone-layout .compass-minimized #compass-toggle {
-  left:auto;right:0;width:56px;height:56px;padding-left:12px;
+.phone-layout :is(#compass-toggle,.compass-return-swipe) {
   touch-action:none;user-select:none;-webkit-touch-callout:none;
 }
+.phone-layout .compass-minimized .compass-return-swipe {
+  display:block;position:absolute;top:var(--compass-return-y);right:var(--compass-return-right);
+  width:84px;height:88px;transform:translateY(-50%);pointer-events:auto;
+}
+.phone-layout .compass-minimized #compass-toggle {
+  left:auto;right:var(--compass-return-right);width:40px;height:48px;transition:none;
+}
+.phone-layout .compass-minimized .compass-chevron {transform:translateX(5px) rotate(180deg);}
 .phone-layout .compass-lock-notice {display:none;}
 .phone-layout .compass-minimized #compass-edge-lock:not([hidden]) {
-  position:absolute;top:calc(var(--compass-size) * .39);right:56px;width:44px;height:44px;
+  position:absolute;z-index:2;top:var(--compass-return-y);right:calc(var(--compass-return-right) + 42px);
+  width:44px;height:44px;
   display:grid;transform:translateY(-50%);color:var(--active-gold);-webkit-touch-callout:none;
   animation:compass-edge-appear .24s steps(1,end) both;
 }

@@ -45,6 +45,7 @@ export function setupRotation(map,controls,onChange){
   const dial=controls.querySelector('.compass-dial');
   const roseArt=rose.querySelector('svg');
   const face=controls.querySelector('#compass-face');
+  const returnZone=controls.querySelector('.compass-return-swipe');
   const toggle=controls.querySelector('#compass-toggle');
   const toggleText=toggle.querySelector('.compass-toggle-text');
   const lock=controls.querySelector('#rotation-lock');
@@ -176,6 +177,7 @@ export function setupRotation(map,controls,onChange){
   }
   document.addEventListener('pointerdown',event=>{
     if(centerHold&&event.pointerId!==centerHold.id)cancelCenterHold();
+    if(returnTouch&&event.pointerId!==returnTouch.id)returnTouch=null;
   },true);
   lock.addEventListener('pointerleave',event=>{
     if(event.pointerType==='mouse'&&event.pointerId===centerHold?.id)cancelCenterHold();
@@ -203,8 +205,10 @@ export function setupRotation(map,controls,onChange){
     const button=event.target.closest('button');
     const phoneTouch=isPhone()&&event.pointerType==='touch';
     if(minimized){
-      if(phoneTouch&&button===toggle){
-        returnTouch={id:event.pointerId,x:event.clientX,y:event.clientY,maxY:0,maxDistance:0};
+      if(phoneTouch&&(button===toggle||event.target===returnZone)){
+        const target=button||returnZone;
+        target.setPointerCapture(event.pointerId);
+        returnTouch={id:event.pointerId,x:event.clientX,y:event.clientY,maxDistance:0,canTap:button===toggle};
       }
       return;
     }
@@ -219,7 +223,7 @@ export function setupRotation(map,controls,onChange){
     }
     if(mouse&&isPhone())return;
     const canTurn=canTurnFrom(button,event);
-    const canHide=phoneTouch&&face.contains(event.target);
+    const canHide=phoneTouch&&(face.contains(event.target)||button===toggle);
     if(!canTurn&&!canHide)return;
     const bounds=dial.getBoundingClientRect();
     const center={x:bounds.left+bounds.width/2,y:bounds.top+bounds.height/2};
@@ -231,7 +235,6 @@ export function setupRotation(map,controls,onChange){
   controls.addEventListener('pointermove',event=>{
     if(event.pointerId===returnTouch?.id){
       const dx=event.clientX-returnTouch.x,dy=event.clientY-returnTouch.y;
-      returnTouch.maxY=Math.max(returnTouch.maxY,Math.abs(dy));
       returnTouch.maxDistance=Math.max(returnTouch.maxDistance,Math.hypot(dx,dy));
       return;
     }
@@ -259,8 +262,8 @@ export function setupRotation(map,controls,onChange){
   controls.addEventListener('pointerup',event=>{
     if(event.pointerId===returnTouch?.id){
       const dx=returnTouch.x-event.clientX,dy=event.clientY-returnTouch.y;
-      const tap=Math.max(returnTouch.maxDistance,Math.hypot(dx,dy))<=HOLD_SLOP;
-      const swipe=dx>=28&&staysHorizontal(dx,Math.max(returnTouch.maxY,Math.abs(dy)));
+      const tap=returnTouch.canTap&&Math.max(returnTouch.maxDistance,Math.hypot(dx,dy))<=HOLD_SLOP;
+      const swipe=dx>=18&&dx>=Math.abs(dy)*1.2;
       returnTouch=null;
       skipClick=true;
       if(tap||swipe)setMinimized(false);

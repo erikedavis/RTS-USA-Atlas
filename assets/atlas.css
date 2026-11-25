@@ -230,6 +230,10 @@ button { color:inherit; cursor:pointer; }
   --compass-angle:0deg;
   --compass-scale:.88;
   --compass-edge-shift:calc(var(--compass-size) * .11);
+  --compass-face-x:var(--compass-edge-shift);
+  --compass-face-y:calc(0px - var(--compass-edge-shift));
+  --compass-cardinal-radius:37%;
+  --compass-return-y:calc(var(--compass-size) * .39);
   --compass-light:#d4a85f;
   --compass-shadow:#334756;
   --compass-letters:#e4ebf2;
@@ -237,7 +241,7 @@ button { color:inherit; cursor:pointer; }
   position:absolute;z-index:8;top:0;right:0;width:var(--compass-size);
   pointer-events:none;
 }
-.rotation-unlocked {--compass-scale:1;}
+.rotation-unlocked {--compass-scale:1;--compass-face-x:-5px;--compass-face-y:4px;}
 .rotation-north-locked {
   --compass-light:#a7c4d8;
   --compass-shadow:#607486;
@@ -251,20 +255,22 @@ button { color:inherit; cursor:pointer; }
 .rotation-tools button:focus-visible {outline:1px solid #d4a85f;outline-offset:1px;}
 .rotation-tools :is(#compass-home,#rotation-lock,.compass-direction) {touch-action:none;user-select:none;-webkit-touch-callout:none;}
 .compass-face {
-  position:relative;transform:translate(var(--compass-edge-shift),calc(0px - var(--compass-edge-shift)));
+  position:relative;transform:translate(var(--compass-face-x),var(--compass-face-y));
   transition:transform .24s ease;
 }
-.rotation-unlocked .compass-face {transform:translate(-5px,4px);}
 .compass-minimized .compass-face {
   transform:translate(calc(var(--compass-size) + 12px),calc(0px - var(--compass-edge-shift)));
 }
 #compass-toggle {
-  position:absolute;z-index:3;width:44px;height:44px;border-radius:4px;
-  top:calc(var(--compass-size) * .39);left:calc(var(--compass-size) * .13 - 22px);
-  transform:translateY(-50%);color:#a7c4d8;transition:left .24s ease;
+  position:absolute;z-index:3;width:28px;height:44px;border-radius:4px;
+  top:50%;left:calc(50% - var(--compass-cardinal-radius) * var(--compass-scale) - 36px);
+  transform:translate(calc(var(--compass-face-x) - 50%),calc(var(--compass-face-y) - 50%));
+  color:#a7c4d8;transition:left .18s ease,transform .24s ease;
 }
-.app:not(.phone-layout) .rotation-unlocked:not(.compass-minimized) #compass-toggle {left:-24px;}
-.compass-minimized #compass-toggle {left:calc(100% - 44px);}
+.compass-minimized #compass-toggle {
+  top:var(--compass-return-y);left:calc(100% - 44px);width:44px;transform:translateY(-50%);
+}
+.compass-return-swipe {display:none;}
 .compass-chevron {
   width:12px;height:16px;fill:none;stroke:currentColor;stroke-width:1.6;
   stroke-linecap:round;stroke-linejoin:round;opacity:.42;
