@@ -1,50 +1,20 @@
-# USAtlas V0.8A handoff to RTS Workchat 3
+# USAtlas development handoff
 
-Updated November 20, 2026. RTS Workchat 2 started at V0.3A.7 and finished at V0.8A. Start from the latest main checkout and use the next request to set scope. The V0.8A preview runs the same source on phone and PC. The regular Windows shortcut opens the approved V0.5C desktop build.
+## Build and work order
 
-- Start the PC preview with `python tools/serve.py` at `http://127.0.0.1:8017/`. For an iPhone on the same Wi-Fi, run `python tools/serve.py --phone` and open the address printed by the server on port 8016.
-- The exact V0.8A preview is pinned in the [source commit](https://github.com/erikedavis/RTS-USA-Atlas/commit/6fb8daee30888d007d0fe10f225ddd23a9890ac1) and [downloadable source ZIP](https://github.com/erikedavis/RTS-USA-Atlas/archive/6fb8daee30888d007d0fe10f225ddd23a9890ac1.zip). The runtime matches the installed preview.
+As verified November 25, 2026, **V0.9K** at `90d7c1f97899f15de99036ff5baf3d0f86877c3f` is the installed PC and iPhone preview on the owner's Windows machine. GitHub's newest numbered branch build is **V0.9G**. The default branch checkout is **V0.8A**. Use the local **Start USA Atlas** shortcut or the launchers for the build you intend to inspect. [Launcher guide](README.md)
 
-## Phone baseline
+Phases **00** and **01** are user approved. **Phase 02** is next and its light palette needs owner approval. Theme work must preserve bearing, zoom, camera position, selection, layer state and Atlas navigation. Follow the current work order for the later data and Analysis sequence. [Master roadmap](https://chatgpt.com/space/page_6affb6a6cbe081918987b3c16f87814d) · [Current work order](https://chatgpt.com/space/page_b277448c73088191b7d1392b6c84d587)
 
-- The single-row header holds search. Home and the map key sit in the lower corners. The chevrons reveal CTY, MSA and the reserved LAYERS button, then compact stats for the selection. Swipe up on the stats or tools to expand the state or city atlas. The full atlas hides map controls, gives the facts their own scroll area and provides a down chevron to exit. A full state atlas fits the state and fades neighboring geography. A full city atlas keeps its surroundings visible.
-- Tap or double-tap a state abbreviation on the phone to fit the state and show its compact facts. Hold its abbreviation or land for 600 ms to open the full state atlas. When a state is selected, tap another state's land to switch in place or tap × beside the chevrons to clear it.
-- A quick map double-tap zooms two levels within the normal 500 ms window. A slower second tap through 1,040 ms selects unselected state land or opens compact facts for the same city name. A city hold opens its full atlas at the current zoom and highlights its MSA.
-- From a state facts card, a city opens at the same level of detail. Back restores the state, camera and originating facts or atlas. An outside-metro tap clears the city and preserves the camera. An outside-state tap closes the state atlas and restores its compact facts and prior camera.
+## Preserve in the current preview
 
-## Shared map behavior in V0.8A
+- A tap on state land or a city name opens facts in place. The state abbreviation or city symbol fits or zooms to the selection. On a phone, a hold opens Atlas, and leaving State Atlas keeps the current camera. On desktop, the sidebar **Atlas** opens the detailed view and **Back** restores the prior camera. Back from a linked city returns to the originating state.
+- Preserve nested geography links, county and metro scope, and the compact C14 header. Active controls use gold lettering and borders with dark faces. The phone's bottom **Layers** and header **Tools → Layers** share the gold **Standard** setting. The desktop hide chevron sits inside the sidebar's map-side edge.
+- **Home** frames USA Stats. **CONUS** and **ALL** change framing, and Alaska and Hawaii remain reachable in either. Preserve Puerto Rico, the Great Lakes, the approved Northeast anchors and upright labels at rotated bearings.
+- On desktop, drag the unlocked compass to turn, and use **WASD** or arrow keys to pan. On a phone, tap the rose to unlock before tapping a heading. A swipe right resets north, locks, and hides the compass. Tap its edge chevron or swipe left near it to restore the locked rose.
 
-- Click a city name on desktop to read its facts in place, or click its symbol to zoom and open facts. Click a state abbreviation to fit the state, or state land to select in place. Keep mouse hover, the map key and the desktop inset shortcuts available.
-- State abbreviations have priority at national and regional phone scales and in rotated views. The existing Northeast anchors continue to apply. Puerto Rico shows PR in the island when space permits and the full inset name at the bottom.
-- From zoom 7, CTY places county names within their outlines where they fit. MSA allows metro selection and shows July 1, 2025 population and total area. When both layers are enabled, a metro name or outline selects the metro, and a county interior selects its county.
-- Rotation controls support desktop drag, phone twist, locking at any heading, the eight bearings and R for north. Search ranks exact state abbreviations first and Enter fits the state.
+The historical acceptance records and checks remain available. [Phase 00](https://chatgpt.com/space/page_75ff79f71f448191a105172bce0000e4) · [Phase 01](https://chatgpt.com/space/page_01483e9a9d0c8191a9b6bfc704df8790) · [V0.8L compass and label acceptance source](https://github.com/erikedavis/RTS-USA-Atlas/commit/6b7ea7bdd1f918860eb19694255685abc4151456)
 
-## Phone to desktop
+## Release discipline
 
-Use these as design options for a requested desktop adaptation. Start by comparing the phone and desktop widths in V0.8A so shared behavior stays in one place.
-
-| Phone behavior | Desktop translation to consider |
-| --- | --- |
-| Compact state stats put population beside capital, largest city and total area. | Make the top of the sidebar easier to scan. Preserve dated figures, source links and the existing desktop land-area detail. |
-| Compact facts expand into a scrollable atlas. State details frame the outline. City details retain zoom and highlight the MSA. | Add a visible, keyboard-operable expand action and Back when fuller detail is requested. Use the current state or city and preserve the originating camera. Keep the map usable beside the facts. |
-| Tapping a city name reads it in place. Tapping the symbol zooms. Linked cities retain the level of detail and Back returns to the state. | Keep the working name/symbol click split. Reuse the linked navigation and return state if desktop gets an expanded view. Check that hover and click agree on the visible lettering. |
-| Tap and hold, slow double-taps and chevrons make the small screen usable without a mouse. | Use immediate desktop clicks, keyboard-operable controls and the sidebar. Test clicks, hovering and drag/zoom independently. |
-| Abbreviations get first choice when space is tight, and county and metro details are selectable. | Reuse the shared rules and data. If desktop label priorities change, compare national, CONUS, half-country and local views. Move competing names around their own markers before dropping them. Preserve eligible small towns and the approved Northeast anchors. |
-
-For an expanded desktop atlas, the first useful comparison is Kansas or California → linked capital → Back. Verify the map angle, zoom, selected feature and originating facts view on return. From Rochester or an Indianapolis-area city, compare name click against marker click, then verify the metro highlight and outside dismissal if those interactions are added.
-
-## Code and QA
-
-- `js/atlas.mjs` owns selection, facts, framing and layer state. `js/phone-ui.mjs`, `js/phone-gestures.mjs` and `assets/phone.css` own phone navigation and touch behavior.
-- `js/state-labels.mjs`, `js/state-label-placement.mjs` and `js/county-labels.mjs` place area labels. `js/city-layout.mjs` and `js/city-display.mjs` place cities and resolve city-name taps. `js/map-rotation.mjs` owns bearing controls. Keep expensive placement after the camera settles.
-- `tools/build-region-facts.py` builds county representative points from the Atlas search index and joins official Census metro population and area using the Census area ID. The data file records source URLs and hashes.
-- Run `npm test` after installing dependencies and Chromium. The V0.8A [browser QA run](https://github.com/erikedavis/RTS-USA-Atlas/actions/runs/44808435751) passed. Desktop spacing, rotation, Big Island and Boise coverage, and the installed desktop smoke test also passed.
-- Phone-sized Chromium and WebKit passed the installed V0.8A gesture and label checks. State compact facts rendered 16–17 ms after tap release in those runs. The local workspace's `work/check-phone.cjs` with `--v08a` repeats that suite. See [QA setup](QA_START_HERE.md).
-
-## Open work
-
-A physical iPhone Safari pass and performance measurements are still open. In portrait and landscape, check actual tap targets, slow versus quick double-taps, hold, scroll versus swipe, facts and Back, CTY and MSA selection, keyboard search, and rotation with facts open. Record device, iOS version, view and timings. Also check the Northeast at several bearings and compare the same map view on the PC.
-
-Rotation Pass 2 is pending approval. It covers the finished compass and lock, scale-specific collision priorities and the optional Labels control. Preserve the current visibility of close-view places when adjusting collision rules.
-
-Publish verified source for every numbered build and record the exact commit, QA and open checks. Keep at most seven separate numbered snapshots and preserve Git history.
+For every build, record its exact commit, verification and open checks. Keep interim builds local. The next GitHub application releases are **1.0A**, then **2.0A**, unless Erik directs otherwise. Retain at most seven separate numbered packages and keep Git history intact. [Release policy](https://chatgpt.com/space/page_f96cf5ac6a4081918884f5e221fa135f)

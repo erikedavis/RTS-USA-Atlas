@@ -1,7 +1,5 @@
-# Source / QA notes
+# Geographic data and provenance
 
-**Input:** Four 2025 Census 1:500,000 cartographic boundary ZIPs uploaded by the owner.
+The bundled boundaries are derived from the U.S. Census Bureau's 2025 1:500,000 cartographic boundary files. The manifest records the source archive URLs, checksums, vintage, coverage and processing. Facts carry their Census sources and dates. Inset transforms affect display placement while preserving source geography and identifiers. [Boundary manifest](../data/manifest.json) · [Facts sources](../data/facts_sources.json)
 
-This release uses no legacy preview basemap polygons. The raw source archives are retained under `source/census_2025/`. Derived geometries are generated for rendering, with identifiers and boundary vintage preserved. No geometry was fabricated for any state, county, municipality or metro.
-
-Known gaps: source data itself contains no population or historical data; no river/road/terrain layers; no complete country-level basemap outside the 56 US state-level entities. Coastal water colors are visual styling, not hydrography. Public production hosting and live cross-device QA not yet performed.
+Run `npm run test:data` to verify state and territory, county, place and metro counts, major-city identifiers, and inset transforms. Keep authoritative inputs and their provenance when updating display-optimized geography. [QA guide](../QA_START_HERE.md) · [Historical design and source notes](V0.3A-design-and-sources.md) · [Historical visual validation](v03a_QA.md)
