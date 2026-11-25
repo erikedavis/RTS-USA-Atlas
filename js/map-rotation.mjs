@@ -178,6 +178,7 @@ export function setupRotation(map,controls,onChange){
   document.addEventListener('pointerdown',event=>{
     if(centerHold&&event.pointerId!==centerHold.id)cancelCenterHold();
     if(returnTouch&&event.pointerId!==returnTouch.id)returnTouch=null;
+    if(drag?.canTap&&event.pointerId!==drag.id)drag.canTap=false;
   },true);
   lock.addEventListener('pointerleave',event=>{
     if(event.pointerType==='mouse'&&event.pointerId===centerHold?.id)cancelCenterHold();
@@ -227,7 +228,8 @@ export function setupRotation(map,controls,onChange){
     if(!canTurn&&!canHide)return;
     const bounds=dial.getBoundingClientRect();
     const center={x:bounds.left+bounds.width/2,y:bounds.top+bounds.height/2};
-    drag={id:event.pointerId,center,angle:angleAt(event,center),turn:0,canTurn,canHide,maxY:0,
+    drag={id:event.pointerId,center,angle:angleAt(event,center),turn:0,canTurn,canHide,
+      canTap:phoneTouch&&button===toggle,maxY:0,
       swipeDistance:Math.max(34,face.offsetWidth*.29),
       startX:event.clientX,startY:event.clientY,bearing:map.getBearing(),started:false};
     if(mouse)button.setPointerCapture(event.pointerId);
@@ -245,6 +247,7 @@ export function setupRotation(map,controls,onChange){
     }
     if(event.pointerId!==drag?.id)return;
     drag.maxY=Math.max(drag.maxY,Math.abs(event.clientY-drag.startY));
+    if(drag.canTap&&Math.hypot(event.clientX-drag.startX,event.clientY-drag.startY)>HOLD_SLOP)drag.canTap=false;
     if(!drag.canTurn)return;
     const angle=angleAt(event,drag.center);
     drag.turn+=((angle-drag.angle+540)%360)-180;
@@ -274,10 +277,11 @@ export function setupRotation(map,controls,onChange){
     const dx=event.clientX-drag.startX,dy=event.clientY-drag.startY;
     const hide=drag.canHide&&dx>=drag.swipeDistance&&staysHorizontal(dx,Math.max(drag.maxY,Math.abs(dy)));
     const gesture=drag;
+    const tap=gesture.canTap&&Math.hypot(dx,dy)<=HOLD_SLOP;
     const turned=gesture.started||(!hide&&reachedTurn(gesture,dx,dy));
-    skipClick=skipClick||turned||Math.hypot(dx,dy)>=10;
+    skipClick=skipClick||tap||turned||Math.hypot(dx,dy)>=10;
     drag=null;
-    if(hide){
+    if(hide||tap){
       if(gesture.started&&!locked)map.setBearing(gesture.bearing);
       setMinimized(true);
     }

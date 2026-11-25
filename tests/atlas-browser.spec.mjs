@@ -9,7 +9,7 @@ async function assertRendered(page, testInfo) {
   const response = await page.goto('/', { waitUntil: 'domcontentloaded' });
   expect(response?.ok(), 'The atlas must respond over HTTP').toBe(true);
   await expect(page.locator('#map-loading'), 'Atlas loading overlay must disappear').toBeHidden({ timeout: 50_000 });
-  await expect(page.locator('meta[name="atlas-version"]')).toHaveAttribute('content', 'ALPHA 0.9M');
+  await expect(page.locator('meta[name="atlas-version"]')).toHaveAttribute('content', 'ALPHA 0.9N');
   await expect(page.locator('canvas.maplibregl-canvas')).toHaveCount(1);
   const renderer = await page.evaluate(() => {
     const canvas = document.querySelector('canvas.maplibregl-canvas');
@@ -134,7 +134,7 @@ test('desktop national map loads, has working WebGL, and renders', async ({ page
   }
   await expect(page.locator('.topbar #search')).toBeVisible();
   const version=page.locator('#build-version');
-  await expect(version).toHaveText('0.9M');
+  await expect(version).toHaveText('0.9N');
   await expect(version).toHaveCSS('color',activeGold);
   const searchBox=await page.locator('#search').boundingBox();
   expect((await version.boundingBox()).x).toBeGreaterThan(searchBox.x+searchBox.width);
@@ -1022,7 +1022,7 @@ test.describe('phone viewport', () => {
     await expect(page.locator('.rotation-tools')).toHaveAttribute('inert', '');
   });
 
-  test('phone compass swipe hides and restores the current bearing and lock by tap or swipe', async ({ page }, testInfo) => {
+  test('phone compass hides and restores the current bearing and lock by tap or swipe', async ({ page }, testInfo) => {
     await exposeMap(page);
     await assertRendered(page,testInfo);
     await readMap(page);
@@ -1066,6 +1066,16 @@ test.describe('phone viewport', () => {
       await expect(lock).toHaveAttribute('aria-pressed',String(locked));
       await expectBearing(page,heading);
     }
+    async function checkChevronTap(heading,locked){
+      await waitForCompassShift(page);
+      await toggle.tap();
+      await expect(face).toHaveAttribute('inert','');
+      await expect(toggle).toHaveAccessibleName('Return compass');
+      await expect(lock).toHaveAttribute('aria-pressed',String(locked));
+      await expectBearing(page,heading);
+      await toggle.tap();
+      await expectRestored(heading,locked);
+    }
     await lock.tap();
     await waitForCompassShift(page);
     await face.getByRole('button',{name:'Southeast up',exact:true}).tap();
@@ -1087,6 +1097,7 @@ test.describe('phone viewport', () => {
     const chevron=await toggle.locator('.compass-chevron').boundingBox();
     await page.touchscreen.tap(chevron.x+chevron.width/2,chevron.y+chevron.height/2);
     await expectRestored(135,true);
+    await checkChevronTap(135,true);
 
     await waitForCompassShift(page);
     await lock.tap();
@@ -1100,6 +1111,7 @@ test.describe('phone viewport', () => {
     await expectBearing(page,90);
     await touch('touchEnd');
     await expectRestored(90,false);
+    await checkChevronTap(90,false);
     await screenshot(page,testInfo,'phone-compass-restored');
   });
 
@@ -1287,7 +1299,7 @@ test.describe('phone viewport', () => {
       const idleSearch = await search.boundingBox();
       const idleTools = await tools.boundingBox();
       const version=page.locator('#build-version');
-      await expect(version).toHaveText('0.9M');
+      await expect(version).toHaveText('0.9N');
       await expect(version).toHaveCSS('color',activeGold);
       const buildLabel=await version.boundingBox();
       expect(buildLabel.x).toBeGreaterThan(idleSearch.x+idleSearch.width);

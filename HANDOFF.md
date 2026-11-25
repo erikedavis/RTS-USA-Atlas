@@ -1,6 +1,6 @@
-# USAtlas V0.9M preview
+# USAtlas V0.9N preview
 
-Hiding the compass preserves the bearing and lock state. The hide chevron moves with the rose as it expands. The phone accepts a short left swipe around the return chevron. Desktop compass keyboard controls remain available while hidden. A locked two-finger map twist on a phone pulses the visible lock or shows a temporary unlock button beside the return chevron.
+Hiding the compass preserves the bearing and lock state. The hide chevron moves with the rose as it expands and can be tapped on a phone. The phone accepts a short left swipe around the return chevron. Desktop compass keyboard controls remain available while hidden. A locked two-finger map twist on a phone pulses the visible lock or shows a temporary unlock button beside the return chevron.
 
 ## V0.9K preview
 

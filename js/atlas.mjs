@@ -7,7 +7,7 @@ import {populateMapKey} from './city-symbols.mjs';
 import {createGeographyLabels} from './geography-labels.mjs?v=09d';
 import {createStateLabels} from './state-labels.mjs?v=09f';
 import {prepareStateShapes,shapeContainsPoint} from './state-label-placement.mjs';
-import {isNorthUp,screenBounds,setupRotation} from './map-rotation.mjs?v=09m';
+import {isNorthUp,screenBounds,setupRotation} from './map-rotation.mjs?v=09n';
 import {setupPhoneUI} from './phone-ui.mjs?v=09k';
 import {COUNTY_LABEL_ZOOM,createCountyLabels} from './county-labels.mjs';
 import {createSelectedAreaLabel} from './selected-area-label.mjs';

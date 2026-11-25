@@ -1,4 +1,4 @@
-# USAtlas V0.9M preview
+# USAtlas V0.9N preview
 
 Requires Python 3. Clone the repository or extract its source ZIP, then run **Start_Atlas.cmd** from that folder. The launcher opens **http://127.0.0.1:8020/**.
 [Development handoff](HANDOFF.md) covers the current preview, repeatable checks, and open work.
@@ -22,7 +22,7 @@ Tap or click the USA map label for USA Stats. Hold it to open USA Atlas. The who
 
 ## Phone controls
 
-- Swipe right across the compass or its hide chevron to hide it. Tap the edge chevron or swipe left in the area around it to bring it back at the current bearing and lock state. A deliberate map twist while locked pulses the visible padlock or briefly shows a tappable padlock beside the edge chevron. Tap that padlock to unlock while the rose stays hidden.
+- Tap the hide chevron or swipe right across the compass or its chevron to hide it. Tap the edge chevron or swipe left in the area around it to bring it back at the current bearing and lock state. A deliberate map twist while locked pulses the visible padlock or briefly shows a tappable padlock beside the edge chevron. Tap that padlock to unlock while the rose stays hidden.
 - Tap the C14 logo and blue chevron to open Tools. Layers expands to show Standard and View expands to show Statistical. The gold number beside Search identifies the development build.
 - Home, the zoom readout, and the map key sit along the bottom and move with the tools and stats bar. **COUNTIES**, **METROS**, and **LAYERS** stay available in City and State Atlas. The bottom **LAYERS** button opens the same Standard entry as the header menu.
 - One tap on state land opens compact facts at the current map position. A quick double-tap on the map zooms two levels around the tap. Tap or double-tap a state abbreviation to fit the state and show its compact facts. With a state selected, tap another state's land to switch, or use the **×** by the chevrons to clear it.
