@@ -171,7 +171,6 @@
 .phone-layout:is([data-phone-stage='atlas'],.phone-atlas-panning) .content {margin-top:0;}
 .phone-layout[data-phone-stage='atlas'] :is(.topbar,.rotation-tools) {transform:translateY(-125%);opacity:0;pointer-events:none;}
 .phone-layout[data-phone-stage='atlas'] :is(.dev-zoom,.map-key-toggle,.map-key,.phone-home,.phone-grip) {display:none;}
-.phone-layout[data-phone-stage='atlas']:not([data-phone-atlas-kind='nation']) .inset-label {display:none;}
 .phone-layout .state-label {transition:opacity .18s ease;}
 .phone-layout[data-phone-atlas-kind='state'] .state-label:not([data-phone-focused]) {opacity:0;pointer-events:none;}
 .phone-layout[data-phone-stage='atlas'] .phone-atlas-back {

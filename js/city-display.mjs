@@ -1,6 +1,6 @@
-import {layoutCities,placeLabel,appearance,requiredCityLabel,cityMarkerBox,HOVER_GRACE_MS} from './city-layout.mjs?v=09d';
+import {layoutCities,placeLabel,appearance,requiredCityLabel,cityMarkerBox,HOVER_GRACE_MS} from './city-layout.mjs?v=10a2';
 import {capitalMarkSize,cityIconName,registerCitySymbols} from './city-symbols.mjs?v=09p';
-import {setThemePaint} from './appearance.mjs?v=09p1';
+import {setThemePaint} from './appearance.mjs?v=10a3';
 const fc=features=>({type:'FeatureCollection',features});
 export function createCityLayers(map,cities,{isNational,metroOverview,phoneViewport,stateLabelsFirst,geographyLabels}){
  const byId=new Map(cities.features.map(f=>[f.properties.geoid,f]));
@@ -52,7 +52,7 @@ export function createCityLayers(map,cities,{isNational,metroOverview,phoneViewp
   const feature=byId.get(hovered);if(!feature){map.getSource('hover-city').setData(fc([]));hideBaseHover();return;}
   const p=map.project(feature.geometry.coordinates),base=result.items.find(i=>i.feature.properties.geoid===hovered);
   const item={feature,x:p.x,y:p.y,style:{...(base?.style||appearance(feature.properties,map.getZoom())),weight:'Noto Sans Bold',opacity:1}};
-  const obstacles=reservations().filter(r=>!r.inset||r.inset!==feature.properties.state_abbr);
+  const obstacles=reservations();
   const viewport={width:map.getContainer().clientWidth,height:map.getContainer().clientHeight,measure};
   const options={...viewport,force:true,scale:1.15,previous:base?.placement};
   const pl=placeLabel(item,{...options,reserved:[...obstacles,...geographyLabels.reservations()]})||

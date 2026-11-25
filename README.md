@@ -7,7 +7,7 @@ Requires Python 3. Clone the repository or extract its source ZIP, then run **St
 
 ## USA overview
 
-Startup and Home open USA Stats. CONUS frames the lower 48, D.C. and the Puerto Rico inset. ALL also frames Alaska in its geographic position, including the dateline islands, and the Hawaii inset. Both show the same national population and land area from [Census QuickFacts](https://www.census.gov/quickfacts/fact/table/US/PST045222).
+Startup and Home open USA Stats. CONUS frames the lower 48 and D.C. ALL also frames Alaska through the Aleutians, the full Hawaiian chain, and Puerto Rico in their geographic locations. Both show the same national population and land area from [Census QuickFacts](https://www.census.gov/quickfacts/fact/table/US/PST045222).
 
 Tap or click the USA map label for USA Stats. Hold it to open USA Atlas. The whole label stays on the Canadian side of the border and disappears above zoom 3.5. On a phone, swipe up from the USA Stats sheet or its top handle to open USA Atlas.
 
@@ -31,7 +31,7 @@ Tap or click the USA map label for USA Stats. Hold it to open USA Atlas. The who
 - Hold on a state or its abbreviation for about 0.6 seconds to open State Atlas. Hold a city name to fit the city above its Atlas facts. A city-symbol hold opens City Atlas at the current zoom. Drag the map far enough to move the city out of the center and City Atlas returns to compact stats while the map follows your finger. Tap a city name to read facts in place or tap its symbol to zoom. Tap outside the highlighted metro to clear the city at the current map position.
 - Open Metro Atlas with the up chevron in Metro Stats or hold a metro area on the map. State, county and largest-city links are on the right in both views.
 - Tap a capital or largest city in state facts to visit the corresponding city view. **BACK** returns to the state facts or atlas you came from. One tap on another state's land switches the selection. In State Atlas, swipe down on the stats or tap open water to return to compact stats at the current camera position. A light pull beyond the state's frame springs back. A deliberate drag away returns to stats and continues panning with your finger.
-- State abbreviations have priority at wide scales and in rotated views. Puerto Rico is labeled **PR** inside the island when it fits, with the inset name along the bottom.
+- State abbreviations have priority at wide scales and in rotated views. Puerto Rico is labeled **PR** inside the island when it fits.
 - Population, capital, largest city and total area fit into the compact state facts. When capital and largest city are the same, they share one entry.
 - A hold gives visual feedback. Browsers exposing the vibration API can also give a short pulse on release.
 
@@ -75,12 +75,12 @@ If Safari can't reach the address, check that both devices are on the same trust
 
 ## Existing behavior
 
-- Hawaii’s main islands are centered in their inset. The northwestern chain appears at a reduced scale in the same inset. Search for HI to frame the main islands.
+- Search for HI to frame Hawaii’s main islands. The ALL home view includes the full chain at its geographic scale.
 - The national view uses smaller city symbols and restrained city label sizes. Text size varies more by population tier at state and local zooms. Small towns wait until a closer view.
 - Between zoom 7.55 and 9.15 the map automatically shows metropolitan statistical areas and a spaced set of city names. Cities over 100,000 have priority. If none are in view, one city over 50,000 can appear. Faint city symbols reveal more names on hover. The MSA button controls the overlay manually.
 - The lower-right map key explains seven population tiers, ordered largest to smallest. A developer zoom readout sits beside it. Capitals have a separate asterisk beside their symbol.
 - On desktop, click a city name to read its facts in place. Click its map symbol to jump to the city. Hover names enlarge and linger for half a second.
-- Small-state abbreviations use fixed geographic positions. A nearby badge can move inside its state when there is room. The exterior badge is shown only when it clears neighboring land. Michigan’s default anchor is just north of St. Johns. Hawaii and Puerto Rico have badges in their national insets.
+- Small-state abbreviations use fixed geographic positions. A nearby badge can move inside its state when there is room. The exterior badge is shown only when it clears neighboring land. Michigan’s default anchor is just north of St. Johns. Hawaii and Puerto Rico use badges within their geography when space permits.
 - On desktop, clicking a state’s land opens its facts at the current view. Its abbreviation fits the full outline to the map.
 - Labels for the Great Lakes, Upper Peninsula and Long Island sit in the background. Long Island fades from close views.
 - City and state label placement refreshes after zooming or panning, so it stays off the camera's animation frames.
@@ -94,8 +94,7 @@ City populations refer to municipal/place boundaries, not metro areas.
 
 Clicking empty ocean clears selection and hover. State and city panels
 retain population, dated sources, and square miles. State panels include capital
-and largest city with their populations. Alaska appears in its geographic position,
-Hawaii in its western inset, and Puerto Rico in its Gulf inset. Select their abbreviations or find them in Search.
+and largest city with their populations. Select Alaska, Hawaii or Puerto Rico on the map or find them in Search.
 
 ## Data and limitations
 

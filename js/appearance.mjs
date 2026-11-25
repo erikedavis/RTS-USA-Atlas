@@ -1,7 +1,7 @@
 const preferenceKey = 'usatlas-appearance';
 const dark = {
   background:'#020307', contextLand:'#0a1119', lake:'#04070c', shoreline:'#648aa5',
-  land:'#101923', inset:'#070d14', insetLine:'#30485b', stateLine:'#718da8',
+  land:'#101923', stateLine:'#718da8',
   countyLine:'#3b5268', countyScoped:'#6685a0', placeLine:'#546b83',
   metroFill:'#506c90', metroLine:'#839bb9', linkedMetroFill:'#6f97ba', linkedMetroLine:'#b2d8f4',
   selectedState:'#b6def5', selectedCounty:'#c2e0f5', selectedPlace:'#a2d7fc', selectedMetro:'#c6daed',
@@ -17,17 +17,18 @@ const dark = {
 };
 const light = {
   background:'#9bbccf', contextLand:'#e4dcc9', lake:'#79a7c1', shoreline:'#527f99',
-  land:'#e7d5ae', inset:'#a4c2d2', insetLine:'#738b91', stateLine:'#687369',
+  land:'#e7d5ae', stateLine:'#687369',
   countyLine:'#7d8b75', countyScoped:'#627458', placeLine:'#737466',
   metroFill:'#9870a1', metroLine:'#74527c', linkedMetroFill:'#a27696', linkedMetroLine:'#663e64',
-  selectedState:'#754c31', selectedCounty:'#5e5031', selectedPlace:'#83412e', selectedMetro:'#683856',
-  metroText:'#533d59', metroHalo:'#f0dfc4', countyText:'#394b3c', countyHalo:'#f0e2c4',
-  citySymbol:'#344e56', cityText:'#273e47', cityHalo:'#eee1c4', selectedCity:'#6c301d',
-  selectedCityHalo:'rgba(247,226,187,.97)', cityHoverGlow:'#f4ddb0', cityHoverText:'#693822',
-  localPlace:'#51696a', localPlaceEdge:'#f0e2c4',
-  tailIsland:'#566f69', tailText:'#354e55',
-  lakeText:'#102638', lakeHalo:'#a6c5d5', peninsulaText:'#33473c', islandText:'#33473c',
+  selectedState:'#000', selectedCounty:'#000', selectedPlace:'#000', selectedMetro:'#000',
+  metroText:'#000', metroHalo:'#f0dfc4', countyText:'#000', countyHalo:'#f0e2c4',
+  citySymbol:'#000', cityText:'#000', cityHalo:'#eee1c4', selectedCity:'#000',
+  selectedCityHalo:'rgba(247,226,187,.97)', cityHoverGlow:'#f4ddb0', cityHoverText:'#000',
+  localPlace:'#000', localPlaceEdge:'#f0e2c4',
+  tailIsland:'#000', tailText:'#000',
+  lakeText:'#000', lakeHalo:'#a6c5d5', peninsulaText:'#000', islandText:'#000',
   geographyHalo:'#e6ddc2', geographyStrength:1.75,
+  selectedStrokeBoost:.75,
   categories:['#265f85','#885535','#4e724d','#754b79'],
   political:{red:'#aa413c',blue:'#275b9d',independent:'#81530f',other:'#734381'},
 };
@@ -73,7 +74,6 @@ export function applyMapAppearance(map, countyScoped, stateFocused) {
     ['atlas-context-land','fill-color',palette.contextLand],
     ['great-lakes-fill','fill-color',palette.lake],
     ['great-lakes-shoreline','line-color',palette.shoreline],
-    ['inset-surface','fill-color',palette.inset], ['inset-lines','line-color',palette.insetLine],
     ['state-surface','fill-color',palette.land], ['state-atlas-surface','fill-color',palette.land],
     ['state-lines','line-color',palette.stateLine],
     ['county-lines','line-color',countyScoped ? palette.countyScoped : palette.countyLine],
@@ -89,6 +89,9 @@ export function applyMapAppearance(map, countyScoped, stateFocused) {
   ];
   for (const [id, property, value] of layers) {
     if (map.getLayer(id)) setThemePaint(map,id,property,value);
+  }
+  for (const [name, width] of [['state',1.8],['county',2.6],['place',2.2],['metro',2.3]]) {
+    setThemePaint(map,name+'-selected','line-width',width+(palette.selectedStrokeBoost||0));
   }
   map.setLayoutProperty('great-lakes-fill','visibility',stateFocused ? 'none' : 'visible');
   return palette;

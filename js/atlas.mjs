@@ -1,18 +1,18 @@
-// USA Atlas 0.3A - adaptive city hierarchy and display insets, official Census 2025 geography.
+// USA Atlas - adaptive city hierarchy and official Census 2025 geography.
 // Local renderer and geography; no external requests at runtime.
 import * as maplibregl from '../assets/vendor/maplibre-gl.mjs';
-import {createCityLayers} from './city-display.mjs?v=09p1';
+import {createCityLayers} from './city-display.mjs?v=10a2';
 import {isMetroScale} from './city-layout.mjs';
 import {populateMapKey} from './city-symbols.mjs?v=09p';
-import {createGeographyLabels} from './geography-labels.mjs?v=09p1';
-import {createStateLabels} from './state-labels.mjs?v=09f';
+import {createGeographyLabels} from './geography-labels.mjs?v=10a2';
+import {createStateLabels} from './state-labels.mjs?v=10a2';
 import {prepareStateShapes,shapeContainsPoint} from './state-label-placement.mjs';
 import {isNorthUp,screenBounds,setupRotation} from './map-rotation.mjs?v=10a';
 import {setupPhoneUI} from './phone-ui.mjs?v=10a';
-import {COUNTY_LABEL_ZOOM,createCountyLabels} from './county-labels.mjs?v=09p';
-import {applyMapAppearance,mapPalette,setupAppearance} from './appearance.mjs?v=10a';
+import {COUNTY_LABEL_ZOOM,createCountyLabels} from './county-labels.mjs?v=10a2';
+import {applyMapAppearance,mapPalette,setupAppearance} from './appearance.mjs?v=10a3';
 import {createSelectedAreaLabel} from './selected-area-label.mjs';
-import {INSETS, CONUS_BOUNDS, allNationalBounds, displayData, displayPoint, geographicPoint, hawaiiTailMarks, insetFrames} from './insets.mjs?v=10a';
+import {CONUS_BOUNDS, MAIN_HAWAII_BOUNDS, allNationalBounds, displayData, displayPoint, geographicPoint, hawaiiTailMarks} from './geographic-display.mjs';
 
 const BASE = './data/';
 const $ = (selector) => document.querySelector(selector);
@@ -50,7 +50,6 @@ let toastTimer;
 let stateLabelsController, cityLayers, citiesById, selectedAreaLabel, geographyLabels;
 let phone,rotation,atlasFocus=null,cityAtlas=null,metroBounds,placeContext;
 let desktopAtlas=null,desktopStateReturn=null;
-const insetMarkers = [];
 
 const countyCache = new Map();
 const countyShapes = new WeakMap();
@@ -402,12 +401,10 @@ function zoomTo(f,maxZoom=8,duration=750) {
   const compactPadding=compactLayout.matches
     ? Math.min(24,map.getContainer().clientHeight/8)
     : null;
-  const inset=f.properties.kind==='state'&&INSETS.find(i=>i.abbr===f.properties.abbr);
-  if(inset?.focusBounds){
-    const box=inset.focusBounds.map(point=>displayPoint(point,inset.abbr));
+  if(f.properties.kind==='state'&&f.properties.abbr==='HI'){
     const {clientWidth:w,clientHeight:h}=map.getContainer();
     const padding={top:h*.145,bottom:phone?.active?Math.max(h*.185,phoneDockHeight()):h*.185,left:w*.09,right:w*.13};
-    fitAtCurrentBearing(box,{padding,maxZoom,duration});
+    fitAtCurrentBearing(MAIN_HAWAII_BOUNDS,{padding,maxZoom,duration});
     return;
   }
   const box=boundsOf(g);
@@ -424,8 +421,7 @@ function phoneDockHeight(){
   return Math.min(shell.clientHeight*.64,height+12);
 }
 function stateAtlasBounds(feature){
-  const inset=INSETS.find(i=>i.abbr===feature.properties.abbr);
-  return inset?.focusBounds?.map(point=>displayPoint(point,inset.abbr))||boundsOf(feature.geometry);
+  return feature.properties.abbr==='HI'?MAIN_HAWAII_BOUNDS:boundsOf(feature.geometry);
 }
 function fitStateAtlas(feature,headerHeight,sheetHeight,duration){
   const bounds=stateAtlasBounds(feature);
@@ -600,7 +596,7 @@ function focusStateAtlas(fips,fast){
   map.setPaintProperty('state-atlas-surface','fill-opacity',fips ? .98 : 0);
   map.setPaintProperty('state-surface','fill-opacity',fips?0:.98);
   map.setPaintProperty('state-lines','line-opacity',fips?0:.9);
-  for(const id of ['inset-surface','inset-lines','great-lakes-shoreline','geography-lake','geography-peninsula','geography-island']){
+  for(const id of ['great-lakes-shoreline','geography-lake','geography-peninsula','geography-island']){
     map.setLayoutProperty(id,'visibility',fips?'none':'visible');
   }
   map.setLayoutProperty('great-lakes-fill','visibility',fips?'none':'visible');
@@ -655,7 +651,6 @@ function deselect({hideSidebar=false}={}) {
   updateCountyView();
   updateMetroMode();
   scheduleSettledView();
-  $('#search').value='';$('#search-results').hidden=true;
 }
 function reset() {
   deselect();
@@ -858,15 +853,13 @@ function toggleCountySelection(force){
 }
 function mapControlReservations(includeSelected=false){
   const r=map.getContainer().getBoundingClientRect();
-  const controls=[...document.querySelectorAll('.map-controls:not(.phone-dock .map-controls),#appearance-toggle,#reset-view,#sidebar-toggle,.rotation-tools:not([inert]) :is(.compass-face:not([inert]),#compass-toggle:not([hidden])),.map-hud,.inset-label,#usa-label,.map-key-toggle,.map-key:not([hidden]),.phone-grip,.phone-dock-row:not([inert]),.phone-home:not([hidden]),.phone-atlas-back:not([hidden]),.phone-history-back:not([hidden])')];
+  const controls=[...document.querySelectorAll('.map-controls:not(.phone-dock .map-controls),#appearance-toggle,#reset-view,#sidebar-toggle,.rotation-tools:not([inert]) :is(.compass-face:not([inert]),#compass-toggle:not([hidden])),.map-hud,#usa-label,.map-key-toggle,.map-key:not([hidden]),.phone-grip,.phone-dock-row:not([inert]),.phone-home:not([hidden]),.phone-atlas-back:not([hidden]),.phone-history-back:not([hidden])')];
   if(includeSelected)controls.push($('.selected-area-label'));
   return controls.filter(n=>n?.offsetWidth&&n.offsetHeight)
     .map(n=>{const b=n.getBoundingClientRect();return {x0:b.left-r.left,y0:b.top-r.top,x1:b.right-r.left,y1:b.bottom-r.top};});
 }
 function mapReservations(){
-  const pr=INSETS.find(inset=>inset.abbr==='PR');
-  const prFrame={...screenBounds(map,pr.box),inset:pr.abbr};
-  return [...stateLabelsController.reservations(),...mapControlReservations(true),...(atlasFocus?[]:[prFrame])];
+  return [...stateLabelsController.reservations(),...mapControlReservations(true)];
 }
 function makeLabels() {
   cityLayers=createCityLayers(map,cities,{isNational:isNationalView,metroOverview,phoneViewport:()=>Boolean(phone?.active),stateLabelsFirst,geographyLabels});
@@ -877,12 +870,6 @@ function makeLabels() {
   cityLayers.setReservations(mapReservations);
   countyNames=createCountyLabels(map);
   selectedAreaLabel=createSelectedAreaLabel(map,maplibregl.Marker);
-  for(const inset of INSETS){
-    const n=element('div','inset-label',inset.name+' / INSET');
-    const marker=new maplibregl.Marker({element:n,anchor:inset.abbr==='PR'?'bottom':'top-left',rotationAlignment:'viewport'})
-      .setLngLat([inset.box[0][0]+.5,inset.box[1][1]-.35]).addTo(map);
-    insetMarkers.push({node:n,inset,marker});
-  }
   usaBadge=element('button','state-label usa-label');
   usaBadge.id='usa-label';
   usaBadge.type='button';
@@ -927,8 +914,8 @@ function updateUSALabel(){
 function updateMapHud() {
   const z=map.getZoom();
   const center=map.getCenter();
-  const {point:[lng,lat],abbr}=geographicPoint([center.lng,center.lat]);
-  const coordinates=`${abbr?abbr+' / ':''}${fmtCoord(lat,'lat')} ${fmtCoord(lng,'lng')}`;
+  const [lng,lat]=geographicPoint([center.lng,center.lat]);
+  const coordinates=`${fmtCoord(lat,'lat')} ${fmtCoord(lng,'lng')}`;
   const zoomText=`ZOOM ${z.toFixed(2)}`;
   if($('#coordinate-text').textContent!==coordinates)$('#coordinate-text').textContent=coordinates;
   if($('#zoom-text').textContent!==zoomText)$('#zoom-text').textContent=zoomText;
@@ -948,7 +935,6 @@ function scheduleSettledView(){
     if(map.isMoving()||rotation?.dragging)return;
     updateMapHud();
     updateMetroMode();
-    updateInsetTitles();
     updateUSALabel();
     updateSelectedAreaLabel();
     stateLabelsController.layout();
@@ -966,29 +952,9 @@ function updateSelectedAreaLabel(){
   selectedAreaLabel.layout(selected,metro?.properties.label||p.official_name||p.name,coordinates,mapControlReservations());
 }
 
-function updateInsetTitles(){
-  for(const {node,inset,marker} of insetMarkers){
-    const bounds=screenBounds(map,inset.box),width=bounds.x1-bounds.x0;
-    if(inset.abbr==='PR'){
-      const [[west,south],[east]]=inset.box;
-      node.textContent=inset.name;
-      node.style.fontSize=Math.max(5.5,Math.min(9,width/8))+'px';
-      marker.setLngLat([(west+east)/2,south+.24]);
-      continue;
-    }
-    node.textContent=width<55?inset.abbr:width<100?inset.abbr+' / INSET':inset.name+' / INSET';
-    node.style.fontSize=width<100?'7px':'9px';
-    const position=isNorthUp(map.getBearing())?[inset.box[0][0]+.5,inset.box[1][1]-.35]
-      :map.unproject([(bounds.x0+bounds.x1)/2-node.offsetWidth/2,bounds.y0+5]);
-    marker.setLngLat(position);
-  }
-}
 function addSourcesAndLayers() {
   map.addSource('context-land',{type:'geojson',data:new URL('../data/context-land.geojson',import.meta.url).href});
   map.addLayer({id:'atlas-context-land',type:'fill',source:'context-land',paint:{'fill-antialias':false}});
-  map.addSource('inset-frames',{type:'geojson',data:insetFrames});
-  map.addLayer({id:'inset-surface',type:'fill',source:'inset-frames',paint:{'fill-opacity':.9}});
-  map.addLayer({id:'inset-lines',type:'line',layout:{'line-join':'bevel','line-cap':'butt'},source:'inset-frames',paint:{'line-width':1}});
   map.addSource('states',{type:'geojson',data:states});
   map.addSource('great-lakes',{type:'geojson',data:new URL('../data/great-lakes.geojson',import.meta.url).href});
   map.addSource('counties',{type:'geojson',data:emptyFC});
@@ -1139,14 +1105,18 @@ async function selectSearchItem(s) {
   toast('Unable to load selected geographic record.');
 }
 function setupSearch() {
-  const box=$('#search'),results=$('#search-results');
+  const box=$('#search'),results=$('#search-results'),wrap=box.closest('.search-wrap');
   const stateAbbreviations=new Map(states.features.map(({properties:p})=>
     [p.abbr.toLowerCase(),{k:'state',n:p.name,id:p.geoid}]));
   const query=()=>box.value.trim().toLowerCase();
   let sequence=0;
-  function choose(item){
+  function dismiss(){
     sequence++;
-    results.hidden=true;box.value='';box.blur();
+    results.hidden=true;
+  }
+  function choose(item){
+    dismiss();
+    box.value='';box.blur();
     selectSearchItem(item);
   }
   function render(hits){
@@ -1161,7 +1131,7 @@ function setupSearch() {
     }
     results.hidden=!hits.length;
   }
-  box.addEventListener('input',async()=>{
+  async function suggest(){
     const q=query(),exact=stateAbbreviations.get(q);
     const ticket=++sequence;
     render(exact?[exact]:[]);
@@ -1173,17 +1143,30 @@ function setupSearch() {
         rankSearch(q,a)-rankSearch(q,b)||
         ({state:0,place:1,county:2,metro:3}[a.k]-{state:0,place:1,county:2,metro:3}[b.k])||a.n.localeCompare(b.n)).slice(0,exact?11:12);
       render(exact?[exact,...hits]:hits);
-    }catch(error){console.warn('Search unavailable',error);toast('Search index unavailable.');}
-  });
+    }catch(error){
+      if(ticket!==sequence)return;
+      console.warn('Search unavailable',error);toast('Search index unavailable.');
+    }
+  }
+  box.addEventListener('input',suggest);
+  box.addEventListener('focus',suggest);
   box.addEventListener('keydown',event=>{
-    if(event.key==='Escape'){sequence++;results.hidden=true;box.blur();}
+    if(event.key==='Escape'){
+      event.stopPropagation();
+      dismiss();box.blur();return;
+    }
     if(event.key!=='Enter'||event.isComposing)return;
     const exact=stateAbbreviations.get(query());
     if(exact){event.preventDefault();choose(exact);}
     else if(!results.hidden)results.querySelector('button')?.click();
   });
-  document.addEventListener('click',event=>{
-    if(!event.target.closest('.search-wrap')){sequence++;results.hidden=true;}
+  document.addEventListener('pointerdown',event=>{
+    if(wrap.contains(event.target))return;
+    dismiss();
+    if(document.activeElement===box)box.blur();
+  },true);
+  document.addEventListener('focusin',event=>{
+    if(!wrap.contains(event.target))dismiss();
   });
 }
 function setupUI() {
@@ -1318,7 +1301,9 @@ async function initialize() {
       loadJSON(BASE+'state_labels.json'),loadJSON(BASE+'cities.geojson'),loadJSON(BASE+'basic_facts.json'),loadJSON(BASE+'usa_facts.json')
     ]);
     citiesById=new Map(cities.features.map(f=>[f.properties.geoid,f]));
-    allBounds=allNationalBounds(boundsOf(states.features.find(f=>f.properties.abbr==='AK').geometry));
+    const islandBounds=states.features.filter(f=>['AK','HI','PR'].includes(f.properties.abbr))
+      .map(f=>boundsOf(f.geometry));
+    allBounds=allNationalBounds(islandBounds);
     for(const state of states.features)stateNames.set(state.properties.geoid,state.properties.name);
     map=new maplibregl.Map({
       container:'map',center:[-98.4,38.5],zoom:3.3,minZoom:0,maxZoom:16,

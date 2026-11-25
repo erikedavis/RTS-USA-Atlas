@@ -1,5 +1,5 @@
 import {appearance} from './city-layout.mjs';
-import {displayPoint} from './insets.mjs';
+import {displayPoint} from './geographic-display.mjs';
 import {isNorthUp} from './map-rotation.mjs';
 import {fitStateLabel,prepareStateShapes,projectStateShapes} from './state-label-placement.mjs';
 
@@ -37,8 +37,7 @@ export function createCountyLabels(map){
       const height=size*1.24+4;
       const labelBox=({x,y})=>({x0:x-width/2,x1:x+width/2,y0:y-height/2,y1:y+height/2});
       const anchor=map.project(displayPoint(coordinates,p.state_abbr));
-      const reservations=p.state_abbr==='PR'?obstacles.filter(box=>box.inset!=='PR'):obstacles;
-      const point=fitStateLabel(map,projected,anchor,size,viewport,reservations,{rotated,labelBox});
+      const point=fitStateLabel(map,projected,anchor,size,viewport,obstacles,{rotated,labelBox});
       if(!point)continue;
       const placement=map.unproject(point).toArray().map(coordinate=>Number(coordinate.toFixed(7)));
       features.push({type:'Feature',properties:{geoid:p.geoid,state_fips:p.state_fips,label,size},

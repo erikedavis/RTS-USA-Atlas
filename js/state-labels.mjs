@@ -1,4 +1,4 @@
-import {displayPoint,INSETS} from './insets.mjs';
+import {displayPoint} from './geographic-display.mjs';
 import {overlaps} from './city-layout.mjs';
 import {isNorthUp} from './map-rotation.mjs';
 import {badgeBox,compactBadgeBox,badgeFitsInState,badgeTouchesLand,fitStateLabel,prepareStateShapes,projectStateShapes} from './state-label-placement.mjs';
@@ -17,6 +17,11 @@ const SMALL_STATES=new Map([
   ['VT',{inside:[[-72.60,44.51],[-72.61,44.02],[-72.78,44.78]]}],
   ['NH',{inside:[[-71.57,43.75],[-71.62,43.96],[-71.68,43.48]]}],
 ]);
+// At overview scale there may be no room for a badge inside these islands.
+const ISLAND_BADGES=new Map([
+  ['HI',[-155.6,17.4]],
+  ['PR',[-68.4,16.4]],
+]);
 const collection=features=>({type:'FeatureCollection',features});
 const pointFeature=(item,coordinates)=>({type:'Feature',properties:{geoid:item.p.geoid},geometry:{type:'Point',coordinates}});
 
@@ -32,14 +37,14 @@ export function createStateLabels(map,labels,states,Marker,onSelect,isNational,p
     node.title='Zoom to '+p.name;node.setAttribute('aria-label','Select '+p.name);node.dataset.geoid=p.geoid;
     node.addEventListener('click',event=>{event.stopPropagation();onSelect(p.geoid,event);});
     node.addEventListener('dblclick',event=>event.stopPropagation());
-    const insetLabel=INSETS.find(inset=>inset.abbr===p.abbr)?.labelPosition;
     const small=SMALL_STATES.get(p.abbr);
     if(small)node.classList.add('state-label-small');
     const original=small?.inside[0]||displayPoint(p.coordinates,p.abbr);
     node.style.display='none';
     const marker=new Marker({element:node,anchor:'center',rotationAlignment:'viewport'}).setLngLat(original);
-    const neighbors=small?.outside?allPolygons.filter(polygon=>polygon.geoid!==p.geoid):[];
-    return {p,node,marker,original,small,insetLabel,neighbors,polygons:stateShapes.get(p.geoid)||[]};
+    const outside=small?.outside||ISLAND_BADGES.get(p.abbr);
+    const neighbors=outside?allPolygons.filter(polygon=>polygon.geoid!==p.geoid):[];
+    return {p,node,marker,original,small,outside,neighbors,polygons:stateShapes.get(p.geoid)||[]};
   });
 
   let lastKey='',focusedState=null,selectedState=null;
@@ -57,7 +62,7 @@ export function createStateLabels(map,labels,states,Marker,onSelect,isNational,p
     const origin=container.getBoundingClientRect(),viewport={x0:5,y0:5,x1:w-5,y1:h-5};
     const bounds=map.getBounds();
     const viewBounds={west:bounds.getWest(),east:bounds.getEast(),south:bounds.getSouth(),north:bounds.getNorth()};
-    const obstacles=[...container.parentElement.parentElement.querySelectorAll('.map-controls:not(.phone-dock .map-controls),#reset-view,#sidebar-toggle,.rotation-tools:not([inert]),.map-key-toggle,.dev-zoom,.inset-label,#usa-label,.selected-area-label,.phone-grip,.phone-dock-row:not([inert]),.phone-home:not([hidden]),.phone-atlas-back:not([hidden]),.phone-history-back:not([hidden])')]
+    const obstacles=[...container.parentElement.parentElement.querySelectorAll('.map-controls:not(.phone-dock .map-controls),#reset-view,#sidebar-toggle,.rotation-tools:not([inert]),.map-key-toggle,.dev-zoom,#appearance-toggle,#usa-label,.selected-area-label,.phone-grip,.phone-dock-row:not([inert]),.phone-home:not([hidden]),.phone-atlas-back:not([hidden]),.phone-history-back:not([hidden])')]
       .filter(node=>node.offsetWidth&&node.offsetHeight)
       .map(node=>{const b=node.getBoundingClientRect();return {x0:b.left-origin.left,y0:b.top-origin.top,x1:b.right-origin.left,y1:b.bottom-origin.top};});
     const uiObstacles=[...obstacles];
@@ -100,15 +105,13 @@ export function createStateLabels(map,labels,states,Marker,onSelect,isNational,p
     for(const item of ordered){
       if(focusedState&&item.p.geoid!==focusedState)continue;
       const anchor=map.project(item.original);
-      const dock=item.insetLabel&&national?map.project(item.insetLabel):null;
-      if(dock&&roomFor(dock,defaultSize,false,wide)){show(item,dock,defaultSize);continue;}
       if(item.small){
         const candidates=item.small.inside.map(coordinates=>map.project(coordinates));
         for(const size of [defaultSize,10.3,8.7,7.8]){
           const point=candidates.find(point=>roomFor(point,size,true)&&badgeFitsInState(map,item.polygons,point,size,rotated));
           if(point){show(item,point,size);break;}
         }
-        if(!shown.has(item)&&item.small.outside)outsideBadges.push(item);
+        if(!shown.has(item)&&item.outside)outsideBadges.push(item);
         continue;
       }
       const compact=wide||item.p.abbr==='PR';
@@ -123,9 +126,10 @@ export function createStateLabels(map,labels,states,Marker,onSelect,isNational,p
         const point=fitStateLabel(map,projected,anchor,size,viewport,obstacles,{compact:true,centerOnly:true,rotated});
         if(point){show(item,point,size);break;}
       }
+      if(national&&item.outside&&!shown.has(item))outsideBadges.push(item);
     }
     for(const item of outsideBadges){
-      const point=map.project(item.small.outside);
+      const point=map.project(item.outside);
       for(const size of [8.7,7.8]){
         if(roomFor(point,size,true)&&!badgeTouchesLand(map,item.neighbors,point,size,rotated)){
           show(item,point,size);break;

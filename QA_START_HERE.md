@@ -1,6 +1,6 @@
 # RTS USA Atlas - GitHub browser QA quick start
 
-This repository contains the **USAtlas V0.8A preview** and its browser QA workflow. See the [README](README.md) for the PC and phone launchers.
+This repository contains the **USAtlas** and its browser QA workflow. See the [README](README.md) for the PC and phone launchers.
 
 ## Run locally
 
@@ -22,9 +22,9 @@ GitHub Actions also runs the checks on pushes to `main` and on pull requests. It
 - Idaho's label selects Idaho, selected-border screenshot is saved, county selection works, reset clears selection.
 - Chicago, Denver, Phoenix, and Houston searches produce city-specific screenshots.
 - A 390 × 844 touch viewport renders the national state labels, opens the phone toolbar, taps the Minnesota abbreviation, clears that selection, and finds Indiana by abbreviation.
-- Source syntax, Census record counts, and inset geographic transformations pass the original `qa_v02d.mjs` script.
+- Source syntax, Census record counts, and native island positions and Alaska’s dateline wrapping pass the original `qa_v02d.mjs` script.
 
-**Limitation:** A passing test confirms the map and interactions render and run, not that the visual appearance is flawless. Review the captured screenshots for city-label drift, blobby borders, inset layout and obvious UI collisions. A desktop-sized Chromium viewport does not emulate every behavior of real iOS Safari. If WebGL fails even with software rendering enabled, the test will report a failure rather than call that a pass.
+**Limitation:** A passing test confirms the map and interactions render and run, not that the visual appearance is flawless. Review the captured screenshots for city-label drift, blobby borders, national map framing and obvious UI collisions. A desktop-sized Chromium viewport does not emulate every behavior of real iOS Safari. If WebGL fails even with software rendering enabled, the test will report a failure rather than call that a pass.
 
 ## Public repository safety
 

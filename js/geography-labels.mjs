@@ -1,5 +1,5 @@
-import {cityMarkerBox,overlaps,placeLabel} from './city-layout.mjs?v=09d';
-import {setThemePaint} from './appearance.mjs?v=09p1';
+import {cityMarkerBox,overlaps,placeLabel} from './city-layout.mjs?v=10a2';
+import {setThemePaint} from './appearance.mjs?v=10a3';
 
 // Angles are map-relative. Long and narrow features can supply a label
 // axis, which also limits how far lettering can slide from its center.
@@ -59,9 +59,9 @@ function fitAlongsideCities(candidates,cities,obstacles,viewport){
       ...cities.filter(city=>!conflicts.includes(city)).map(city=>({...city.placement.box,city:true}))];
     const moved=[];
     for(const city of conflicts){
-      const {geoid,state_abbr:abbr}=city.feature.properties;
+      const {geoid}=city.feature.properties;
       const placement=placeLabel(city,{...viewport,previous:city.placement,scale:city.placement.size/city.style.labelSize,
-        reserved:reserved.filter(box=>box.marker!==geoid&&(!box.inset||box.inset!==abbr))});
+        reserved:reserved.filter(box=>box.marker!==geoid)});
       if(!placement)break;
       moved.push({city,placement});
       reserved.push({...placement.box,city:true});

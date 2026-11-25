@@ -73,17 +73,37 @@ async function phoneTapSelection(page, point, title) {
   expect(await page.evaluate(()=>window.tapSelectionMs)).toBeLessThan(450);
 }
 
-async function expectAlaskaAndInsets(page) {
+async function expectGeographicNationalExtent(page) {
   await expect.poll(()=>page.evaluate(()=>{
-    const visible=new Set(testMap.queryRenderedFeatures({layers:['state-hit']}).map(f=>f.properties.abbr));
-    const west=testMap.project([-187.14,52.88]);
     const {clientWidth,clientHeight}=testMap.getContainer();
-    const westernAlaska=testMap.queryRenderedFeatures([[west.x-2,west.y-2],[west.x+2,west.y+2]],{layers:['state-hit']})
-      .some(f=>f.properties.abbr==='AK');
-    return ['AK','HI','PR'].every(abbr=>visible.has(abbr))&&westernAlaska&&
-      west.x>1&&west.x<clientWidth-1&&west.y>0&&west.y<clientHeight;
+    const locations=[
+      ['AK',[-187.14,52.88]],
+      ['HI',[-155.53,19.65]],
+      ['PR',[-66.47,18.22]],
+      ['CA',[-119.58,36.62]],
+      ['ME',[-69.2,45.2]],
+    ];
+    return locations.every(([abbr,coordinates])=>{
+      const {x,y}=testMap.project(coordinates);
+      return x>1&&x<clientWidth-1&&y>0&&y<clientHeight&&
+        testMap.queryRenderedFeatures([[x-2,y-2],[x+2,y+2]],{layers:['state-hit']})
+          .some(f=>f.properties.abbr===abbr);
+    });
   })).toBe(true);
-  await expect(page.getByText('ALASKA / INSET',{exact:true})).toHaveCount(0);
+  expect(await page.evaluate(()=>testMap.getLayer('inset-lines'))).toBeUndefined();
+  await expect(page.locator('.inset-label')).toHaveCount(0);
+  for(const name of ['Hawaii','Puerto Rico']){
+    await expect(page.getByRole('button',{name:'Select '+name,exact:true})).toBeVisible();
+  }
+}
+
+async function expectIslandStatesRemainReachableInConus(page) {
+  for(const [abbr,center] of [['AK',[-153,58]],['HI',[-157,21]],['PR',[-66.47,18.22]]]){
+    await page.evaluate(center=>testMap.jumpTo({center,zoom:4}),center);
+    await expect.poll(()=>page.evaluate(abbr=>testMap.queryRenderedFeatures({layers:['state-hit']})
+      .some(feature=>feature.properties.abbr===abbr),abbr)).toBe(true);
+  }
+  await expect(page.getByRole('button',{name:'CONUS',exact:true})).toHaveAttribute('aria-pressed','true');
 }
 
 async function searchFor(page, name) {
@@ -541,10 +561,8 @@ test('desktop USA home defaults to CONUS and keeps the chosen extent through Atl
     await expect.poll(lowestLatitude).toBeGreaterThan(49.4);
   }
   await page.evaluate(([lng,lat,zoom,bearing])=>testMap.jumpTo({center:[lng,lat],zoom,bearing}),original);
-  await expect.poll(visibleStates).toContain('PR');
-  await page.evaluate(()=>testMap.jumpTo({center:[-145,44],zoom:2.5}));
-  await expect.poll(visibleStates).toEqual(expect.arrayContaining(['AK','HI']));
-  await expect(conus).toHaveAttribute('aria-pressed','true');
+  await expect.poll(visibleStates).toEqual(expect.arrayContaining(['CA','ME']));
+  await expectIslandStatesRemainReachableInConus(page);
   await page.evaluate(([lng,lat,zoom,bearing])=>testMap.jumpTo({center:[lng-4,lat],zoom:zoom-.2,bearing}),original);
   await usa.click();
   await waitForCamera(page);
@@ -554,7 +572,7 @@ test('desktop USA home defaults to CONUS and keeps the chosen extent through Atl
   await all.click();
   await expect(all).toHaveCSS('color',activeGold);
   await waitForCamera(page);
-  await expectAlaskaAndInsets(page);
+  await expectGeographicNationalExtent(page);
   await expect(panel.locator('.population-total')).toHaveText('341,784,857');
   await page.locator('#desktop-atlas-toggle').click();
   await expect(panel.locator('.section-kicker')).toHaveText('USA STATS');
@@ -572,6 +590,43 @@ test('desktop USA home defaults to CONUS and keeps the chosen extent through Atl
   await expect(conus).toHaveAttribute('aria-pressed','true');
   await waitForCamera(page);
   expect(await camera(page)).toEqual(original);
+});
+
+async function expectSearchDismissal(page,phone){
+  const search=page.locator('#search'),results=page.locator('#search-results');
+  const click=target=>phone?target.tap():target.click();
+  if(phone)await click(page.locator('#appearance-toggle'));
+  await search.fill('San');
+  await expect(results.locator('button').first()).toBeVisible();
+  const titles=await results.locator('button').allTextContents();
+  await click(page.getByRole('button',{name:'Select California',exact:true}));
+  await expect(page.locator('#panel-content h1')).toHaveText('California');
+  await expect(results).toBeHidden();
+  await expect(search).toHaveValue('San');
+  await click(search);
+  await expect(results.locator('button')).toHaveText(titles);
+
+  await waitForCamera(page);
+  const ocean=await page.evaluate(()=>{
+    const point=testMap.project([-125.5,36.5]);
+    const map=testMap.getContainer().getBoundingClientRect();
+    return [map.left+point.x,map.top+point.y];
+  });
+  if(phone)await page.touchscreen.tap(...ocean);else await page.mouse.click(...ocean);
+  await expect(results).toBeHidden();
+  await expect(search).toHaveValue('San');
+  await click(search);
+  await expect(results.locator('button')).toHaveText(titles);
+  await search.press('Escape');
+  await expect(results).toBeHidden();
+  await expect(search).toHaveValue('San');
+}
+
+test('desktop dark search suggestions resume after clicking outside', async ({page},testInfo)=>{
+  await exposeMap(page);
+  await assertRendered(page,testInfo);
+  await readMap(page);
+  await expectSearchDismissal(page,false);
 });
 
 test('desktop light theme recolors water and keeps Atlas state', async ({ page }, testInfo) => {
@@ -594,6 +649,22 @@ test('desktop light theme recolors water and keeps Atlas state', async ({ page }
   await page.mouse.move(800,65);
   await expect(root).toHaveAttribute('data-theme','light');
   await expect(theme.locator('.appearance-sun')).toBeVisible();
+  await expect(page.locator('.brand img')).toHaveCSS('content',/brand-c14-light\.svg/);
+  const lock=page.locator('#rotation-lock'),rose=page.locator('.compass-rose');
+  const north=page.getByRole('button',{name:'North up',exact:true});
+  await expect(lock).toHaveCSS('color',activeGold);
+  await expect(rose.locator('.compass-light')).toHaveCSS('fill','rgb(98, 98, 98)');
+  await expect(rose.locator('.compass-shadow')).toHaveCSS('fill','rgb(135, 135, 135)');
+  await lock.click();
+  await expect(rose.locator('.compass-light')).toHaveCSS('fill','rgb(0, 0, 0)');
+  await expect(rose.locator('.compass-shadow')).toHaveCSS('fill','rgb(0, 0, 0)');
+  await expect(north).toHaveCSS('color','rgb(0, 0, 0)');
+  await expect(north).toHaveCSS('font-weight','800');
+  await lock.click();
+  const selectionPaint=await page.evaluate(()=>['state','county','place','metro']
+    .map(kind=>testMap.getPaintProperty(kind+'-selected','line-color')));
+  expect(selectionPaint).toEqual(['#000','#000','#000','#000']);
+  expect(await page.evaluate(()=>testMap.getPaintProperty('city-name-hover','text-color'))).toBe('#000');
   await screenshot(page,testInfo,'theme-desktop-light-national');
   await page.evaluate(()=>testMap.jumpTo({center:[-79,42],zoom:5.1,bearing:0}));
   const waterAt=(coordinates,layer)=>page.evaluate(({coordinates,layer})=>
@@ -695,10 +766,9 @@ test('desktop Atlas expands, restores a rotated camera, and reopens the hidden s
   await waitForCamera(page);
   expect(await camera(page)).toEqual(metroCamera);
 
-  await page.evaluate(() => testMap.jumpTo({ center: [-88.5, 25.5], zoom: 5.45, bearing: 45 }));
+  await page.evaluate(() => testMap.jumpTo({ center: [-66.47, 18.22], zoom: 6.7, bearing: 45 }));
   const puertoRico = page.getByRole('button', { name: 'Select Puerto Rico' });
   await expect(puertoRico).toHaveText('PR');
-  await expect(page.getByText('PUERTO RICO', { exact: true })).toBeVisible();
   await expect.poll(() => puertoRico.evaluate(label => {
     const bounds = label.getBoundingClientRect();
     const map = testMap.getContainer().getBoundingClientRect();
@@ -1353,10 +1423,7 @@ test.describe('phone viewport', () => {
     const touch=(type,point)=>cdp.send('Input.dispatchTouchEvent',{type,touchPoints:point?[point]:[]});
     await expect(mode).toHaveText('USA STATS');
     const original=await camera(page);
-    await page.evaluate(()=>testMap.jumpTo({center:[-145,44],zoom:2.05}));
-    await expect.poll(()=>page.evaluate(()=>testMap.queryRenderedFeatures({layers:['state-hit']}).map(f=>f.properties.abbr)))
-      .toEqual(expect.arrayContaining(['AK','HI']));
-    await expect(page.getByRole('button',{name:'CONUS',exact:true})).toHaveAttribute('aria-pressed','true');
+    await expectIslandStatesRemainReachableInConus(page);
     await page.locator('#phone-home').tap();
     await waitForCamera(page);
     expect(await camera(page)).toEqual(original);
@@ -1367,7 +1434,7 @@ test.describe('phone viewport', () => {
     await touch('touchEnd');
     await page.getByRole('button',{name:'ALL',exact:true}).tap();
     await waitForCamera(page);
-    await expectAlaskaAndInsets(page);
+    await expectGeographicNationalExtent(page);
     await leave.tap();
     await expect(mode).toHaveText('USA STATS');
     await expect(page.getByRole('button',{name:'ALL',exact:true})).toHaveAttribute('aria-pressed','true');
@@ -1379,6 +1446,45 @@ test.describe('phone viewport', () => {
     await expect(mode).toHaveText('USA ATLAS');
     await expect(panel.locator('.population-total')).toHaveText('341,784,857');
     await expect(page.getByRole('button',{name:'ALL',exact:true})).toHaveAttribute('aria-pressed','true');
+  });
+
+  test('phone searches the real island locations and opens their state Atlas pages', async ({page},testInfo)=>{
+    await exposeMap(page);
+    await assertRendered(page,testInfo);
+    await readMap(page);
+    const panel=page.locator('#panel-content');
+    const app=page.locator('.app');
+    for(const [abbr,title,city,cityTitle,longitude] of [
+      ['HI','Hawaii','Urban Honolulu','Honolulu',-157.84],
+      ['PR','Puerto Rico','San Juan','San Juan',-66.05],
+    ]){
+      await searchFor(page,abbr);
+      await expect(panel.locator('h1')).toHaveText(title);
+      await waitForCamera(page);
+      expect(Math.abs((await camera(page))[0]-longitude)).toBeLessThan(3);
+      const badge=page.getByRole('button',{name:'Select '+title,exact:true});
+      await expect(badge).toBeVisible();
+      const rect=await badge.boundingBox();
+      const point={x:rect.x+rect.width/2,y:rect.y+rect.height/2};
+      const cdp=await page.context().newCDPSession(page);
+      await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[point]});
+      await expect(app).toHaveAttribute('data-phone-atlas-kind','state');
+      await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+      await cdp.detach();
+      await expect(panel.locator('h1')).toHaveText(title);
+      await page.locator('#phone-atlas-back').tap();
+      await searchFor(page,city);
+      await expect(panel.locator('h1')).toHaveText(cityTitle);
+      await waitForCamera(page);
+      expect(Math.abs((await camera(page))[0]-longitude)).toBeLessThan(1);
+    }
+  });
+
+  test('phone light search suggestions resume after tapping outside', async ({page},testInfo)=>{
+    await exposeMap(page);
+    await assertRendered(page,testInfo);
+    await readMap(page);
+    await expectSearchDismissal(page,true);
   });
 
   test('phone light theme keeps Atlas open and fits portrait and landscape', async ({ page }, testInfo) => {

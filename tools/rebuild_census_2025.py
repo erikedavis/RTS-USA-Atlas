@@ -170,7 +170,7 @@ def main():
              'counts':counts,'source_archives':fingerprints,
              'processing':'Rendering geometry is produced directly from Census shapefiles; no projection shifting or decorative edits. Representative interior points are calculated for labels/search.',
              'coverage':'All supplied Census geographies, including territories, DC, CDPs and micro areas.',
-             'display_note':'Initial map camera targets contiguous US. Alaska/Hawaii require navigation buttons; territories are present in data.'}
+             'display_note':'Alaska, Hawaii and Puerto Rico are shown in their geographic locations. Coordinates are unchanged in the source data. Alaska’s dateline islands wrap west of 180 degrees for a continuous map.'}
     file_json(DAT/'manifest.json',summary)
     print('COUNTS',counts)
     print('data size MB',round(sum(p.stat().st_size for p in DAT.rglob('*') if p.is_file())/1e6,2))

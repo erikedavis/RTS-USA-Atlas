@@ -42,11 +42,18 @@ button { color:inherit; cursor:pointer; }
   #map-layers[aria-expanded="false"]
 ) {border-color:var(--idle-gold-edge);color:var(--idle-gold-ink);}
 :root[data-theme="light"] .tools-current {box-shadow:inset 2px 0 var(--brand-blue);}
-:root[data-theme="light"] .compass-direction:is(:hover,:focus-visible,:active) span {
-  color:var(--compass-gold);
+:root[data-theme="light"] :is(.brand,.tools-mobile) img {content:url('./brand-c14-light.svg');}
+:root[data-theme="light"] .compass-direction {font-weight:800;}
+:root[data-theme="light"] .compass-direction:is(:hover,:focus-visible,:active) span {color:var(--compass-letters);}
+:root[data-theme="light"] .rotation-tools:not(.rotation-unlocked) {
+  --compass-light:var(--compass-locked-ink);
+  --compass-shadow:var(--compass-locked-shadow);
+  --compass-letters:var(--compass-locked-ink);
+  --compass-facet-opacity:1;
+  --compass-opacity:1;
+  --compass-chevron-ink:var(--compass-locked-ink);
 }
-:root[data-theme="light"] :is(#rotation-lock,#compass-edge-lock) {color:var(--brand-blue);}
-:root[data-theme="light"] .rotation-north-locked {--compass-opacity:.84;}
+:root[data-theme="light"] .rotation-tools:not(.rotation-unlocked) .compass-rose {filter:none;}
 :root[data-theme="light"] .compass-chevron {opacity:.7;}
 :root[data-theme="light"] :is(#appearance-toggle,.tools-menu summary,.tools-options button,.map-controls button,
   .panel-layer-controls button,.national-scope-button,.panel-action,.phone-control,.map-key-toggle):focus-visible {
@@ -137,7 +144,7 @@ button { color:inherit; cursor:pointer; }
 .app:not(.phone-layout).sidebar-hidden .info-panel > :not(#sidebar-toggle) {visibility:hidden;}
 .sidebar-hidden #sidebar-toggle {left:-28px;border-radius:5px 0 0 5px;}
 .sidebar-hidden #sidebar-toggle svg {transform:rotate(180deg);}
-.app:not(.phone-layout)[data-desktop-atlas='state'] :is(.inset-label,.state-label:not([data-phone-focused])) {opacity:0;pointer-events:none;}
+.app:not(.phone-layout)[data-desktop-atlas='state'] .state-label:not([data-phone-focused]) {opacity:0;pointer-events:none;}
 .app:not(.phone-layout) .state-label {transition:opacity .18s ease;}
 .panel-content {padding:30px 25px;overflow:auto;flex:1;}
 .app:not(.phone-layout) .panel-content {margin-inline-start:28px;padding-inline-start:8px;}
@@ -186,7 +193,7 @@ button { color:inherit; cursor:pointer; }
 .state-label:hover,.state-label:focus-visible{color:var(--state-label-hover);text-shadow:0 0 9px var(--state-hover-halo);}
 .state-label.usa-label {min-height:36px;min-width:44px;padding:0 2px;color:var(--map-icon);font-size:26px;letter-spacing:.075em;}
 .usa-label .state-label-text {opacity:.64;}
-.state-label.usa-label[hidden],.inset-label[hidden] {display:none;}
+.state-label.usa-label[hidden] {display:none;}
 .usa-label:is(:hover,:focus-visible) .state-label-text {opacity:1;}
 .national-scope {position:relative;display:flex;width:max-content;margin:0 0 10px;}
 .national-scope::before {
@@ -221,8 +228,6 @@ button { color:inherit; cursor:pointer; }
 .atlas-city-overlay { position:absolute; left:0; top:0; z-index:4; pointer-events:none;
   padding:0; margin:0; border:0; background:transparent; display:block; }
 
-/* v0.2d display containers are anchored to the same map as their geometry. */
-.inset-label {font:600 9px 'Segoe UI',Arial,sans-serif;letter-spacing:.13em;color:var(--inset-label);pointer-events:none;white-space:nowrap;}
 #toggle-counties,#toggle-metros {font-size:11px;font-weight:600;}
 
 /* v0.2E: basic demographic information comes before the technical record. */
@@ -296,25 +301,26 @@ button { color:inherit; cursor:pointer; }
   --compass-face-y:calc(0px - var(--compass-edge-shift));
   --compass-cardinal-radius:37%;
   --compass-return-y:calc(var(--compass-size) * .39);
-  --compass-light:var(--compass-gold);
+  --compass-light:var(--compass-spire);
   --compass-shadow:var(--compass-deep);
   --compass-letters:var(--compass-direction-ink);
+  --compass-facet-opacity:var(--compass-shadow-opacity,1);
   --compass-opacity:1;
   position:absolute;z-index:8;top:0;right:0;width:var(--compass-size);
   pointer-events:none;
 }
 .rotation-unlocked {--compass-scale:1;--compass-face-x:-5px;--compass-face-y:4px;}
 .rotation-north-locked {
-  --compass-light:var(--map-icon);
+  --compass-light:var(--compass-locked-ink);
   --compass-shadow:var(--compass-locked-shadow);
-  --compass-letters:var(--map-icon);
+  --compass-letters:var(--compass-locked-ink);
   --compass-opacity:.66;
 }
 .rotation-tools button {
   display:grid;place-items:center;padding:0;border:0;background:transparent;
   pointer-events:auto;touch-action:manipulation;
 }
-.rotation-tools button:focus-visible {outline:1px solid var(--compass-gold);outline-offset:1px;}
+.rotation-tools button:focus-visible {outline:1px solid var(--compass-spire);outline-offset:1px;}
 .rotation-tools :is(#compass-home,#rotation-lock,.compass-direction) {touch-action:none;user-select:none;-webkit-touch-callout:none;}
 .compass-face {
   position:relative;transform:translate(var(--compass-face-x),var(--compass-face-y));
@@ -327,7 +333,7 @@ button { color:inherit; cursor:pointer; }
   position:absolute;z-index:3;width:28px;height:44px;border-radius:4px;
   top:50%;left:calc(50% - var(--compass-cardinal-radius) * var(--compass-scale) - 36px);
   transform:translate(calc(var(--compass-face-x) - 50%),calc(var(--compass-face-y) - 50%));
-  color:var(--map-icon);transition:left .18s ease,transform .24s ease;
+  color:var(--compass-chevron-ink,var(--map-icon));transition:left .18s ease,transform .24s ease;
 }
 .compass-minimized #compass-toggle {
   top:var(--compass-return-y);left:calc(100% - 44px);width:44px;transform:translateY(-50%);
@@ -353,7 +359,7 @@ button { color:inherit; cursor:pointer; }
 }
 .rotation-north-locked .compass-rose {filter:none;}
 .compass-light {fill:var(--compass-light);}
-.compass-shadow {fill:var(--compass-shadow);}
+.compass-shadow {fill:var(--compass-shadow);fill-opacity:var(--compass-facet-opacity);}
 .compass-rose path {transition:fill .18s ease;}
 .compass-direction {
   --direction-x:0%;--direction-y:0%;

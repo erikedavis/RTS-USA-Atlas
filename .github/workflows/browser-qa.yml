@@ -34,7 +34,7 @@ jobs:
       - name: Validate source and geographic data
         run: |
           node --check js/atlas.mjs
-          node --check js/insets.mjs
+          node --check js/geographic-display.mjs
           node tools/qa_v02d.mjs
       - name: Start Atlas HTTP server (separate from Playwright)
         shell: bash

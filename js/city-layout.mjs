@@ -161,7 +161,7 @@ export function layoutCities(projected,{width,height,zoom,state,selectedId,natio
   const metroNameGap=clamp(Math.min(width,height)*.135,78,116);
   let visibleCount=0,metroLabels=0;
   const labelObstaclesFor=({feature:{properties:p}})=>
-    occupied.filter(r=>(!r.inset||r.inset!==p.state_abbr)&&r.marker!==p.geoid);
+    occupied.filter(r=>r.marker!==p.geoid);
   function addLabel(item,labelObstacles){
     const id=item.feature.properties.geoid;
     const options={width,height,reserved:labelObstacles,measure,previous:previous.get(id)};
@@ -186,7 +186,7 @@ export function layoutCities(projected,{width,height,zoom,state,selectedId,natio
       const markerGap=i.metroName?Math.min(22,dotGap):dotGap;
       if(admitted.some(other=>Math.hypot(i.x-other.x,i.y-other.y)<markerGap+other.style.radius+i.style.radius))continue;
       if(!localCoverage&&occupied.some(r=>r.city&&overlaps({x0:i.x-4,x1:i.x+4,y0:i.y-4,y1:i.y+4},r,4)))continue;
-      if(labelObstacles.some(r=>(r.state||r.inset)&&overlaps({x0:i.x-3,x1:i.x+3,y0:i.y-3,y1:i.y+3},r)))continue;
+      if(labelObstacles.some(r=>r.state&&overlaps({x0:i.x-3,x1:i.x+3,y0:i.y-3,y1:i.y+3},r)))continue;
     }
     i.placement=null;
     if(!localCoverage){
@@ -206,7 +206,7 @@ export function layoutCities(projected,{width,height,zoom,state,selectedId,natio
   // A lone town must never end up as an anonymous dot.
   if(!metroOverview&&admitted.length===1&&!admitted[0].placement){
     const place=admitted[0];
-    place.placement=placeLabel(place,{width,height,reserved:reserved.filter(r=>!r.inset||r.inset!==place.feature.properties.state_abbr),measure,force:true});
+    place.placement=placeLabel(place,{width,height,reserved,measure,force:true});
     if(admitted[0].placement)placements.set(admitted[0].feature.properties.geoid,admitted[0].placement);
   }
   return {items:admitted,placements,metrics:{candidates:items.length,dots:admitted.length,labels:placements.size,threshold,dotGap,budget}};
