@@ -8,25 +8,32 @@ const northwesternHawaii={from:[-170.125,25.75],to:[-144,27.65],scale:.28};
 const northwesternLongitude=-161;
 const northwesternDisplayLongitude=-141.25;
 export const INSETS = [
-  {abbr:'AK', name:'ALASKA', from:[-154,64], to:[-138,38], scale:.36, box:[[-151,30],[-127,45.5]]},
   {abbr:'HI', name:'HAWAII', from:middle(mainHawaiiBounds), to:middle(hawaiiBox), scale:1.36,
     box:hawaiiBox, labelPosition:[-137,22.7], focusBounds:mainHawaiiBounds},
   {abbr:'PR', name:'PUERTO RICO', from:[-66.583,18.2], to:[-88.5,25.5], scale:2.75,
     box:[[-93,23],[-84,28]]}
 ];
-export const NATIONAL_BOUNDS = [[-152,20],[-66,51]];
 export const CONUS_BOUNDS = [[-125.4,22.5],[-66.7,49.4]];
+
+export function allNationalBounds(alaskaBounds) {
+  const boxes=[CONUS_BOUNDS,alaskaBounds,...INSETS.map(inset=>inset.box)];
+  return [
+    [Math.min(...boxes.map(box=>box[0][0])),Math.min(...boxes.map(box=>box[0][1]))],
+    [Math.max(...boxes.map(box=>box[1][0])),Math.max(...boxes.map(box=>box[1][1]))],
+  ];
+}
+
 function region([lng,lat]) {
-  if(lat>50 && (lng < -129 || lng>170))return INSETS[0];
-  if(lat>18 && lat<30 && lng<-154)return INSETS[1];
-  if(lat>17 && lat<19.5 && lng>-68.5 && lng<-65.2)return INSETS[2];
+  if(lat>18 && lat<30 && lng<-154)return INSETS[0];
+  if(lat>17 && lat<19.5 && lng>-68.5 && lng<-65.2)return INSETS[1];
   return null;
 }
 export function displayPoint(point,abbr) {
+  // Keep the dateline islands adjacent to mainland Alaska in the Pacific view.
+  if(abbr==='AK')return point[0]>0?[point[0]-360,point[1]]:point;
   const inset=abbr===undefined?region(point):INSETS.find(i=>i.abbr===abbr);
   if(!inset)return point;
-  let [lng,lat]=point;
-  if(inset.abbr==='AK' && lng>0)lng-=360;
+  const [lng,lat]=point;
   // Compress the distant chain separately so it doesn't push the main
   // islands out of the middle of their frame.
   const {from,to,scale}=inset.abbr==='HI'&&lng<northwesternLongitude?northwesternHawaii:inset;
@@ -34,6 +41,7 @@ export function displayPoint(point,abbr) {
     latitude(mercY(to[1])+(mercY(lat)-mercY(from[1]))*scale)];
 }
 export function geographicPoint(point) {
+  if(point[0]<-180||point[0]>180)point=[((point[0]%360+540)%360)-180,point[1]];
   const inset=INSETS.find(({box})=>point[0]>=box[0][0] && point[0]<=box[1][0] && point[1]>=box[0][1] && point[1]<=box[1][1]);
   if(!inset)return {point,abbr:''};
   const {from,to,scale}=inset.abbr==='HI'&&point[0]<northwesternDisplayLongitude?northwesternHawaii:inset;

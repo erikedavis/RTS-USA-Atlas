@@ -1,6 +1,7 @@
 export const HOLD_MS=600;
 export const HOLD_SLOP=9;
-// Match the bundled MapLibre double-tap window before committing a single tap.
+// Keep MapLibre's double-tap window for navigation. Known feature taps can
+// update the facts on release while still recognizing a second tap.
 const MAP_DOUBLE_TAP_MS=500, TAP_SPACING=30;
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const position=touch=>({x:touch.clientX,y:touch.clientY});
@@ -85,6 +86,12 @@ export function bindMapTouches(surface,{enabled,hit,preview,hold,single,immediat
       return;
     }
     clearPending();
+    const kind=result?.feature?.properties.kind;
+    if(kind==='place'||kind==='county'||kind==='metro'){
+      pending={at:touch.at,time:event.timeStamp};
+      single(result);
+      return;
+    }
     const previewState=result?.layer==='state-hit'&&!hasState();
     pending={at:touch.at,time:event.timeStamp,preview:previewState};
     if(previewState)preview(result.feature);

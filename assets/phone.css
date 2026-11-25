@@ -138,6 +138,7 @@
 .phone-layout .panel-content:has(.national-scope) > .section-kicker {grid-area:1/1;}
 .phone-layout .panel-content:has(.national-scope) > h1 {grid-area:2/1;margin:3px 0 6px;}
 .phone-layout .national-scope {grid-area:1/2/span 2;margin-bottom:0;}
+.phone-layout .national-scope::before {inset:9px 0;}
 .phone-layout .national-scope-button {min-height:40px;}
 .phone-layout .national-facts {grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:10px;align-items:center;}
 .phone-layout .national-area .record-row {display:grid;padding-top:5px;}

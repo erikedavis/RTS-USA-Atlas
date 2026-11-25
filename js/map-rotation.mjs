@@ -1,4 +1,4 @@
-import {HOLD_MS,HOLD_SLOP} from './phone-gestures.mjs?v=09e';
+import {HOLD_MS,HOLD_SLOP} from './phone-gestures.mjs?v=10a';
 import {bindDesktopMapKeys} from './desktop-map-keys.mjs?v=09l';
 
 export const isNorthUp=bearing=>Math.abs(((bearing%360+540)%360)-180)<1e-6;

@@ -1,6 +1,6 @@
-# USAtlas V0.9Q preview
+# USAtlas V1.0A preview
 
-Phase 02 preview. The outlined crescent or sun in the map's top-left corner switches the interface and live map paints in place. For placement requests, “top left” means the map corner below the header unless the top bar is named. Interface roles live in `assets/theme.css` and map roles in `js/appearance.mjs`. Light mode uses the packaged Natural Earth ocean geometry and the existing Great Lakes polygons. Palette and physical phone acceptance remain open.
+Phase 02 release candidate. The outlined crescent or sun in the map's top-left corner switches the interface and live map paints in place. For placement requests, “top left” means the map corner below the header unless the top bar is named. Interface roles live in `assets/theme.css` and map roles in `js/appearance.mjs`. Both appearances use the packaged Natural Earth land backdrop. ALL fits real-position Alaska and the Hawaii and Puerto Rico insets. A phone tap on a city, county or metro selects on release. Palette and physical phone acceptance remain open.
 
 Hiding the compass preserves the bearing and lock state. The hide chevron moves with the rose as it expands and can be tapped on a phone. The phone accepts a short left swipe around the return chevron. The phone compass suppresses the browser's text selection and callout so a press and hold stays a compass gesture. Desktop compass keyboard controls remain available while hidden. A locked two-finger map twist on a phone pulses the visible lock or shows a temporary unlock button beside the return chevron.
 

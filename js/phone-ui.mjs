@@ -1,4 +1,4 @@
-import {bindDockSwipe,bindMapTouches,bindStateAtlasPan} from './phone-gestures.mjs?v=09e';
+import {bindDockSwipe,bindMapTouches,bindStateAtlasPan} from './phone-gestures.mjs?v=10a';
 
 const phoneMedia='(max-width: 670px) and (pointer: coarse), (max-width: 950px) and (pointer: coarse) and (orientation: landscape)';
 const STAGES=['closed','tools','summary','atlas'];

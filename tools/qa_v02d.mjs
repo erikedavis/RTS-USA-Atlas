@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {fileURLToPath} from 'node:url';
-import {INSETS,displayData,displayPoint,geographicPoint} from '../js/insets.mjs';
+import {INSETS,allNationalBounds,displayData,displayPoint,geographicPoint} from '../js/insets.mjs';
 const root=new URL('../',import.meta.url);
 const read=p=>JSON.parse(fs.readFileSync(new URL(p,root),'utf8'));
 const states=read('data/states.geojson');
@@ -25,6 +25,22 @@ for(const inset of INSETS){
 for(const abbr of ['CA','MI','TX','VI','GU','AS','MP']){
   assert.deepEqual(transformed.features.find(f=>f.properties.abbr===abbr),states.features.find(f=>f.properties.abbr===abbr));
 }
+const alaska=states.features.find(f=>f.properties.abbr==='AK');
+const alaskaPoints=alaska.geometry.coordinates.flat(2);
+const alaskaDisplay=transformed.features.find(f=>f.properties.abbr==='AK').geometry.coordinates.flat(2);
+assert.equal(alaskaPoints.length,alaskaDisplay.length);
+alaskaPoints.forEach(([lng,lat],i)=>{
+  assert.deepEqual(alaskaDisplay[i],[lng>0?lng-360:lng,lat]);
+  const inverse=geographicPoint(alaskaDisplay[i]);
+  assert.equal(inverse.abbr,'');
+  assert(Math.abs(inverse.point[0]-lng)<1e-8&&inverse.point[1]===lat);
+});
+const alaskaBounds=[
+  [Math.min(...alaskaDisplay.map(p=>p[0])),Math.min(...alaskaDisplay.map(p=>p[1]))],
+  [Math.max(...alaskaDisplay.map(p=>p[0])),Math.max(...alaskaDisplay.map(p=>p[1]))],
+];
+assert(alaskaBounds[0][0]<-187 && alaskaBounds[1][1]>71);
+assert.deepEqual(allNationalBounds(alaskaBounds),[[alaskaBounds[0][0],21.8],[-66.7,alaskaBounds[1][1]]]);
 const count=(folder,suffix)=>fs.readdirSync(fileURLToPath(new URL(folder,root))).filter(p=>p.endsWith(suffix)).reduce((n,p)=>n+read(folder+p).features.length,0);
 assert.equal(count('data/counties/','.geojson'),3235);
 assert.equal(count('data/places/','_points.geojson'),32629);
@@ -44,6 +60,7 @@ assert.equal(metroFacts['35620'].counties['36059'],'Nassau County');
 for(const city of read('data/major_cities.geojson').features){
   assert(read('data/places/'+city.properties.state_fips+'_points.geojson').features.some(f=>f.properties.geoid===city.properties.geoid));
 }
-console.log('PASS all inset boundaries fit containers; display transforms invert correctly; other territories unchanged.');
+console.log('PASS Alaska keeps its geographic coordinates through the dateline; ALL includes its full extent and both insets.');
+console.log('PASS inset boundaries fit their containers; display transforms invert correctly; other territories unchanged.');
 console.log('PASS 56 states/equivalents, 3235 counties, 32629 places, 935 metros; all 43 major-city Census IDs resolve.');
 console.log('PASS 1915 official county memberships across all 935 metro and micro areas.');

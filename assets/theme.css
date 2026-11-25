@@ -143,6 +143,8 @@
   --phone-atlas-surface:#0b131e;
   --theme-indicator:#b4cbdc;
   --build-ink:var(--active-gold);
+  --brand-blue:#221cb6;
+  --scope-accent:var(--active-gold);
   --active-surface:#283640;
   --focus-ring:#42768a;
 }
@@ -274,11 +276,11 @@
   --legend-detail:#43564e;
   --legend-capital:#344e56;
   --legend-divider:#bba98a;
-  --compass-gold:#99632e;
+  --compass-gold:var(--brand-blue);
   --compass-deep:#384e55;
   --compass-direction-ink:#2d444a;
   --compass-locked-shadow:#7f8d7b;
-  --compass-glow:#f3e2be8f;
+  --compass-glow:#221cb634;
   --lock-hint-surface:#293839;
   --compass-hint:#324b50;
   --compass-tip-border:#8f7c5d;
@@ -290,5 +292,9 @@
   --phone-record-edge:#b4a280;
   --phone-atlas-surface:#e8dabb;
   --theme-indicator:#8f5725;
-  --build-ink:#684621;
+  --build-ink:var(--brand-blue);
+  --scope-accent:var(--brand-blue);
+  --idle-gold:#f3d99e;
+  --idle-gold-edge:#9a6c2f;
+  --idle-gold-ink:#704a21;
 }

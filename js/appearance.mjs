@@ -1,6 +1,6 @@
 const preferenceKey = 'usatlas-appearance';
 const dark = {
-  background:'#020307', ocean:'#020307', lake:'#020307', shoreline:'#648aa5',
+  background:'#020307', contextLand:'#0a1119', lake:'#04070c', shoreline:'#648aa5',
   land:'#101923', inset:'#070d14', insetLine:'#30485b', stateLine:'#718da8',
   countyLine:'#3b5268', countyScoped:'#6685a0', placeLine:'#546b83',
   metroFill:'#506c90', metroLine:'#839bb9', linkedMetroFill:'#6f97ba', linkedMetroLine:'#b2d8f4',
@@ -16,7 +16,7 @@ const dark = {
   political:{red:'#e49086',blue:'#85aee3',independent:'#e6bf79',other:'#c5a3d3'},
 };
 const light = {
-  background:'#e4dcc9', ocean:'#9bbccf', lake:'#79a7c1', shoreline:'#527f99',
+  background:'#9bbccf', contextLand:'#e4dcc9', lake:'#79a7c1', shoreline:'#527f99',
   land:'#e7d5ae', inset:'#a4c2d2', insetLine:'#738b91', stateLine:'#687369',
   countyLine:'#7d8b75', countyScoped:'#627458', placeLine:'#737466',
   metroFill:'#9870a1', metroLine:'#74527c', linkedMetroFill:'#a27696', linkedMetroLine:'#663e64',
@@ -70,7 +70,7 @@ export function applyMapAppearance(map, countyScoped, stateFocused) {
   const palette = mapPalette();
   const layers = [
     ['background','background-color',palette.background],
-    ['atlas-ocean','fill-color',palette.ocean],
+    ['atlas-context-land','fill-color',palette.contextLand],
     ['great-lakes-fill','fill-color',palette.lake],
     ['great-lakes-shoreline','line-color',palette.shoreline],
     ['inset-surface','fill-color',palette.inset], ['inset-lines','line-color',palette.insetLine],
@@ -90,8 +90,6 @@ export function applyMapAppearance(map, countyScoped, stateFocused) {
   for (const [id, property, value] of layers) {
     if (map.getLayer(id)) setThemePaint(map,id,property,value);
   }
-  const waterVisible = mode() === 'light';
-  map.setLayoutProperty('atlas-ocean','visibility',waterVisible ? 'visible' : 'none');
-  map.setLayoutProperty('great-lakes-fill','visibility',waterVisible && !stateFocused ? 'visible' : 'none');
+  map.setLayoutProperty('great-lakes-fill','visibility',stateFocused ? 'none' : 'visible');
   return palette;
 }

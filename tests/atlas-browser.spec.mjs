@@ -9,7 +9,7 @@ async function assertRendered(page, testInfo) {
   const response = await page.goto('/', { waitUntil: 'domcontentloaded' });
   expect(response?.ok(), 'The atlas must respond over HTTP').toBe(true);
   await expect(page.locator('#map-loading'), 'Atlas loading overlay must disappear').toBeHidden({ timeout: 50_000 });
-  await expect(page.locator('meta[name="atlas-version"]')).toHaveAttribute('content', 'ALPHA 0.9Q');
+  await expect(page.locator('meta[name="atlas-version"]')).toHaveAttribute('content', 'ALPHA 1.0A');
   await expect(page.locator('canvas.maplibregl-canvas')).toHaveCount(1);
   const renderer = await page.evaluate(() => {
     const canvas = document.querySelector('canvas.maplibregl-canvas');
@@ -52,6 +52,38 @@ async function readMap(page) {
     window.testMap = atlas.map;
     window.testCityLayers = atlas.cityLayers;
   });
+}
+
+async function phoneTapSelection(page, point, title) {
+  await page.evaluate(title=>{
+    window.tapSelectionMs=null;
+    let released;
+    document.addEventListener('touchend',()=>{released=performance.now();},{capture:true,once:true});
+    const panel=document.querySelector('#panel-content');
+    const observer=new MutationObserver(()=>{
+      if(released===undefined||panel.querySelector('h1')?.textContent!==title)return;
+      window.tapSelectionMs=performance.now()-released;
+      observer.disconnect();
+    });
+    observer.observe(panel,{childList:true,subtree:true});
+  },title);
+  await page.touchscreen.tap(...point);
+  await expect(page.locator('#panel-content h1')).toHaveText(title);
+  await expect.poll(()=>page.evaluate(()=>window.tapSelectionMs)).not.toBeNull();
+  expect(await page.evaluate(()=>window.tapSelectionMs)).toBeLessThan(450);
+}
+
+async function expectAlaskaAndInsets(page) {
+  await expect.poll(()=>page.evaluate(()=>{
+    const visible=new Set(testMap.queryRenderedFeatures({layers:['state-hit']}).map(f=>f.properties.abbr));
+    const west=testMap.project([-187.14,52.88]);
+    const {clientWidth,clientHeight}=testMap.getContainer();
+    const westernAlaska=testMap.queryRenderedFeatures([[west.x-2,west.y-2],[west.x+2,west.y+2]],{layers:['state-hit']})
+      .some(f=>f.properties.abbr==='AK');
+    return ['AK','HI','PR'].every(abbr=>visible.has(abbr))&&westernAlaska&&
+      west.x>1&&west.x<clientWidth-1&&west.y>0&&west.y<clientHeight;
+  })).toBe(true);
+  await expect(page.getByText('ALASKA / INSET',{exact:true})).toHaveCount(0);
 }
 
 async function searchFor(page, name) {
@@ -142,7 +174,7 @@ test('desktop national map loads, has working WebGL, and renders', async ({ page
   }
   await expect(page.locator('.topbar #search')).toBeVisible();
   const version=page.locator('#build-version');
-  await expect(version).toHaveText('0.9Q');
+  await expect(version).toHaveText('1.0A');
   await expect(version).toHaveCSS('color',activeGold);
   const searchBox=await page.locator('#search').boundingBox();
   expect((await version.boundingBox()).x).toBeGreaterThan(searchBox.x+searchBox.width);
@@ -510,7 +542,7 @@ test('desktop USA home defaults to CONUS and keeps the chosen extent through Atl
   }
   await page.evaluate(([lng,lat,zoom,bearing])=>testMap.jumpTo({center:[lng,lat],zoom,bearing}),original);
   await expect.poll(visibleStates).toContain('PR');
-  await page.evaluate(()=>testMap.jumpTo({center:[-137,34],zoom:2.5}));
+  await page.evaluate(()=>testMap.jumpTo({center:[-145,44],zoom:2.5}));
   await expect.poll(visibleStates).toEqual(expect.arrayContaining(['AK','HI']));
   await expect(conus).toHaveAttribute('aria-pressed','true');
   await page.evaluate(([lng,lat,zoom,bearing])=>testMap.jumpTo({center:[lng-4,lat],zoom:zoom-.2,bearing}),original);
@@ -521,7 +553,8 @@ test('desktop USA home defaults to CONUS and keeps the chosen extent through Atl
   await expect(panel.locator('.section-kicker')).toHaveText('USA ATLAS');
   await all.click();
   await expect(all).toHaveCSS('color',activeGold);
-  await expect.poll(visibleStates).toEqual(expect.arrayContaining(['AK','HI','PR']));
+  await waitForCamera(page);
+  await expectAlaskaAndInsets(page);
   await expect(panel.locator('.population-total')).toHaveText('341,784,857');
   await page.locator('#desktop-atlas-toggle').click();
   await expect(panel.locator('.section-kicker')).toHaveText('USA STATS');
@@ -565,12 +598,14 @@ test('desktop light theme recolors water and keeps Atlas state', async ({ page }
   await page.evaluate(()=>testMap.jumpTo({center:[-79,42],zoom:5.1,bearing:0}));
   const waterAt=(coordinates,layer)=>page.evaluate(({coordinates,layer})=>
     testMap.queryRenderedFeatures(testMap.project(coordinates),{layers:[layer]}).length,{coordinates,layer});
-  await expect.poll(()=>waterAt([-74,38],'atlas-ocean')).toBeGreaterThan(0);
-  expect(await waterAt([-79,46],'atlas-ocean')).toBe(0);
+  await expect.poll(()=>waterAt([-79,46],'atlas-context-land')).toBeGreaterThan(0);
+  expect(await waterAt([-74,38],'atlas-context-land')).toBe(0);
   await expect.poll(()=>waterAt([-81.55,42.20],'great-lakes-fill')).toBeGreaterThan(0);
   await screenshot(page,testInfo,'theme-desktop-light-northeast');
   const key=page.getByRole('button',{name:'Map key',exact:true});
+  await expect(key.locator('.map-key-filled')).toHaveCSS('fill','rgb(243, 217, 158)');
   await key.click();
+  await expect(key.locator('.map-key-filled')).toHaveCSS('fill','rgb(34, 28, 182)');
   await expect(page.locator('#map-key-symbols li')).toHaveCount(8);
   await screenshot(page,testInfo,'theme-desktop-light-legend');
   await theme.click();
@@ -582,6 +617,7 @@ test('desktop light theme recolors water and keeps Atlas state', async ({ page }
   await page.locator('#desktop-atlas-toggle').click();
   await expect(page.locator('.app')).toHaveAttribute('data-desktop-atlas','state');
   await page.locator('#toggle-counties').click();
+  await expect(page.locator('#toggle-counties')).toHaveCSS('color','rgb(34, 28, 182)');
   await page.locator('#toggle-metros').click();
   await waitForCamera(page);
   await page.evaluate(()=>testMap.setBearing(37));
@@ -795,7 +831,7 @@ for (const isPhone of [false, true]) {
             if(!hits.length)return [rect.left+px,rect.top+py];
           }
         },{layer,geoid})).jsonValue();
-        if(isPhone)await page.touchscreen.tap(...point);
+        if(isPhone)await phoneTapSelection(page,point,title);
         else await page.mouse.click(...point);
         await expect(heading).toHaveText(title);
         await expect(name).toBeVisible();
@@ -1317,7 +1353,7 @@ test.describe('phone viewport', () => {
     const touch=(type,point)=>cdp.send('Input.dispatchTouchEvent',{type,touchPoints:point?[point]:[]});
     await expect(mode).toHaveText('USA STATS');
     const original=await camera(page);
-    await page.evaluate(()=>testMap.jumpTo({center:[-137,34],zoom:2.05}));
+    await page.evaluate(()=>testMap.jumpTo({center:[-145,44],zoom:2.05}));
     await expect.poll(()=>page.evaluate(()=>testMap.queryRenderedFeatures({layers:['state-hit']}).map(f=>f.properties.abbr)))
       .toEqual(expect.arrayContaining(['AK','HI']));
     await expect(page.getByRole('button',{name:'CONUS',exact:true})).toHaveAttribute('aria-pressed','true');
@@ -1330,6 +1366,8 @@ test.describe('phone viewport', () => {
     await expect(mode).toHaveText('USA ATLAS');
     await touch('touchEnd');
     await page.getByRole('button',{name:'ALL',exact:true}).tap();
+    await waitForCamera(page);
+    await expectAlaskaAndInsets(page);
     await leave.tap();
     await expect(mode).toHaveText('USA STATS');
     await expect(page.getByRole('button',{name:'ALL',exact:true})).toHaveAttribute('aria-pressed','true');
@@ -1381,6 +1419,31 @@ test.describe('phone viewport', () => {
     await expect(theme.locator('.appearance-sun')).toBeVisible();
   });
 
+  test('phone draws the Americas at low zoom in both themes and selects a city on release', async ({page},testInfo)=>{
+    await exposeMap(page);
+    await assertRendered(page,testInfo);
+    await readMap(page);
+    const toggle=page.locator('#appearance-toggle');
+    await page.evaluate(()=>testMap.jumpTo({center:[-79,-13],zoom:1.19,bearing:0}));
+    const context=(point)=>page.evaluate(point=>testMap.queryRenderedFeatures(testMap.project(point),
+      {layers:['atlas-context-land']}).length,point);
+    for(const [theme,color] of [['dark','#0a1119'],['light','#e4dcc9']]){
+      if(theme==='light')await toggle.tap();
+      await expect.poll(()=>page.evaluate(()=>testMap.getPaintProperty('atlas-context-land','fill-color'))).toBe(color);
+      for(const point of [[-83.7,9.9],[-74,-9],[-53,-14],[-70.8,-45]])await expect.poll(()=>context(point)).toBeGreaterThan(0);
+      expect(await context([-99,-12])).toBe(0);
+      await screenshot(page,testInfo,'phone-americas-'+theme);
+    }
+    await page.evaluate(()=>testMap.jumpTo({center:[-116.2,43.27],zoom:7.1}));
+    const city=await (await page.waitForFunction(()=>{
+      const item=testCityLayers.getLayoutState().items.find(i=>i.id==='1608830'&&i.placement);
+      if(!item)return null;
+      const box=item.placement.box,bounds=testMap.getContainer().getBoundingClientRect();
+      return [bounds.left+(box.x0+box.x1)/2,bounds.top+(box.y0+box.y1)/2];
+    })).jsonValue();
+    await phoneTapSelection(page,city,'Boise');
+  });
+
   test('phone startup hides the desktop sidebar while the map loads', async ({ page }) => {
     await page.route('**/js/atlas.mjs?*', route => route.abort());
     await page.goto('/');
@@ -1407,7 +1470,7 @@ test.describe('phone viewport', () => {
       const idleSearch = await search.boundingBox();
       const idleTools = await tools.boundingBox();
       const version=page.locator('#build-version');
-      await expect(version).toHaveText('0.9Q');
+      await expect(version).toHaveText('1.0A');
       await expect(version).toHaveCSS('color',activeGold);
       const buildLabel=await version.boundingBox();
       expect(buildLabel.x).toBeGreaterThan(idleSearch.x+idleSearch.width);

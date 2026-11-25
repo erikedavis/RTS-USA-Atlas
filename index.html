@@ -5,8 +5,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#020307">
-  <meta name="atlas-version" content="ALPHA 0.9Q">
-  <title>USAtlas | V0.9Q</title>
+  <meta name="atlas-version" content="ALPHA 1.0A">
+  <title>USAtlas | V1.0A</title>
   <script>
     try {
       if (localStorage.getItem('usatlas-appearance') === 'light') {
@@ -15,9 +15,9 @@
     } catch {}
   </script>
   <link href="./assets/vendor/maplibre-gl.css" rel="stylesheet">
-  <link rel="stylesheet" href="./assets/theme.css?v=09p">
-  <link rel="stylesheet" href="./assets/atlas.css?v=09q">
-  <link rel="stylesheet" href="./assets/phone.css?v=09q">
+  <link rel="stylesheet" href="./assets/theme.css?v=10a">
+  <link rel="stylesheet" href="./assets/atlas.css?v=10a">
+  <link rel="stylesheet" href="./assets/phone.css?v=10a">
 </head>
 <body>
   <div class="app">
@@ -135,7 +135,10 @@
         <div class="map-hud lower-left"><span id="coordinate-text">39.0°N 98.0°W</span></div>
         <span class="map-hud dev-zoom" id="zoom-text">ZOOM —</span>
         <button type="button" class="map-key-toggle" id="map-key-toggle" title="Map key" aria-label="Map key" aria-expanded="false" aria-controls="map-key">
-          <svg viewBox="0 0 46 24" aria-hidden="true"><circle cx="8.5" cy="13" r="5.6"/><path d="M14 11.5H23V10h3v1.5h8V5h3v3h2.5V5H43v9.5H26V16h-3v-1.5h-9"/></svg>
+          <svg viewBox="0 0 46 24" aria-hidden="true">
+            <g class="map-key-outline"><circle cx="8.5" cy="13" r="5.6"/><path d="M14 11.5H23V10h3v1.5h8V5h3v3h2.5V5H43v9.5H26V16h-3v-1.5h-9"/></g>
+            <path class="map-key-filled" fill-rule="evenodd" d="M13.8 11.2H22V10h5v1.2h6V5h4v3h2.5V5H44v10H27v1.4h-5V15h-8.2a5.6 5.6 0 1 1 0-3.8ZM8.5 10a3 3 0 1 0 0 6 3 3 0 1 0 0-6Z"/>
+          </svg>
         </button>
         <section class="map-key" id="map-key" aria-labelledby="map-key-heading" hidden>
           <h2 id="map-key-heading">Map key</h2>
@@ -200,7 +203,7 @@
     </div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
   </div>
-  <script type="module" src="./js/atlas.mjs?v=09q"></script>
+  <script type="module" src="./js/atlas.mjs?v=10a"></script>
 </body>
 </html>
 

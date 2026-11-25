@@ -7,12 +7,12 @@ import {populateMapKey} from './city-symbols.mjs?v=09p';
 import {createGeographyLabels} from './geography-labels.mjs?v=09p1';
 import {createStateLabels} from './state-labels.mjs?v=09f';
 import {prepareStateShapes,shapeContainsPoint} from './state-label-placement.mjs';
-import {isNorthUp,screenBounds,setupRotation} from './map-rotation.mjs?v=09n';
-import {setupPhoneUI} from './phone-ui.mjs?v=09k';
+import {isNorthUp,screenBounds,setupRotation} from './map-rotation.mjs?v=10a';
+import {setupPhoneUI} from './phone-ui.mjs?v=10a';
 import {COUNTY_LABEL_ZOOM,createCountyLabels} from './county-labels.mjs?v=09p';
-import {applyMapAppearance,mapPalette,mode,setupAppearance} from './appearance.mjs?v=09p1';
+import {applyMapAppearance,mapPalette,setupAppearance} from './appearance.mjs?v=10a';
 import {createSelectedAreaLabel} from './selected-area-label.mjs';
-import {INSETS, NATIONAL_BOUNDS, CONUS_BOUNDS, displayData, displayPoint, geographicPoint, hawaiiTailMarks, insetFrames} from './insets.mjs';
+import {INSETS, CONUS_BOUNDS, allNationalBounds, displayData, displayPoint, geographicPoint, hawaiiTailMarks, insetFrames} from './insets.mjs?v=10a';
 
 const BASE = './data/';
 const $ = (selector) => document.querySelector(selector);
@@ -25,6 +25,7 @@ const stateNames = new Map();
 let map, manifest, states, stateLabels, cities, facts, usaFacts, usaBadge, usaMarker;
 const USA={type:'Feature',properties:{kind:'nation',name:'United States',geoid:'US'},geometry:null};
 let nationalScope='conus';
+let allBounds=CONUS_BOUNDS;
 let selected = null;
 let selectedState = null;
 let selectionRevision = 0;
@@ -63,7 +64,7 @@ const hoverInput = matchMedia('(any-hover: hover)');
 const nationalPadding = () => compactLayout.matches
   ? {top:46,bottom:phone?.active?phoneDockHeight():40,left:10,right:10}
   : {top:55,bottom:35,left:25,right:85};
-const nationalBounds=()=>nationalScope==='all'?NATIONAL_BOUNDS:CONUS_BOUNDS;
+const nationalBounds=()=>nationalScope==='all'?allBounds:CONUS_BOUNDS;
 let homeSize='',homeZoom=3.3;
 let settledFrame=0,nextHudUpdate=0;
 function isNationalView(){
@@ -602,7 +603,7 @@ function focusStateAtlas(fips,fast){
   for(const id of ['inset-surface','inset-lines','great-lakes-shoreline','geography-lake','geography-peninsula','geography-island']){
     map.setLayoutProperty(id,'visibility',fips?'none':'visible');
   }
-  map.setLayoutProperty('great-lakes-fill','visibility',!fips&&mode()==='light'?'visible':'none');
+  map.setLayoutProperty('great-lakes-fill','visibility',fips?'none':'visible');
   for(const id of ['hawaii-tail-islands','hawaii-tail-label']){
     if(map.getLayer(id))map.setLayoutProperty(id,'visibility',!fips||fips==='15'?'visible':'none');
   }
@@ -983,8 +984,8 @@ function updateInsetTitles(){
   }
 }
 function addSourcesAndLayers() {
-  map.addSource('ocean',{type:'geojson',data:new URL('../data/ocean.geojson',import.meta.url).href});
-  map.addLayer({id:'atlas-ocean',type:'fill',source:'ocean',layout:{visibility:'none'}});
+  map.addSource('context-land',{type:'geojson',data:new URL('../data/context-land.geojson',import.meta.url).href});
+  map.addLayer({id:'atlas-context-land',type:'fill',source:'context-land',paint:{'fill-antialias':false}});
   map.addSource('inset-frames',{type:'geojson',data:insetFrames});
   map.addLayer({id:'inset-surface',type:'fill',source:'inset-frames',paint:{'fill-opacity':.9}});
   map.addLayer({id:'inset-lines',type:'line',layout:{'line-join':'bevel','line-cap':'butt'},source:'inset-frames',paint:{'line-width':1}});
@@ -1317,10 +1318,11 @@ async function initialize() {
       loadJSON(BASE+'state_labels.json'),loadJSON(BASE+'cities.geojson'),loadJSON(BASE+'basic_facts.json'),loadJSON(BASE+'usa_facts.json')
     ]);
     citiesById=new Map(cities.features.map(f=>[f.properties.geoid,f]));
+    allBounds=allNationalBounds(boundsOf(states.features.find(f=>f.properties.abbr==='AK').geometry));
     for(const state of states.features)stateNames.set(state.properties.geoid,state.properties.name);
     map=new maplibregl.Map({
-      container:'map',center:[-98.4,38.5],zoom:3.3,minZoom:1.1,maxZoom:16,
-      attributionControl:false,pitchWithRotate:false,dragRotate:false,touchPitch:false,maxPitch:0,bearingSnap:0,renderWorldCopies:false,
+      container:'map',center:[-98.4,38.5],zoom:3.3,minZoom:0,maxZoom:16,
+      attributionControl:false,pitchWithRotate:false,dragRotate:false,touchPitch:false,maxPitch:0,bearingSnap:0,renderWorldCopies:true,
       pixelRatio:touchInput.matches?Math.min(window.devicePixelRatio,2):undefined,
       style:{version:8,name:'USA Atlas Statistical',glyphs:new URL('../assets/fonts/',import.meta.url).href+'{fontstack}/{range}.pbf',sources:{},layers:[{id:'background',type:'background',paint:{'background-color':mapPalette().background}}]}
     });

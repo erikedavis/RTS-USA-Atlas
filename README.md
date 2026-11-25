@@ -1,13 +1,13 @@
-# USAtlas V0.9Q preview
+# USAtlas V1.0A preview
 
-The appearance control in the map's top-left corner shows an outlined crescent for dark mode and an eight-rayed sun for light mode. Mouse hover names the current mode and the available switch. The app remembers the chosen mode in the current browser. Light mode uses the local Natural Earth ocean overlay and the five existing Great Lakes polygons. The U.S. geography and selection sources are shared by both appearances.
+The appearance control in the map's top-left corner shows an outlined crescent for dark mode and an eight-rayed sun for light mode. Mouse hover names the current mode and the available switch. The app remembers the chosen mode in the current browser. Both modes use the local Natural Earth land backdrop and the five Great Lakes polygons. Light controls use the C14 blue for active accents and gold for inactive accents.
 
 Requires Python 3. Clone the repository or extract its source ZIP, then run **Start_Atlas.cmd** from that folder. The launcher opens **http://127.0.0.1:8020/**.
 [Development handoff](HANDOFF.md) covers the current preview, repeatable checks, and open work.
 
 ## USA overview
 
-Startup and Home open USA Stats. CONUS frames the lower 48, D.C. and the Puerto Rico inset. Pan west or zoom out to reach the Alaska and Hawaii insets from CONUS. ALL frames those insets too. Both show the same national population and land area from [Census QuickFacts](https://www.census.gov/quickfacts/fact/table/US/PST045222).
+Startup and Home open USA Stats. CONUS frames the lower 48, D.C. and the Puerto Rico inset. ALL also frames Alaska in its geographic position, including the dateline islands, and the Hawaii inset. Both show the same national population and land area from [Census QuickFacts](https://www.census.gov/quickfacts/fact/table/US/PST045222).
 
 Tap or click the USA map label for USA Stats. Hold it to open USA Atlas. The whole label stays on the Canadian side of the border and disappears above zoom 3.5. On a phone, swipe up from the USA Stats sheet or its top handle to open USA Atlas.
 
@@ -94,8 +94,8 @@ City populations refer to municipal/place boundaries, not metro areas.
 
 Clicking empty ocean clears selection and hover. State and city panels
 retain population, dated sources, and square miles. State panels include capital
-and largest city with their populations. Alaska and Hawaii remain in western
-insets and Puerto Rico stays in its Gulf inset. Select their abbreviations or find them in Search.
+and largest city with their populations. Alaska appears in its geographic position,
+Hawaii in its western inset, and Puerto Rico in its Gulf inset. Select their abbreviations or find them in Search.
 
 ## Data and limitations
 
