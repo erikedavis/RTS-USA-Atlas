@@ -276,13 +276,13 @@
   --legend-detail:#000;
   --legend-capital:#000;
   --legend-divider:#bba98a;
-  --compass-spire:#075881;
+  --compass-spire:var(--brand-blue);
   --compass-lock-ink:#a37343;
   --compass-deep:#000;
   --compass-direction-ink:#000;
   --compass-locked-ink:#626262;
   --compass-locked-shadow:#878787;
-  --compass-glow:#07588130;
+  --compass-glow:color-mix(in srgb,var(--brand-blue) 18.8%,transparent);
   --lock-hint-surface:#293839;
   --compass-hint:#000;
   --compass-tip-border:#8f7c5d;

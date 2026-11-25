@@ -656,7 +656,7 @@ test('desktop light theme recolors water and keeps Atlas state', async ({ page }
   await expect(rose.locator('.compass-light')).toHaveCSS('fill','rgb(98, 98, 98)');
   await expect(rose.locator('.compass-shadow')).toHaveCSS('fill','rgb(135, 135, 135)');
   await lock.click();
-  await expect(rose.locator('.compass-light')).toHaveCSS('fill','rgb(7, 88, 129)');
+  await expect(rose.locator('.compass-light')).toHaveCSS('fill','rgb(34, 28, 182)');
   await expect(rose.locator('.compass-shadow')).toHaveCSS('fill','rgb(0, 0, 0)');
   await expect(north).toHaveCSS('color','rgb(0, 0, 0)');
   await expect(north).toHaveCSS('font-weight','800');
