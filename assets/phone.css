@@ -49,8 +49,13 @@
 .phone-layout .compass-minimized #compass-edge-lock:not([hidden]) {
   position:absolute;top:calc(var(--compass-size) * .39);right:56px;width:44px;height:44px;
   display:grid;transform:translateY(-50%);color:var(--active-gold);-webkit-touch-callout:none;
+  animation:compass-edge-appear .24s steps(1,end) both;
 }
 .phone-layout #compass-edge-lock[inert] {pointer-events:none;}
+@keyframes compass-edge-appear {from {visibility:hidden;} to {visibility:visible;}}
+@media (prefers-reduced-motion:reduce) {
+  .phone-layout .compass-minimized #compass-edge-lock:not([hidden]) {animation:none;}
+}
 .phone-layout .phone-dock-body {position:relative;}
 .phone-layout .map-key-toggle {bottom:100%;pointer-events:auto;}
 .phone-layout .dev-zoom {bottom:calc(100% + 4px);}
