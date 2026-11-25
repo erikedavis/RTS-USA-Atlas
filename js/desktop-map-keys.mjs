@@ -2,9 +2,10 @@ const PAN_PIXELS_PER_SECOND=420;
 const TURN_DEGREES_PER_SECOND=34;
 const PAN_KEYS=new Set(['arrowleft','arrowright','arrowup','arrowdown','w','a','s','d']);
 const TURN_KEYS=['q','e'];
+const COMPASS_KEYS=['l','n','r'];
 const editable=target=>target.closest?.('input,textarea,select,[contenteditable]:not([contenteditable="false"])');
 
-export function bindDesktopMapKeys(map,{isDesktop,canTurn,onChange}){
+export function bindDesktopMapKeys(map,{isDesktop,canTurn,onCompassKey,onChange}){
   const keys=new Set();
   const held=(first,second)=>Number(keys.has(first)||keys.has(second));
   let frame=0,lastTime=0;
@@ -48,10 +49,16 @@ export function bindDesktopMapKeys(map,{isDesktop,canTurn,onChange}){
     if(event.defaultPrevented||event.isComposing||event.altKey||event.ctrlKey||
       event.metaKey||editable(event.target)||!isDesktop())return;
     const key=event.key.toLowerCase();
-    if(!PAN_KEYS.has(key)&&!(TURN_KEYS.includes(key)&&canTurn()))return;
+    const turn=TURN_KEYS.includes(key);
+    const compass=COMPASS_KEYS.includes(key);
+    if(!PAN_KEYS.has(key)&&!turn&&!compass)return;
     event.preventDefault();
     event.stopPropagation();
     if(event.repeat||keys.has(key))return;
+    if(compass||(turn&&!canTurn())){
+      onCompassKey(key);
+      return;
+    }
     keys.add(key);
     if(frame)return;
     map.stop();

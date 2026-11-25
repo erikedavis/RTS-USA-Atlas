@@ -1,7 +1,36 @@
 import {HOLD_MS,HOLD_SLOP} from './phone-gestures.mjs?v=09e';
-import {bindDesktopMapKeys} from './desktop-map-keys.mjs?v=09g';
+import {bindDesktopMapKeys} from './desktop-map-keys.mjs?v=09l';
 
 export const isNorthUp=bearing=>Math.abs(((bearing%360+540)%360)-180)<1e-6;
+const LOCK_NOTICE_MS=2000, LOCK_RELEASE_MS=940;
+
+function bindLockedTwist(surface,enabled,onTwist){
+  let start=null;
+  const options={passive:true,capture:true};
+  function span(touches){
+    if(touches.length!==2)return null;
+    const [a,b]=[touches[0],touches[1]].sort((first,second)=>first.identifier-second.identifier);
+    const x=b.clientX-a.clientX,y=b.clientY-a.clientY;
+    return {x,y,length:Math.hypot(x,y)};
+  }
+  surface.addEventListener('touchstart',event=>{
+    const initial=enabled()?span(event.touches):null;
+    start=initial?.length>=45?initial:null;
+  },options);
+  surface.addEventListener('touchmove',event=>{
+    if(!start||!enabled())return;
+    const next=span(event.touches);
+    if(!next||next.length<32){start=null;return;}
+    const turn=Math.abs(Math.atan2(start.x*next.y-start.y*next.x,start.x*next.x+start.y*next.y));
+    const arc=turn*(start.length+next.length)/2;
+    // Require a substantial twist whose arc outweighs the change in finger spacing.
+    if(turn>=Math.PI/9&&arc>=Math.max(22,1.2*Math.abs(next.length-start.length))){
+      start=null;
+      onTwist();
+    }
+  },options);
+  for(const type of ['touchend','touchcancel'])surface.addEventListener(type,()=>{start=null;},options);
+}
 
 export function screenBounds(map,[[west,south],[east,north]]){
   const points=[[west,south],[west,north],[east,south],[east,north]].map(point=>map.project(point));
@@ -19,11 +48,48 @@ export function setupRotation(map,controls,onChange){
   const toggle=controls.querySelector('#compass-toggle');
   const toggleText=toggle.querySelector('.compass-toggle-text');
   const lock=controls.querySelector('#rotation-lock');
+  const lockGlyph=lock.querySelector('svg');
+  const edgeLock=controls.querySelector('#compass-edge-lock');
+  const lockNotice=controls.querySelector('#compass-lock-notice');
   const heading=controls.querySelector('#rotation-bearing');
   let locked=true,minimized=false;
   let drag=null,centerHold=null,returnTouch=null,skipClick=false;
+  let lockFeedbackTimer=0,lockPulse;
   const isPhone=()=>Boolean(controls.closest('.phone-layout'));
-  const desktop=bindDesktopMapKeys(map,{isDesktop:()=>!isPhone(),canTurn:()=>!locked&&!drag?.started,onChange});
+  const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)');
+  const desktop=bindDesktopMapKeys(map,{
+    isDesktop:()=>!isPhone(),canTurn:()=>!locked&&!drag?.started,onCompassKey,onChange,
+  });
+
+  function clearLockFeedback(){
+    clearTimeout(lockFeedbackTimer);
+    lockPulse?.cancel();
+    lockNotice.hidden=true;
+    edgeLock.hidden=true;
+    edgeLock.inert=false;
+  }
+
+  function reportLockedTurn(){
+    if(!locked||controls.inert)return;
+    clearLockFeedback();
+    if(minimized){
+      const feedback=isPhone()?edgeLock:lockNotice;
+      feedback.hidden=false;
+      lockFeedbackTimer=setTimeout(clearLockFeedback,LOCK_NOTICE_MS);
+      return;
+    }
+    const bump=reducedMotion.matches?'none':'translateY(-2px) scale(1.16)';
+    lockPulse=lockGlyph.animate([{opacity:1,transform:'none'},
+      {opacity:.52,transform:bump},{opacity:1,transform:bump},{opacity:1,transform:'none'}],
+      {duration:460,easing:'ease-in-out'});
+  }
+
+  function onCompassKey(key){
+    if(key==='l')setLocked(!locked);
+    else if(key==='r')northAndLock();
+    else if(locked)reportLockedTurn();
+    else if(key==='n')snap(0);
+  }
 
   function showBearing(){
     const bearing=map.getBearing(),degrees=Math.round((bearing+360)%360)%360;
@@ -34,7 +100,7 @@ export function setupRotation(map,controls,onChange){
   }
 
   function setLocked(value){
-    if(minimized&&!value)return;
+    clearLockFeedback();
     if(value&&!locked&&map.isRotating())map.stop();
     locked=value;
     if(locked){
@@ -50,16 +116,15 @@ export function setupRotation(map,controls,onChange){
     rose.title=action;
     lock.dataset.hint=locked?'Map rotation is locked. Click to unlock.':'Click to lock rotation here.';
     controls.classList.toggle('rotation-unlocked',!locked);
-    toggle.hidden=!locked;
-    if(!locked)controls.classList.remove('compass-near');
     showBearing();
     onChange();
   }
 
   function setMinimized(value){
     if(minimized===value)return;
-    if(isPhone())northAndLock(0);
-    else if(!locked)return;
+    clearLockFeedback();
+    cancelCenterHold();
+    drag=returnTouch=null;
     minimized=value;
     face.inert=minimized;
     controls.classList.toggle('compass-minimized',minimized);
@@ -73,7 +138,7 @@ export function setupRotation(map,controls,onChange){
 
   const shell=controls.parentElement;
   shell.addEventListener('pointermove',event=>{
-    if(event.pointerType!=='mouse'||!locked||minimized||controls.inert)return;
+    if(event.pointerType!=='mouse'||minimized||controls.inert)return;
     const a=face.getBoundingClientRect(),b=toggle.getBoundingClientRect();
     const {clientX:x,clientY:y}=event;
     controls.classList.toggle('compass-near',x>=Math.min(a.left,b.left)-7&&x<=a.right&&
@@ -87,6 +152,14 @@ export function setupRotation(map,controls,onChange){
     if(!minimized&&isPhone()&&event.detail>0)return;
     setMinimized(!minimized);
   });
+  edgeLock.addEventListener('click',()=>{
+    if(!isPhone()||!minimized||!locked||edgeLock.hidden)return;
+    setLocked(false);
+    edgeLock.hidden=false;
+    edgeLock.inert=true;
+    lockFeedbackTimer=setTimeout(clearLockFeedback,LOCK_RELEASE_MS);
+  });
+  bindLockedTwist(map.getContainer(),()=>isPhone()&&locked&&!controls.inert,reportLockedTurn);
 
   function snap(bearing,duration=280){
     desktop.stopTurning();
@@ -175,7 +248,7 @@ export function setupRotation(map,controls,onChange){
     drag.angle=angle;
     const dx=event.clientX-drag.startX;
     // A straight rightward swipe owns the gesture even when it starts on a direction.
-    if(!drag.started&&drag.canHide&&dx>=-HOLD_SLOP&&staysHorizontal(dx,drag.maxY))return;
+    if(!drag.started&&drag.canHide&&dx>=-HOLD_SLOP&&staysHorizontal(Math.max(dx,drag.swipeDistance),drag.maxY))return;
     if(!drag.started&&reachedTurn(drag,dx,event.clientY-drag.startY)){
       drag.started=true;
       desktop.stopTurning();
@@ -201,7 +274,10 @@ export function setupRotation(map,controls,onChange){
     const turned=gesture.started||(!hide&&reachedTurn(gesture,dx,dy));
     skipClick=skipClick||turned||Math.hypot(dx,dy)>=10;
     drag=null;
-    if(hide)setMinimized(true);
+    if(hide){
+      if(gesture.started&&!locked)map.setBearing(gesture.bearing);
+      setMinimized(true);
+    }
     else if(turned&&locked)setLocked(false);
     else if(turned){
       if(!gesture.started)map.setBearing(gesture.bearing-gesture.turn);
@@ -233,18 +309,12 @@ export function setupRotation(map,controls,onChange){
   setLocked(true);
   map.on('rotate',showBearing);
   map.on('moveend',showBearing);
-  for(const button of [rose,lock])button.addEventListener('click',()=>setLocked(!locked));
+  for(const button of [rose,lock])button.addEventListener('click',()=>{if(!minimized)setLocked(!locked);});
   controls.addEventListener('click',event=>{
     const button=event.target.closest('button[data-bearing]');
-    if(button&&!minimized&&(!locked||!isPhone()))snap(Number(button.dataset.bearing));
-  });
-  document.addEventListener('keydown',event=>{
-    if(event.defaultPrevented||event.isComposing||event.altKey||event.ctrlKey||event.metaKey||
-      event.target.closest?.('input,textarea,select,[contenteditable]'))return;
-    if(event.key.toLowerCase()==='r'){
-      event.preventDefault();
-      snap(0);
-    }
+    if(!button||minimized)return;
+    if(locked&&isPhone())reportLockedTurn();
+    else snap(Number(button.dataset.bearing));
   });
   return {get dragging(){return Boolean(drag?.started||desktop.active);}};
 }

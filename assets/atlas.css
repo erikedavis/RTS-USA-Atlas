@@ -263,7 +263,7 @@ button { color:inherit; cursor:pointer; }
   top:calc(var(--compass-size) * .39);left:calc(var(--compass-size) * .13 - 22px);
   transform:translateY(-50%);color:#a7c4d8;transition:left .24s ease;
 }
-#compass-toggle[hidden] {display:none;}
+.app:not(.phone-layout) .rotation-unlocked:not(.compass-minimized) #compass-toggle {left:-24px;}
 .compass-minimized #compass-toggle {left:calc(100% - 44px);}
 .compass-chevron {
   width:12px;height:16px;fill:none;stroke:currentColor;stroke-width:1.6;
@@ -308,13 +308,19 @@ button { color:inherit; cursor:pointer; }
   position:absolute;z-index:2;top:50%;left:50%;width:min(44px,40%);height:min(44px,40%);
   transform:translate(-50%,-50%);border-radius:50%;color:var(--active-gold);
 }
-#rotation-lock svg {
+:is(#rotation-lock,#compass-edge-lock) svg {
   width:22px;height:22px;overflow:visible;pointer-events:none;
   filter:drop-shadow(0 0 1px #020307) drop-shadow(0 0 1px #020307);
 }
 .compass-shackle {transform-origin:7.5px 11px;transition:transform .22s ease;}
-.rotation-unlocked #rotation-lock svg {animation:compass-lock-release .94s ease both;}
+.rotation-unlocked :is(#rotation-lock,#compass-edge-lock) svg {animation:compass-lock-release .94s ease both;}
 .rotation-unlocked .compass-shackle {transform:rotate(-28deg);}
+#compass-edge-lock {display:none;}
+.compass-lock-notice {
+  position:absolute;top:8px;right:10px;width:max-content;max-width:calc(100vw - 20px);padding:7px 10px;
+  background:#0b1521;border:1px solid var(--active-border);color:var(--active-gold);
+  font-size:11px;line-height:1.3;pointer-events:none;
+}
 @keyframes compass-lock-release {
   0%,80% {opacity:1;}
   100% {opacity:0;}
@@ -359,7 +365,7 @@ button { color:inherit; cursor:pointer; }
 }
 @media (prefers-reduced-motion:reduce) {
   .rotation-tools :is(.compass-face,button,span,svg,path),#rotation-lock[data-hint]::after {transition:none;}
-  .rotation-unlocked #rotation-lock svg {animation-duration:.75s;animation-timing-function:step-end;}
+  .rotation-unlocked :is(#rotation-lock,#compass-edge-lock) svg {animation-duration:.75s;animation-timing-function:step-end;}
 }
 
 @media (max-width: 670px), (max-width: 950px) and (hover: none) and (orientation: landscape) {

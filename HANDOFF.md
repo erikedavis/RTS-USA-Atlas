@@ -1,4 +1,8 @@
-# USAtlas V0.9K preview
+# USAtlas V0.9L preview
+
+Hiding the compass preserves the bearing and lock state. Desktop compass keyboard controls remain available while hidden. A locked two-finger map twist on a phone pulses the visible lock or shows a temporary unlock button when the rose is hidden.
+
+## V0.9K preview
 
 The desktop sidebar hides from its inside left edge. On a phone, the bottom Layers button opens the same Standard entry as Tools → Layers.
 

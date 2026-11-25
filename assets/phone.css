@@ -45,6 +45,12 @@
   left:auto;right:0;width:56px;height:56px;padding-left:12px;
   touch-action:none;user-select:none;-webkit-touch-callout:none;
 }
+.phone-layout .compass-lock-notice {display:none;}
+.phone-layout .compass-minimized #compass-edge-lock:not([hidden]) {
+  position:absolute;top:calc(var(--compass-size) * .39);right:56px;width:44px;height:44px;
+  display:grid;transform:translateY(-50%);color:var(--active-gold);-webkit-touch-callout:none;
+}
+.phone-layout #compass-edge-lock[inert] {pointer-events:none;}
 .phone-layout .phone-dock-body {position:relative;}
 .phone-layout .map-key-toggle {bottom:100%;pointer-events:auto;}
 .phone-layout .dev-zoom {bottom:calc(100% + 4px);}
