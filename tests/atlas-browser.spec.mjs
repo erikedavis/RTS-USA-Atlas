@@ -9,7 +9,7 @@ async function assertRendered(page, testInfo) {
   const response = await page.goto('/', { waitUntil: 'domcontentloaded' });
   expect(response?.ok(), 'The atlas must respond over HTTP').toBe(true);
   await expect(page.locator('#map-loading'), 'Atlas loading overlay must disappear').toBeHidden({ timeout: 50_000 });
-  await expect(page.locator('meta[name="atlas-version"]')).toHaveAttribute('content', 'ALPHA 0.9P');
+  await expect(page.locator('meta[name="atlas-version"]')).toHaveAttribute('content', 'ALPHA 0.9Q');
   await expect(page.locator('canvas.maplibregl-canvas')).toHaveCount(1);
   const renderer = await page.evaluate(() => {
     const canvas = document.querySelector('canvas.maplibregl-canvas');
@@ -100,6 +100,14 @@ async function expectHideChevronBesideWest(page) {
   })).toEqual([36,0]);
 }
 
+async function expectAppearanceInMapCorner(page) {
+  await expect.poll(()=>page.locator('#appearance-toggle').evaluate(button=>{
+    const map=document.querySelector('#map').getBoundingClientRect();
+    const buttonBox=button.getBoundingClientRect();
+    return [Math.round(buttonBox.left-map.left),Math.round(buttonBox.top-map.top)];
+  })).toEqual([7,0]);
+}
+
 async function bottomHudGeometry(page, isPhone = false) {
   return page.evaluate(isPhone => {
     const rect = selector => document.querySelector(selector).getBoundingClientRect();
@@ -134,7 +142,7 @@ test('desktop national map loads, has working WebGL, and renders', async ({ page
   }
   await expect(page.locator('.topbar #search')).toBeVisible();
   const version=page.locator('#build-version');
-  await expect(version).toHaveText('0.9P');
+  await expect(version).toHaveText('0.9Q');
   await expect(version).toHaveCSS('color',activeGold);
   const searchBox=await page.locator('#search').boundingBox();
   expect((await version.boundingBox()).x).toBeGreaterThan(searchBox.x+searchBox.width);
@@ -538,9 +546,14 @@ test('desktop light theme recolors water and keeps Atlas state', async ({ page }
   await assertRendered(page,testInfo);
   await readMap(page);
   const theme=page.locator('#appearance-toggle'),root=page.locator('html');
-  await expect(theme.locator('.appearance-moon')).toBeVisible();
+  const moon=theme.locator('.appearance-moon');
+  await expectAppearanceInMapCorner(page);
+  await expect(moon).toBeVisible();
+  await expect(moon).toHaveCSS('fill','none');
+  await expect(moon).toHaveCSS('stroke',await page.locator('#reset-view svg').evaluate(node=>getComputedStyle(node).stroke));
   await screenshot(page,testInfo,'theme-desktop-dark-national');
   await theme.hover();
+  await expect(moon).toHaveCSS('opacity','1');
   await expect(page.locator('#appearance-hint')).toHaveText('Dark mode · Switch to light');
   await expect(page.locator('#appearance-hint')).toHaveCSS('opacity','1');
   await expect(theme.locator('.appearance-moon')).toBeVisible();
@@ -1335,6 +1348,7 @@ test.describe('phone viewport', () => {
     await assertRendered(page,testInfo);
     await readMap(page);
     const theme=page.locator('#appearance-toggle');
+    await expectAppearanceInMapCorner(page);
     await expect(theme.locator('.appearance-moon')).toBeVisible();
     await screenshot(page,testInfo,'theme-phone-dark-national');
     await theme.tap();
@@ -1343,6 +1357,7 @@ test.describe('phone viewport', () => {
     await searchFor(page,'Idaho');
     await page.getByRole('button',{name:'Open state atlas'}).tap();
     await expect(page.locator('.app')).toHaveAttribute('data-phone-atlas-kind','state');
+    await expectAppearanceInMapCorner(page);
     await waitForCamera(page);
     const fitted=await camera(page);
     await theme.tap();
@@ -1354,13 +1369,14 @@ test.describe('phone viewport', () => {
     await page.locator('#phone-atlas-back').tap();
     await page.setViewportSize({width:744,height:390});
     await expect(page.locator('#search')).toBeVisible();
+    await expectAppearanceInMapCorner(page);
     await screenshot(page,testInfo,'theme-phone-light-landscape');
     await page.setViewportSize({width:320,height:650});
     const search=await page.locator('#search').boundingBox();
     const tools=await page.locator('#tools-menu').boundingBox();
-    const toggle=await theme.boundingBox();
     expect(search.width).toBeGreaterThan(95);
-    expect(tools.x).toBeGreaterThan(toggle.x+toggle.width);
+    expect(tools.x).toBeLessThan(15);
+    await expectAppearanceInMapCorner(page);
     await assertRendered(page,testInfo);
     await expect(theme.locator('.appearance-sun')).toBeVisible();
   });
@@ -1391,7 +1407,7 @@ test.describe('phone viewport', () => {
       const idleSearch = await search.boundingBox();
       const idleTools = await tools.boundingBox();
       const version=page.locator('#build-version');
-      await expect(version).toHaveText('0.9P');
+      await expect(version).toHaveText('0.9Q');
       await expect(version).toHaveCSS('color',activeGold);
       const buildLabel=await version.boundingBox();
       expect(buildLabel.x).toBeGreaterThan(idleSearch.x+idleSearch.width);

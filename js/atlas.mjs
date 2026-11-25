@@ -857,7 +857,7 @@ function toggleCountySelection(force){
 }
 function mapControlReservations(includeSelected=false){
   const r=map.getContainer().getBoundingClientRect();
-  const controls=[...document.querySelectorAll('.map-controls:not(.phone-dock .map-controls),#reset-view,#sidebar-toggle,.rotation-tools:not([inert]) :is(.compass-face:not([inert]),#compass-toggle:not([hidden])),.map-hud,.inset-label,#usa-label,.map-key-toggle,.map-key:not([hidden]),.phone-grip,.phone-dock-row:not([inert]),.phone-home:not([hidden]),.phone-atlas-back:not([hidden]),.phone-history-back:not([hidden])')];
+  const controls=[...document.querySelectorAll('.map-controls:not(.phone-dock .map-controls),#appearance-toggle,#reset-view,#sidebar-toggle,.rotation-tools:not([inert]) :is(.compass-face:not([inert]),#compass-toggle:not([hidden])),.map-hud,.inset-label,#usa-label,.map-key-toggle,.map-key:not([hidden]),.phone-grip,.phone-dock-row:not([inert]),.phone-home:not([hidden]),.phone-atlas-back:not([hidden]),.phone-history-back:not([hidden])')];
   if(includeSelected)controls.push($('.selected-area-label'));
   return controls.filter(n=>n?.offsetWidth&&n.offsetHeight)
     .map(n=>{const b=n.getBoundingClientRect();return {x0:b.left-r.left,y0:b.top-r.top,x1:b.right-r.left,y1:b.bottom-r.top};});

@@ -1,6 +1,6 @@
-# USAtlas V0.9P preview
+# USAtlas V0.9Q preview
 
-The top-left appearance control shows a crescent for dark mode and an eight-rayed sun for light mode. Mouse hover names the current mode and the available switch. The app remembers the chosen mode in the current browser. Light mode uses the local Natural Earth ocean overlay and the five existing Great Lakes polygons. The U.S. geography and selection sources are shared by both appearances.
+The appearance control in the map's top-left corner shows an outlined crescent for dark mode and an eight-rayed sun for light mode. Mouse hover names the current mode and the available switch. The app remembers the chosen mode in the current browser. Light mode uses the local Natural Earth ocean overlay and the five existing Great Lakes polygons. The U.S. geography and selection sources are shared by both appearances.
 
 Requires Python 3. Clone the repository or extract its source ZIP, then run **Start_Atlas.cmd** from that folder. The launcher opens **http://127.0.0.1:8020/**.
 [Development handoff](HANDOFF.md) covers the current preview, repeatable checks, and open work.
