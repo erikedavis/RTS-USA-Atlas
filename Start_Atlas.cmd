@@ -3,7 +3,6 @@ cd /d "%~dp0"
 if not exist "tools\serve.py" (
   echo This launcher needs the complete extracted Atlas folder.
   echo In the ZIP window, choose Extract All, then run Start_Atlas.cmd from the extracted folder.
-  echo The regular Desktop shortcut opens the approved release.
   pause
   exit /b 1
 )

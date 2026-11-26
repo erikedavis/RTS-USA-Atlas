@@ -1,10 +1,6 @@
-# RTS USA Atlas - GitHub browser QA quick start
+# USAtlas QA
 
-This repository contains the **USAtlas** and its browser QA workflow. See the [README](README.md) for the PC and phone launchers.
-
-## Run locally
-
-With Node.js and Python 3 installed, run the following from the repository root.
+Install Node.js and Python 3. From the root of the build you are checking, run:
 
 ```sh
 npm install
@@ -12,27 +8,17 @@ npx playwright install chromium
 npm test
 ```
 
-GitHub Actions also runs the checks on pushes to `main` and on pull requests. Its **atlas-browser-qa** artifact contains screenshots, the test report, and failure traces.
+`npm run test:data` runs the Census checks separately. The browser suite serves the checkout over HTTP on port **8001** and requires a working WebGL context and rendered geography. GitHub Actions runs on pushes to `main`, on pull requests and by manual dispatch. Inspect the report, screenshots and traces for the exact commit tested. [Browser QA runs](https://github.com/erikedavis/RTS-USA-Atlas/actions/workflows/browser-qa.yml)
 
-## What the CI workflow actually verifies
+## Public release check
 
-- The test copy is served over HTTP on port 8001.
-- MapLibre genuinely creates a WebGL graphics context. Without WebGL, the test FAILS and does not certify visual QA.
-- The map loads real 2025 Census data, not a blank canvas or a partial-loading screen.
-- Idaho's label selects Idaho, selected-border screenshot is saved, county selection works, reset clears selection.
-- Chicago, Denver, Phoenix, and Houston searches produce city-specific screenshots.
-- A 390 × 844 touch viewport renders the national state labels, opens the phone toolbar, taps the Minnesota abbreviation, clears that selection, and finds Indiana by abbreviation.
-- Source syntax, Census record counts, and native island positions and Alaska’s dateline wrapping pass the original `qa_v02d.mjs` script.
+After a major tag deploys, open the public HTTPS site on desktop and a phone-sized browser. Verify the displayed version, map, Search, and theme switch. The /release.json file records the exact deployed commit. [Public atlas](https://erikedavis.github.io/RTS-USA-Atlas/) · [Deployment runs](https://github.com/erikedavis/RTS-USA-Atlas/actions/workflows/pages.yml)
 
-**Limitation:** A passing test confirms the map and interactions render and run, not that the visual appearance is flawless. Review the captured screenshots for city-label drift, blobby borders, national map framing and obvious UI collisions. A desktop-sized Chromium viewport does not emulate every behavior of real iOS Safari. If WebGL fails even with software rendering enabled, the test will report a failure rather than call that a pass.
+## Regression checks
 
-## Public repository safety
+- Compare national, Northeast, Boise and dense city views. Check fixed small-state anchors, continuous outlines, population-symbol placement, the seven key tiers and capital marks. Use the relevant accepted build and matched camera settings.
+- Check search, selection, Atlas framing and Back on the builds that support them. Verify that county picking requires the overlay and an eligible zoom, and that enabling the metro overlay keeps it visible at close zoom. Check Alaska, Hawaii and Puerto Rico framing and label placement.
+- Test desktop and phone portrait and landscape. Exercise tap, hold, drag, pinch and compass gestures for the build under test. For rotation, check the accepted bearing matrix **0°, 37°, 90°, 133°, 180°, 270°, 359° and return to north**.
+- For performance comparisons, record the device, browser, build, workload and settings. Measure startup time and bytes, layer latency, available memory and interaction responsiveness separately.
 
-The repository uses public Census-derived geography and bundled MapLibre. Its tests run with local files and require no credentials or API keys.
-
-## Future release discipline
-
-- Each development chat starts by checking the repository's newest code, release tag, and last test result, rather than guessing from old ZIPs.
-- Make one focused change, keep the baseline, run tests, and preserve screenshots and logs.
-- If a GitHub connector cannot write to the repository, don't claim code was uploaded; use a PR where permitted or provide the user a ready-to-commit change package.
-- Never claim that city positions or border appearance are visually fixed without rendered evidence from working WebGL.
+Record exact build identity, visible results, failures and open checks. Distinguish browser emulation, physical-device tests, owner acceptance and deployment. [Release QA foundation](https://chatgpt.com/space/page_75ff79f71f448191a105172bce0000e4) · [Rotation acceptance](https://chatgpt.com/space/page_01483e9a9d0c8191a9b6bfc704df8790) · [Earlier QA reports in Git history](https://github.com/erikedavis/RTS-USA-Atlas/tree/56b0d90f4e9109f556d065c2644147e81c0be8aa/documentation)
